@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { usePageLanguage } from '../../lib/page-language';
-import { onMounted, ref } from 'vue';
+import { onMounted, onBeforeUnmount, ref } from 'vue';
 import Icon from '../ui/Icon.vue';
 import { topics } from '../../data/topics';
 import { pageUrl, t, type Locale } from '../../lib/i18n';
@@ -14,11 +14,15 @@ const ready = ref(false);
 onMounted(() => {
   ready.value = true;
 });
+let hoverTimer = 0;
+onBeforeUnmount(() => clearTimeout(hoverTimer));
 function close() {
+  clearTimeout(hoverTimer);
   expanded.value = false;
   pinned.value = false;
 }
 function toggle() {
+  clearTimeout(hoverTimer);
   if (pinned.value) {
     close();
     return;
@@ -34,10 +38,17 @@ function leave(event: FocusEvent) {
   if (!menu.value?.contains(event.relatedTarget as Node)) close();
 }
 function hover(event: PointerEvent) {
-  if (event.pointerType === 'mouse') expanded.value = true;
+  clearTimeout(hoverTimer);
+  if (event.pointerType === 'mouse')
+    hoverTimer = window.setTimeout(() => (expanded.value = true), 115);
+}
+function cancelHover() {
+  clearTimeout(hoverTimer);
 }
 function pointerLeave() {
-  if (!pinned.value && !menu.value?.contains(document.activeElement)) close();
+  clearTimeout(hoverTimer);
+  if (!pinned.value && !menu.value?.contains(document.activeElement))
+    hoverTimer = window.setTimeout(close, 460);
 }
 const height = Math.max(208, topics.length * 23);
 function port(i: number) {
@@ -68,6 +79,7 @@ function trace(i: number) {
     :aria-label="t(locale).knowledge"
     @keydown.esc.prevent="escape"
     @focusout="leave"
+    @pointerenter="cancelHover"
     @pointerleave="pointerLeave"
   >
     <div
@@ -89,37 +101,46 @@ function trace(i: number) {
       >
         <span class="book-chip"><Icon name="book" /></span>
       </button>
-      <div id="book-branches" :hidden="!expanded" class="core-branches">
-        <svg
-          class="core-copper"
-          :viewBox="'0 0 270 ' + height"
-          preserveAspectRatio="none"
-          aria-hidden="true"
+      <Transition name="branch-fade"
+        ><div
+          id="book-branches"
+          v-show="expanded"
+          :inert="!expanded"
+          class="core-branches"
         >
-          <g
+          <svg
+            class="core-copper"
+            :viewBox="'0 0 270 ' + height"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <g
+              v-for="(topic, i) in topics"
+              :key="topic.id"
+              :style="{ '--delay': i * 38 + 'ms' }"
+            >
+              <path :d="trace(i)" pathLength="1" />
+              <path class="trace-current" :d="trace(i)" pathLength="1" />
+              <circle :cx="port(i).x" :cy="port(i).y" r="4" />
+            </g>
+          </svg>
+          <a
             v-for="(topic, i) in topics"
             :key="topic.id"
-            :style="{ '--delay': i * 38 + 'ms' }"
+            class="core-port"
+            :href="pageUrl(locale, 'knowledge/' + topic.id)"
+            :aria-label="topic.title[locale]"
+            :style="{
+              '--x': (port(i).x / 270) * 100 + '%',
+              '--y': (port(i).y / height) * 100 + '%',
+              '--delay': i * 38 + 'ms',
+            }"
+            ><Icon :name="topic.icon" /><span>{{
+              topic.title[locale]
+            }}</span></a
           >
-            <path :d="trace(i)" pathLength="1" />
-            <path class="trace-current" :d="trace(i)" pathLength="1" />
-            <circle :cx="port(i).x" :cy="port(i).y" r="4" />
-          </g>
-        </svg>
-        <a
-          v-for="(topic, i) in topics"
-          :key="topic.id"
-          class="core-port"
-          :href="pageUrl(locale, 'knowledge/' + topic.id)"
-          :aria-label="topic.title[locale]"
-          :style="{
-            '--x': (port(i).x / 270) * 100 + '%',
-            '--y': (port(i).y / height) * 100 + '%',
-            '--delay': i * 38 + 'ms',
-          }"
-          ><Icon :name="topic.icon" /><span>{{ topic.title[locale] }}</span></a
-        >
-      </div>
+        </div></Transition
+      >
     </div>
   </nav>
 </template>

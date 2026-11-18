@@ -157,6 +157,9 @@ test('switching languages keeps the selected part and section', async ({
   page,
 }) => {
   await page.goto('uk/');
+  await page
+    .locator('#anatomy')
+    .evaluate((el) => el.scrollIntoView({ behavior: 'instant' }));
   await page.getByRole('button', { name: 'Камера FPV' }).click();
   await page.keyboard.press('Escape');
   await page.getByRole('link', { name: 'Switch to English' }).click();
@@ -170,6 +173,9 @@ test('switching languages keeps the selected part and section', async ({
 
 test('the detail card returns focus to its trigger', async ({ page }) => {
   await page.goto('en/');
+  await page
+    .locator('#anatomy')
+    .evaluate((el) => el.scrollIntoView({ behavior: 'instant' }));
   const details = page.getByRole('button', { name: 'Frame', exact: true });
   await details.click();
   await expect(page.getByRole('dialog')).toBeVisible();

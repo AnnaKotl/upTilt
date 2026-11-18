@@ -1,4 +1,5 @@
 ---
+import { paths } from '../../components/ui/paths';
 import SiteLayout from '../../layouts/SiteLayout.astro';
 import BookNav from '../../components/knowledge/BookNav.vue';
 import PartsBoard from '../../components/scene/PartsBoard.vue';
@@ -28,6 +29,37 @@ const kit = [
 
 <SiteLayout locale={locale} title="FPV">
   <div class="flight-story" data-story>
+    <div class="boot-screen" aria-hidden="true">
+      <svg viewBox="-150 -95 300 190" fill="none" stroke="currentColor">
+        {Array.from({ length: 8 }, (_, i) => (
+          <g transform={`rotate(${i * 45})`}>
+            <path
+              class="boot-trace"
+              d="M20 0h15l10 -10h16l12 12h14"
+              pathLength="1"
+            />
+            <circle cx="89" cy="2" r="2" />
+          </g>
+        ))}
+        <path
+          d={paths.quad}
+          transform="translate(-18 -18) scale(1.5)"
+          stroke-width="1.3"
+        />
+      </svg>
+    </div>
+    <script is:inline>
+      try {
+        if (!sessionStorage.getItem('uptilt:boot') && !location.hash) {
+          const root = document.documentElement;
+          root.dataset.boot = 'pending';
+          sessionStorage.setItem('uptilt:boot', '1');
+          setTimeout(() => {
+            delete root.dataset.boot;
+          }, 3000);
+        }
+      } catch {}
+    </script>
     <div class="scene-stage" aria-hidden="true">
       <div class="stage-light"></div>
       <div class="bench-mat"></div>
@@ -35,14 +67,6 @@ const kit = [
     </div>
     <section data-stop id="hero" class="flight-hero">
       <div class="hero-shot">
-        <svg
-          class="hero-spinner"
-          viewBox="0 0 36 36"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path d="M18 4 33 29H3Z" pathLength="1" />
-        </svg>
         <div class="rest-shadow" aria-hidden="true"></div>
         <div class="hero-machine">
           <StudyPoster
@@ -210,6 +234,12 @@ const kit = [
       function ready() {
         if (!waiting) return;
         waiting = false;
+        if (document.documentElement.dataset.boot === 'pending') {
+          document.documentElement.dataset.boot = 'ready';
+          setTimeout(() => {
+            delete document.documentElement.dataset.boot;
+          }, 180);
+        }
         delete storyEl.dataset.awaiting;
         restart(false);
       }
@@ -235,7 +265,9 @@ const kit = [
         delete storyEl.dataset.bookPaused;
         restart(false);
       }
-      book?.addEventListener('pointerenter', pauseForBook);
+      book
+        ?.querySelector('.book-trigger')
+        ?.addEventListener('pointerenter', pauseForBook);
       book?.addEventListener('focusin', pauseForBook);
       book?.addEventListener('pointerleave', () => {
         if (!book.contains(document.activeElement)) releaseBook();
@@ -325,7 +357,11 @@ const kit = [
           ? '.day-image'
           : '.night-image',
       )!;
-      void poster.decode().then(ready, ready);
+      const deadline = window.setTimeout(ready, 3000);
+      void poster.decode().then(ready, () => {});
+      storyEl.addEventListener('restart-intro', () => clearTimeout(deadline), {
+        once: true,
+      });
       document.addEventListener('visibilitychange', advance);
       media.addEventListener('change', sync);
       void sync();

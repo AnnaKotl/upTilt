@@ -48,6 +48,8 @@ try {
     'light-strip',
     'mounts',
     'connector',
+    'power-lead',
+    'battery-holder',
     'gate',
     'radio',
     'radio-1',

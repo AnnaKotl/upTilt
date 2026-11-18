@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { usePageLanguage } from '../../lib/page-language';
 import { currentAircraft, type Aircraft } from '../../lib/aircraft';
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { parts } from '../../data/airframe';
 import { useStudySelection } from '../../lib/useStudySelection';
 import { type Locale } from '../../lib/i18n';
@@ -17,11 +17,32 @@ const model = ref<Aircraft>('whoop');
 function syncModel() {
   model.value = currentAircraft();
 }
+const settled = ref(false);
+let observer: MutationObserver | undefined;
+function syncBoard() {
+  const stage = document.querySelector<HTMLElement>('[data-story]');
+  settled.value = !stage?.dataset.live || stage.dataset.boardReady === 'true';
+  if (!settled.value) {
+    highlight(null);
+    dialog.value?.close();
+  }
+}
 onMounted(() => {
+  syncBoard();
+  observer = new MutationObserver(syncBoard);
+  observer.observe(document.querySelector('[data-story]')!, {
+    attributes: true,
+    attributeFilter: ['data-live', 'data-board-ready'],
+  });
+  window.addEventListener('resize', positionDialog);
   syncModel();
   window.addEventListener('aircraft-change', syncModel);
 });
-onBeforeUnmount(() => window.removeEventListener('aircraft-change', syncModel));
+onBeforeUnmount(() => {
+  observer?.disconnect();
+  window.removeEventListener('resize', positionDialog);
+  window.removeEventListener('aircraft-change', syncModel);
+});
 function art(id: string) {
   return (
     base +
@@ -59,6 +80,7 @@ function description(part: (typeof parts)[number]) {
 }
 const themed = ['frame', 'canopy', 'camera', 'antenna'];
 function highlight(index: number | null) {
+  if (index !== null && !settled.value) return;
   hover.value = index;
   const board = document.querySelector<HTMLElement>('.parts-board');
   if (board && index !== null) {
@@ -71,10 +93,40 @@ function highlight(index: number | null) {
     }),
   );
 }
-function open(event: Event, index: number) {
+const aliases: Record<string, [string, string]> = {
+  propeller: ['Проп, пропи', 'Prop, props'],
+  battery: ['Акум, батка', 'Pack'],
+  board: ['Польотник', 'FC'],
+  canopy: ['Канопа', 'Canopy'],
+  motor: ['Мотор', 'Motor'],
+  'light-strip': ['Ледка', 'LED strip'],
+};
+function positionDialog() {
+  const box = dialog.value,
+    button = opener.value;
+  if (!box?.open || !button) return;
+  const rect = button.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2,
+    cy = rect.top + rect.height / 2;
+  const x = Math.max(
+    12,
+    Math.min(innerWidth - box.offsetWidth - 12, cx - box.offsetWidth / 2),
+  );
+  const y = Math.max(
+    12,
+    Math.min(innerHeight - box.offsetHeight - 12, cy - box.offsetHeight / 2),
+  );
+  box.style.left = x + 'px';
+  box.style.top = y + 'px';
+  box.style.transformOrigin = cx - x + 'px ' + (cy - y) + 'px';
+}
+async function open(event: Event, index: number) {
+  if (!settled.value) return;
   choose(index);
   opener.value = event.currentTarget as HTMLElement;
+  await nextTick();
   dialog.value?.showModal();
+  positionDialog();
 }
 </script>
 <template>
@@ -96,7 +148,8 @@ function open(event: Event, index: number) {
           }"
           class="board-part"
           :class="{ dim: hover !== null && hover !== i }"
-          :disabled="!ready"
+          :disabled="!ready || !settled"
+          :data-part="part.id"
           :aria-pressed="selected === i"
           :aria-label="name(part)"
           @pointerenter="highlight(i)"
@@ -123,7 +176,7 @@ function open(event: Event, index: number) {
     </div>
     <dialog
       ref="dialog"
-      class="part-dialog"
+      class="part-dialog anchored-dialog"
       aria-labelledby="part-name"
       @close="opener?.focus({ preventScroll: true })"
       @click="
@@ -144,6 +197,13 @@ function open(event: Event, index: number) {
             alt=""
         /></span>
         <h3 id="part-name">{{ name(parts[selected]) }}</h3>
+        <small
+          v-if="
+            aliases[parts[selected].id] &&
+            !(model === 'seven' && parts[selected].id === 'canopy')
+          "
+          >{{ aliases[parts[selected].id][locale === 'uk' ? 0 : 1] }}</small
+        >
         <p>{{ description(parts[selected]) }}</p>
         <form method="dialog">
           <button autofocus>

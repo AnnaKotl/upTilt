@@ -265,7 +265,9 @@ export function makeWhoop(openFrame = false) {
     antenna = part('antenna'),
     strip = part('light-strip'),
     mounts = part('mounts'),
-    plug = part('connector');
+    plug = part('connector'),
+    lead = part('power-lead'),
+    holder = part('battery-holder');
   let index = 0;
   const span = openFrame ? 1.42 : 1.02;
   for (const x of [-span, span])
@@ -509,7 +511,7 @@ export function makeWhoop(openFrame = false) {
       cyl(mounts, cap, 0.075, 0.08, 0.065, [s * 0.29, -0.12, 0.64]);
   box(plug, cap, [0.22, 0.13, 0.19], [0, -0.23, -0.65], 0.024);
   tube(
-    plug,
+    lead,
     frame,
     [
       [-0.06, -0.24, -0.69],
@@ -534,7 +536,7 @@ export function makeWhoop(openFrame = false) {
   box(battery, cell, [0.5, 0.26, 1.27], [0, -0.345, 0.03], 0.085);
   for (const s of [-1, 1]) {
     box(battery, cap, [0.51, 0.27, 0.14], [0, -0.345, 0.03 + s * 0.59]);
-    box(chassis, frame, [0.57, 0.06, 0.09], [0, -0.49, s * 0.33]);
+    box(holder, frame, [0.57, 0.06, 0.09], [0, -0.49, s * 0.33]);
   }
   // Keep the optical bezel independently movable for the dusk transition.
   camera.remove(evening);

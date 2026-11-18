@@ -56,6 +56,33 @@ function fadeTexture() {
   ctx.fillRect(0, 0, 96, 96);
   return new T.CanvasTexture(canvas);
 }
+// Four softened contact patches preserve the footprint as the craft lifts.
+function groundTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 192;
+  canvas.height = 96;
+  const ctx = canvas.getContext('2d')!;
+  const patches = [
+    [53, 42, 40],
+    [119, 29, 32],
+    [76, 67, 35],
+    [145, 55, 37],
+    [97, 49, 42],
+  ];
+  for (const [x, y, r] of patches) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(1, 0.56);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+    g.addColorStop(0, 'rgba(255,255,255,.77)');
+    g.addColorStop(0.46, 'rgba(255,255,255,.40)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-r, -r, r * 2, r * 2);
+    ctx.restore();
+  }
+  return new T.CanvasTexture(canvas);
+}
 // A brief exposure of three blades keeps a resting render legible as a spinning rotor.
 function rotorExposure() {
   const canvas = document.createElement('canvas');
@@ -82,18 +109,18 @@ function rotorExposure() {
 // Positions are composed for the page in fractions of the viewport. They are
 // animation keyframes, not flight dynamics or a transmitter configuration.
 const path = [
-  [0, 0.704, 0.439, 0.66, 0.32, -0.38, 0, 3.5],
-  [0.2, 0.738, 0.38, 0.84, 0.43, -0.52, -0.16, 3.3],
-  [0.48, 0.78, 0.32, 0.47, 0.34, -0.92, 0.22, 2.7],
-  [0.78, 0.69, 0.435, 0.22, 0.25, -1.18, 0.27, 0],
+  [0, 0.72, 0.5, 0.66, 0.32, -0.38, 0, 3.5],
+  [0.24, 0.738, 0.48, 0.89, 0.43, -0.52, -0.16, 3.3],
+  [0.48, 0.76, 0.58, 0.49, 0.34, -0.92, 0.22, 2.7],
+  [0.78, 0.58, 0.435, 0.22, 0.25, -1.18, 0.27, 0],
   [1.08, 0.31, 0.54, 0.61, 0.43, -0.65, 0.16, -2.8],
   [1.34, 0.266, 0.51, 0.63, 0.56, -0.3, -0.115, -3.2],
   [1.65, 0.49, 0.49, 0.72, 0.67, -0.23, -0.025, 0],
   [2, 0.5, 0.5, 0.58, 0.54, -0.32, 0, 0],
   [2.31, 0.5, 0.5, 0.58, 0.54, -0.32, 0, 0],
   [2.84, 0.37, 0.485, 0.7, 0.55, -0.31, -0.06, 0],
-  [3, 0.726, 0.465, 0.7, 0.43, -0.16, 0, 0],
-  [4, 0.726, 0.465, 0.7, 0.43, -0.16, 0, 0],
+  [3, 0.77, 0.41, 0.53, 0.43, -0.16, 0, 0],
+  [4, 0.77, 0.41, 0.53, 0.43, -0.16, 0, 0],
 ];
 export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const renderer = new T.WebGLRenderer({
@@ -112,6 +139,36 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     gate = makeGate(),
     radio = makeRadio();
   scene.add(quad.root, gate.root, radio.root);
+  // Put the readout in the glass plane so its perspective and depth follow the case.
+  const lcd = document.createElement('canvas');
+  lcd.width = 512;
+  lcd.height = 256;
+  const lcdContext = lcd.getContext('2d')!;
+  const lcdTexture = new T.CanvasTexture(lcd);
+  lcdTexture.colorSpace = T.SRGBColorSpace;
+  const readout = new T.Mesh(
+    new T.PlaneGeometry(1.73, 0.9),
+    new T.MeshBasicMaterial({
+      map: lcdTexture,
+      transparent: true,
+      depthWrite: false,
+    }),
+  );
+  readout.position.set(0, -0.95, 0.368);
+  radio.root.add(readout);
+  let lastReadout: string | undefined;
+  function updateReadout() {
+    const term = story.dataset.radioTerm ?? '';
+    if (term === lastReadout) return;
+    lastReadout = term;
+    lcdContext.clearRect(0, 0, lcd.width, lcd.height);
+    lcdContext.font = 'bold 45px monospace';
+    lcdContext.fillStyle = '#c5efdd';
+    lcdContext.textAlign = 'center';
+    lcdContext.textBaseline = 'middle';
+    lcdContext.fillText(term.toUpperCase(), 256, 128);
+    lcdTexture.needsUpdate = true;
+  }
   const ghosts = raceReplays(gate.root);
   const texture = fadeTexture(),
     smear = rotorExposure();
@@ -140,6 +197,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   }
   const shadow = sprite(scene, '#000000'),
     gateShade = sprite(scene, '#000000');
+  const footprint = groundTexture();
+  shadow.material.map = footprint;
   const lamps = [sprite(quad.parts['light-strip'], '#bff7dd')];
   lamps[0].position.set(0, 0.072, 0.685);
   lamps[0].scale.set(0.55, 0.17, 1);
@@ -148,6 +207,10 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   bounce.position.set(0, 0.073, 0.74);
   quad.parts['light-strip'].add(bounce);
   const spill = sprite(scene, '#bff7dd');
+  const underglow = sprite(quad.parts['light-strip'], '#bff7dd');
+  underglow.position.set(0, -0.065, 0.68);
+  underglow.scale.set(0.62, 0.4, 1);
+  underglow.material.blending = T.AdditiveBlending;
   const controlNodes = radioControls.map(
     (c) => (c.kind === 'switch' ? radio.switches : radio.sticks)[c.slot],
   );
@@ -174,10 +237,10 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     depthWrite: false,
   });
   const insert = new T.Mesh(
-    new T.TorusGeometry(1.664, 0.019, 6, 80),
+    new T.TorusGeometry(1.655, 0.034, 6, 80),
     insertMaterial,
   );
-  insert.position.z = 0.085;
+  insert.position.z = 0.105;
   gate.root.add(halo, insert);
   const solids = new Set<T.MeshStandardMaterial>();
   quad.root.traverse((n) => {
@@ -344,9 +407,11 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const take = ease(1.82, 3.56, elapsed),
       hero = 1 - ease(0.03, 0.46, p);
 
+    const departRadio = ease(3.26, 3.56, p);
     const [x, y, k, rx, ry, rz, z] = sample(path, p);
     const spread = ease(1.77, 1.99, p) * (1 - ease(2.5, 2.84, p));
-    const boardReady = String(spread > 0.995);
+    const boardReady = String(spread >= 1);
+    if (spread < 1) focus = '';
     if (story.dataset.boardReady !== boardReady)
       story.dataset.boardReady = boardReady;
     story.style.setProperty(
@@ -372,6 +437,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       }
       oldDiagram = diagram;
     }
+    story.style.setProperty('--radio-exit', String(1 - departRadio));
     const inRadio = ease(2.77, 2.99, p);
     const ax = Number(story.dataset.radioX ?? 0),
       ay = Number(story.dataset.radioY ?? 0);
@@ -402,9 +468,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
         ? Math.sin(elapsed * 1.5) * 0.035 * (1 - ease(5.5, 7, elapsed))
         : 0);
     quad.root.position.set(
-      (x - 0.5) * w + hoverX * 0.14 * hero,
+      (x - 0.5 + departRadio * 0.62) * w + hoverX * 0.14 * hero,
       (0.5 - y) * 10 -
-        1.2 * (1 - take) * hero +
+        2.32 * (1 - take) * hero +
         bob +
         (0.92 * lift * exitLanding - 0.42) * inRadio,
       z,
@@ -456,13 +522,16 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
           (i === 0 || i === 3 ? 1 : -1) *
           (1 - spread);
     });
-    for (const lamp of lamps)
-      lamp.material.opacity = 0.84 * (1 - day) * (1 - spread);
-    gate.root.visible = p > 0.16 && p < 1.69;
+    const ledPower =
+      (1 - day) * (1 - spread) * (0.9 + 0.06 * Math.sin(now * 0.0025));
+    for (const lamp of lamps) lamp.material.opacity = ledPower;
+    quad.led.emissiveIntensity = ledPower * 2.1;
+    underglow.material.opacity = ledPower * 0.38;
+    gate.root.visible = p > 0.36 && p < 1.69;
     gate.root.position.set(
-      0.19 * w,
+      0.08 * w,
       (0.5 - 0.435) * 10 -
-        (1 - ease(0.15, 0.6, p)) * 6 +
+        (1 - ease(0.35, 0.72, p)) * 6 +
         ease(1.14, 1.69, p) * 6,
       0,
     );
@@ -471,9 +540,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const replaying = ghosts.update(p, now, day);
     insert.visible = halo.visible = day < 0.98;
     insertMaterial.opacity = (1 - day) * (0.8 + 0.1 * Math.sin(now * 0.0019));
-    haloMaterial.opacity = (1 - day) * (0.16 + 0.04 * Math.sin(now * 0.0019));
+    haloMaterial.opacity = (1 - day) * (0.27 + 0.045 * Math.sin(now * 0.0019));
     gate.accent.emissiveIntensity =
-      (1 - day) * (1.6 + 0.28 * Math.sin(now * 0.0019));
+      (1 - day) * (0.56 + 0.12 * Math.sin(now * 0.0019));
     const caption = (ease(0.9, 1.04, p) * (1 - ease(1.35, 1.58, p))).toFixed(3);
     if (lastCaption !== caption) {
       story.style.setProperty('--caption-opacity', caption);
@@ -489,31 +558,37 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       quad.root.position.x,
       mix(
         (0.5 - y) * 10 - quad.root.scale.x * 1.05,
-        (0.5 - y) * 10 - 1.2 - quad.root.scale.x * 0.84,
+        (0.5 - y) * 10 - 2.32 - quad.root.scale.x * 0.72,
         hero,
       ),
       -3,
     );
     shadow.scale.set(
-      5 * quad.root.scale.x * (1 + 0.12 * take),
-      0.46 * quad.root.scale.x,
+      3.65 * quad.root.scale.x * (1 + 0.29 * take),
+      (0.46 + take * 0.32) * quad.root.scale.x,
       1,
     );
-    shadow.material.opacity = (0.5 - 0.18 * take) * (1 - spread);
-    bounce.intensity = (1 - day) * 0.65;
+    shadow.material.opacity = (0.46 - 0.26 * take) * (1 - spread);
+    bounce.intensity = ledPower * 1.9;
     spill.position.copy(shadow.position);
-    spill.position.y += 0.01;
+    lamps[0].getWorldPosition(target);
+    spill.position.x = target.x - quad.root.scale.x * 0.1;
+    spill.position.y -= 0.04 * quad.root.scale.x;
     spill.position.z += 0.04;
     spill.scale.set(
-      quad.root.scale.x * (1.28 + 0.45 * take),
-      quad.root.scale.x * 0.21,
+      quad.root.scale.x * (1.35 + 1.12 * take),
+      quad.root.scale.x * (0.52 + 0.48 * take),
       1,
     );
-    spill.material.opacity = (1 - day) * (1 - spread) * (0.53 - 0.19 * take);
+    spill.material.opacity = ledPower * (0.23 - 0.14 * take);
     radio.root.visible = p > 2.59;
-    radio.root.position.set((-0.21 - (1 - inRadio) * 0.49) * w, -0.27, 0);
-    radio.root.rotation.set(-0.24 * inRadio, 0.32 * inRadio, -0.035 * inRadio);
-    radio.root.scale.setScalar(Math.min(w * 0.112, 1.61));
+    radio.root.position.set(
+      (-0.24 - (1 - inRadio) * 0.49 - departRadio * 0.65) * w,
+      -0.84,
+      0,
+    );
+    radio.root.rotation.set(-0.21 * inRadio, 0.25 * inRadio, 0.34 * inRadio);
+    radio.root.scale.setScalar(Math.min(w * 0.116, 1.85));
     radio.sticks[0].rotation.x = mix(
       radio.sticks[0].rotation.x,
       pose === 2 ? -ay * 0.7 : 0,
@@ -544,10 +619,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     if (radio.root.visible) {
       radio.root.updateWorldMatrix(true, false);
       camera.updateMatrixWorld();
-      radio.root.localToWorld(target.set(0, -0.95, 0.38)).project(camera);
-      const panel = chapters[3].firstElementChild as HTMLElement;
-      panel.style.setProperty('--screen-x', (1 + target.x) * 50 + '%');
-      panel.style.setProperty('--screen-y', (1 - target.y) * 50 + '%');
+      updateReadout();
       for (const [index, control] of gimbalLights.entries()) {
         control.getWorldPosition(target).project(camera);
         const pin = chapters[3].firstElementChild as HTMLElement;
@@ -624,15 +696,21 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const accent = getComputedStyle(document.documentElement)
       .getPropertyValue('--accent')
       .trim();
+    const hue = new T.Color(accent).getHSL(
+      { h: 0, s: 0, l: 0 },
+      T.SRGBColorSpace,
+    ).h;
+    const neon = new T.Color().setHSL(hue, 0.98, 0.49, T.SRGBColorSpace);
     for (const lamp of [...lamps, ...gimbalLights])
-      lamp.material.color.set(accent);
-    spill.material.color.set(accent);
-    bounce.color.set(accent);
-    haloMaterial.color.set(accent);
-    insertMaterial.color.set(accent).lerp(new T.Color(0xfffaf2), 0.24);
-    quad.led.emissive.set(accent);
+      lamp.material.color.copy(neon);
+    underglow.material.color.copy(neon);
+    spill.material.color.copy(neon);
+    bounce.color.copy(neon);
+    haloMaterial.color.copy(neon);
+    insertMaterial.color.copy(neon);
+    quad.led.emissive.copy(neon);
     gate.accent.color.set(accent);
-    gate.accent.emissive.set(accent);
+    gate.accent.emissive.copy(neon);
   }
   lighting();
   const mo = new MutationObserver(() => {
@@ -668,10 +746,13 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     mo.disconnect();
     ro.disconnect();
     disposeScene(scene);
-    [shadow, gateShade, spill, ...lamps, ...gimbalLights].forEach((s) =>
-      s.material.dispose(),
+    [shadow, gateShade, spill, underglow, ...lamps, ...gimbalLights].forEach(
+      (s) => s.material.dispose(),
     );
     texture.dispose();
+    footprint.dispose();
+    smear.dispose();
+    lcdTexture.dispose();
     renderer.dispose();
     renderer.forceContextLoss();
     canvas.remove();

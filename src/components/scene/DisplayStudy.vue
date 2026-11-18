@@ -55,9 +55,19 @@ function measure() {
   if (p < 0.66) returnedFromKit = false;
   const exit = returnedFromKit
     ? 0
-    : Math.min(1, Math.max(0, (p - 0.72) / 0.25));
+    : Math.min(1, Math.max(0, (p - 0.53) / 0.34));
   const approach = Math.min(1, Math.max(0, box.top / h));
   const style = surface.value.style;
+  const imageIn = Math.max(0, Math.min(1, (0.65 - approach) / 0.49));
+  const dissolve = Math.max(0, Math.min(1, (p - 0.87) / 0.13));
+  style.setProperty(
+    '--signal-image',
+    String(reduced() ? 1 : imageIn * (1 - exit)),
+  );
+  style.setProperty(
+    '--signal-visible',
+    String(reduced() || returnedFromKit ? 1 : 1 - dissolve),
+  );
   style.setProperty('--edge', (reduced() ? 0 : approach * 19) + '%');
   style.setProperty('--drift', (reduced() ? 0 : (p - 0.38) * 56) + 'px');
   style.setProperty('--tilt', (reduced() ? 0 : (p - 0.38) * 2.8) + 'deg');

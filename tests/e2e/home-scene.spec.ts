@@ -161,3 +161,32 @@ test('the final bookmark starts an optional tour and Escape releases scrolling',
   await page.locator('#before-flight').scrollIntoViewIfNeeded();
   await expect(tour).toBeVisible();
 });
+
+test('the moving board is locked and opens a card at the settled battery', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'Checks the animated WebGL board.');
+  await page.goto('uk/');
+  await expect(page.locator('[data-story]')).toHaveAttribute(
+    'data-live',
+    'true',
+  );
+  const battery = page.locator('[data-part="battery"]');
+  await expect(battery).toBeDisabled();
+  await page
+    .locator('#anatomy')
+    .evaluate((el) => el.scrollIntoView({ behavior: 'instant' }));
+  await expect(battery).toBeEnabled();
+  const anchor = await battery.boundingBox();
+  await battery.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Акум');
+  const bounds = await dialog.boundingBox();
+  expect(anchor!.y + anchor!.height / 2).toBeGreaterThan(bounds!.y);
+  expect(anchor!.y + anchor!.height / 2).toBeLessThan(
+    bounds!.y + bounds!.height,
+  );
+  await page.keyboard.press('Escape');
+  await expect(battery).toBeFocused();
+});

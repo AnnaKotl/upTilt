@@ -7,11 +7,11 @@ export function raceReplays(gate: T.Group) {
     const d = i - 1;
     const curve = new T.CatmullRomCurve3(
       [
-        [2.5 + d * 0.45, 0.92 + d * 0.34, 3.7],
+        [2.5 + d * 1.15, 0.45 + d * 1.4, 3.7],
         [0.85 + d * 0.36, 0.53 - d * 0.24, 1.8],
-        [d * 0.31, d * 0.34, 0],
+        [0, 0, 0],
         [-1.25 - d * 0.15, -0.21 + d * 0.29, -1.9],
-        [-4.2 + d * 0.36, -0.8 - d * 0.3, -3.9],
+        [-4.2 + d * 0.36, -0.35 + d * 1.65, -3.9],
       ].map(([x, y, z]) => new T.Vector3(x, y, z)),
     );
     const group = new T.Group();
@@ -59,15 +59,15 @@ export function raceReplays(gate: T.Group) {
     if (!swarm.visible) return false;
     let active = false;
     runs.forEach(({ curve, hull, tube, group, material }, i) => {
-      const age = (now - start) / 1000 - 0.5 - i * 0.43;
-      group.visible = age >= 0 && age < 2.03;
-      if (age < 2.03) active = true;
+      const age = (now - start) / 1000 - 0.5 - i * 1.25;
+      group.visible = age >= 0 && age < 2.62;
+      if (age < 2.62) active = true;
       if (!group.visible) return;
-      const t = Math.min(1, age / 0.94);
-      hull.position.copy(curve.getPoint(t));
-      hull.lookAt(curve.getPoint(Math.min(1, t + 0.015)));
+      const t = Math.min(1, age / 1.53);
+      hull.position.copy(curve.getPointAt(t));
+      hull.lookAt(curve.getPointAt(Math.min(1, t + 0.015)));
       hull.visible = t < 1;
-      const fade = Math.max(0, age - 0.94) / 1.09;
+      const fade = Math.max(0, age - 1.53) / 1.09;
       const reflection =
         (1 - day) * Math.max(0, 1 - Math.abs(t - 0.51) * 4) * 0.85;
       if (reflection > reflected.intensity) {

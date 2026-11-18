@@ -45,7 +45,7 @@ export function capture(id: string, day: boolean) {
         picked?.kind === 'switch' && picked.slot === slot ? 0.55 : -0.45;
     });
     obj = radio.root.clone();
-    obj.rotation.set(-0.24, 0.32, -0.035);
+    obj.rotation.set(-0.21, 0.25, 0.34);
   } else if (id === 'gate') {
     obj = gate.root.clone();
     obj.rotation.y = 0.68;
@@ -113,6 +113,15 @@ export function capture(id: string, day: boolean) {
         y: +((((1 - point.y) * height) / 2 - t) / h).toFixed(4),
       });
     }
+  }
+  if (id === 'radio') {
+    const lcd = new T.Vector3(0, -0.95, 0.368)
+      .applyMatrix4(obj.matrixWorld)
+      .project(camera);
+    posterControls.push({
+      x: (((lcd.x + 1) * width) / 2 - l) / w,
+      y: (((1 - lcd.y) * height) / 2 - t) / h,
+    });
   }
   out.width = Math.round(ratio * w);
   out.height = Math.round(ratio * h);

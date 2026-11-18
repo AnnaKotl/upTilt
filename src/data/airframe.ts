@@ -143,4 +143,30 @@ export const parts = [
       en: 'This connector links the battery to the electronics.',
     },
   },
+  {
+    id: 'power-lead',
+    uk: 'Провід живлення',
+    en: 'Power lead',
+    x: 0.33,
+    y: 0.83,
+    width: 0.11,
+    scale: 2.8,
+    description: {
+      uk: 'Гнучкий провід біля роз’єму живлення.',
+      en: 'A flexible wire beside the power connector.',
+    },
+  },
+  {
+    id: 'battery-holder',
+    uk: 'Тримач акумулятора',
+    en: 'Battery retainer',
+    x: 0.41,
+    y: 0.34,
+    width: 0.14,
+    scale: 1.25,
+    description: {
+      uk: 'Дві поперечини під корпусом утримують акумулятор у цій моделі.',
+      en: 'Two crosspieces beneath the body hold the battery in this model.',
+    },
+  },
 ] as const;

@@ -78,13 +78,21 @@ function alignPosterControls() {
     h = img.naturalHeight * scale;
   scene.style.setProperty(
     '--poster-screen-x',
-    box.left - bounds.left + (box.width - w) / 2 + 0.52 * w + 'px',
+    box.left -
+      bounds.left +
+      (box.width - w) / 2 +
+      posterControls[controls.length].x * w +
+      'px',
   );
   scene.style.setProperty(
     '--poster-screen-y',
-    box.top - bounds.top + (box.height - h) / 2 + 0.76 * h + 'px',
+    box.top -
+      bounds.top +
+      (box.height - h) / 2 +
+      posterControls[controls.length].y * h +
+      'px',
   );
-  posterControls.forEach(({ x, y }, i) => {
+  posterControls.slice(0, controls.length).forEach(({ x, y }, i) => {
     scene.style.setProperty(
       '--poster-' + i + '-x',
       box.left - bounds.left + (box.width - w) / 2 + x * w + 'px',
@@ -111,6 +119,7 @@ function pose(i: number, term = '', x = 0, y = 0, arrow = '') {
   cue.value = arrow;
   const story = surface.value?.closest<HTMLElement>('[data-story]');
   if (!story) return;
+  story.dataset.radioTerm = term;
   story.dataset.radioLanded = String(term === 'DISARMED');
   story.dataset.radioIdle = String(
     complete.value && manualArmed && !manualLift,
