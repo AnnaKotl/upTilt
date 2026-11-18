@@ -1,0 +1,52 @@
+---
+import { topics } from '../../data/topics';
+import { pageUrl, type Locale } from '../../lib/i18n';
+import Icon from '../ui/Icon.vue';
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const label = locale === 'uk' ? 'Знайти тему' : 'Find a topic';
+---
+
+<div class="library-list">
+  <label class="search-line">
+    <Icon name="search" />
+    <input
+      type="search"
+      data-topic-search
+      aria-label={label}
+      placeholder={label}
+    />
+  </label>
+  <ul>
+    {topics.map((topic) => (
+      <li data-topic-row>
+        <a class="topic-row" href={pageUrl(locale, 'knowledge/' + topic.id)}>
+          <Icon name={topic.icon} />
+          <span>
+            <strong>{topic.title[locale]}</strong>
+            <small>{topic.summary[locale]}</small>
+          </span>
+          <Icon name="next" />
+        </a>
+      </li>
+    ))}
+  </ul>
+  <p hidden data-empty role="status">
+    {locale === 'uk'
+      ? 'Такої теми поки немає. Спробуй інше слово.'
+      : 'No topics found. Try a different word.'}
+  </p>
+</div>
+<script>
+  const input = document.querySelector<HTMLInputElement>('[data-topic-search]');
+  const rows = [...document.querySelectorAll<HTMLElement>('[data-topic-row]')];
+  const empty = document.querySelector<HTMLElement>('[data-empty]');
+  input?.addEventListener('input', () => {
+    const query = input.value.trim().toLocaleLowerCase();
+    for (const row of rows)
+      row.hidden = !row.textContent.toLocaleLowerCase().includes(query);
+    if (empty) empty.hidden = rows.some((row) => !row.hidden);
+  });
+</script>

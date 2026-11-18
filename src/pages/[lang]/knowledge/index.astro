@@ -1,0 +1,20 @@
+---
+import SiteLayout from '../../../layouts/SiteLayout.astro';
+import KnowledgeCore from '../../../components/knowledge/KnowledgeCore.astro';
+import Icon from '../../../components/ui/Icon.vue';
+import { locales, t, pageUrl, type Locale } from '../../../lib/i18n';
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang } }));
+}
+const locale = Astro.params.lang as Locale;
+---
+
+<SiteLayout locale={locale} title={t(locale).knowledge} path="knowledge">
+  <section class="reading-page">
+    <a class="plain-back" href={pageUrl(locale)} aria-label={t(locale).home}>
+      <Icon name="back" />
+    </a>
+    <h1>{t(locale).knowledge}</h1>
+    <KnowledgeCore locale={locale} />
+  </section>
+</SiteLayout>

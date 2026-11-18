@@ -1,0 +1,202 @@
+@import './fonts.css';
+@import '@fontsource-variable/manrope';
+@import '@fontsource-variable/jetbrains-mono';
+@import 'tailwindcss';
+@import './atlas.css';
+@import './navigation.css';
+@import './knowledge.css';
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@theme inline {
+  --color-surface: var(--surface);
+  --color-panel: var(--panel);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --font-display: 'Play', sans-serif;
+  --font-sans: 'Manrope Variable', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', monospace;
+}
+:root {
+  color-scheme: dark;
+  --surface: #0d0f13;
+  --panel: #171a1f;
+  --ink: #eaebed;
+  --muted: #a7abb2;
+  --line: #3b4048;
+  --accent: #edaa80;
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+  --surface: #f6f7f9;
+  --panel: #ffffff;
+  --ink: #202328;
+  --muted: #526669;
+  --line: #becfcb;
+  --accent: #94431a;
+}
+:root[data-palette='copper'] {
+  --accent: #f4ab76;
+}
+:root[data-theme='light'][data-palette='copper'] {
+  --accent: #9a461a;
+}
+:root[data-palette='ice'] {
+  --accent: #8bcfff;
+}
+:root[data-theme='light'][data-palette='ice'] {
+  --accent: #15639a;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  transition:
+    background-color 0.22s,
+    color 0.22s;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+}
+::selection {
+  background: var(--accent);
+  color: var(--surface);
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+:root[data-season='winter'] {
+  --accent: #98d8ff;
+}
+:root[data-season='spring'] {
+  --accent: #f1a9c2;
+}
+:root[data-season='summer'] {
+  --accent: #b9d783;
+}
+:root[data-theme='light'][data-season='winter'] {
+  --accent: #205c85;
+}
+:root[data-theme='light'][data-season='spring'] {
+  --accent: #8b3359;
+}
+:root[data-theme='light'][data-season='summer'] {
+  --accent: #476022;
+}
+[hidden] {
+  display: none !important;
+}
+body {
+  overflow-x: clip;
+}
+
+@media (max-width: 760px) {
+  .page-pad {
+    padding-inline: clamp(1.3rem, 6vw, 3.5rem);
+  }
+  .hero {
+    grid-template-columns: 1fr;
+    align-content: center;
+    gap: 1.5rem;
+    padding-block: 4rem;
+  }
+  .specimen {
+    grid-row: 1;
+    width: min(83%, 27rem);
+    justify-self: end;
+  }
+  .hero-copy {
+    padding-left: 2.8rem;
+  }
+  .hero h1 {
+    font-size: clamp(3rem, 12vw, 4.5rem);
+  }
+  .specimen figcaption {
+    font-size: 0.6rem;
+  }
+  .book-nav {
+    margin-top: 0.6rem;
+    min-height: 3rem;
+  }
+  .edge-tab {
+    width: 40px;
+  }
+  .pass {
+    height: auto;
+  }
+  .pass-stage {
+    position: relative;
+    top: 0;
+    height: 65svh;
+  }
+  .pass-art img {
+    width: 56%;
+    left: 10%;
+    top: 30%;
+    transform: none;
+  }
+  .pass-label {
+    right: 6%;
+    bottom: 8%;
+  }
+  .study {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    min-height: 0;
+    padding-block: 3rem;
+  }
+  .study-photo {
+    width: 85%;
+    justify-self: center;
+  }
+  .study-note {
+    min-height: 0;
+  }
+  .reading-page {
+    padding: 4rem 1.2rem 2rem 3.6rem;
+  }
+}
+@media (hover: none), (max-width: 760px) {
+  .branches {
+    gap: 0.35rem 0.9rem;
+    max-width: 19rem;
+  }
+  .branch {
+    display: grid;
+    justify-items: start;
+    justify-content: start;
+    padding: 0.25rem 0;
+    border: 0;
+  }
+  .branch::before {
+    display: none;
+  }
+  .branch .hint {
+    position: static;
+    transform: none;
+    opacity: 1;
+    white-space: normal;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pass {
+    height: auto;
+  }
+  .pass-stage {
+    position: relative;
+    top: 0;
+  }
+  .pass-art img {
+    transform: none;
+  }
+}

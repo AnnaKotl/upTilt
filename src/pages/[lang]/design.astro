@@ -1,0 +1,47 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import SceneGate from '../../components/scene/SceneGate.vue';
+import PalettePicker from '../../components/preferences/PalettePicker.vue';
+import { locales, t, type Locale } from '../../lib/i18n';
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang } }));
+}
+const locale = Astro.params.lang as Locale;
+const text = t(locale);
+---
+
+<SiteLayout locale={locale} title={text.design} path="design">
+  <section class="mx-auto min-h-[75svh] max-w-5xl px-5 py-16">
+    <h1 class="font-display text-4xl md:text-6xl">{text.design}</h1>
+    <p class="mt-6 mb-12 leading-8 text-muted">{text.designText}</p>
+    <PalettePicker client:load label={text.palette} />
+    <div class="mt-16 grid gap-8 border-t border-line pt-10 md:grid-cols-2">
+      <div>
+        <h2 class="mb-6 font-mono text-xs uppercase tracking-widest text-muted">
+          {text.type}
+        </h2>
+        <p class="font-display text-4xl">Play — upTilt</p>
+        <p class="mt-6 leading-8">
+          Manrope — Українська абетка. І Ї Є Ґ.
+          <br />
+          Explore every detail.
+        </p>
+        <p class="mt-6 font-mono text-sm text-accent">
+          JetBrains Mono / FPV_01
+        </p>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="border border-line bg-panel p-6">Surface / panel</div>
+        <div class="border border-accent p-6 text-accent">Signal / accent</div>
+        <div class="p-6 text-ink">Aa / primary</div>
+        <div class="p-6 text-muted">Aa / secondary</div>
+      </div>
+    </div>
+    <SceneGate
+      client:visible
+      label={text.fallback}
+      loadLabel={text.load}
+      simpleLabel={text.simple}
+    />
+  </section>
+</SiteLayout>

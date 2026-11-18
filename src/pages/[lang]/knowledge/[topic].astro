@@ -1,0 +1,46 @@
+---
+import SiteLayout from '../../../layouts/SiteLayout.astro';
+import Icon from '../../../components/ui/Icon.vue';
+import { topics } from '../../../data/topics';
+import { locales, t, pageUrl, type Locale } from '../../../lib/i18n';
+export function getStaticPaths() {
+  return locales.flatMap((lang) =>
+    topics.map((topic) => ({
+      params: { lang, topic: topic.id },
+      props: { topic },
+    })),
+  );
+}
+const locale = Astro.params.lang as Locale;
+const { topic } = Astro.props;
+---
+
+<SiteLayout
+  locale={locale}
+  title={topic.title[locale]}
+  path={'knowledge/' + topic.id}
+>
+  <article class="reading-page">
+    <nav
+      class="crumbs"
+      aria-label={locale === 'uk' ? 'Навігаційний шлях' : 'Breadcrumbs'}
+    >
+      <a href={pageUrl(locale, 'knowledge')} aria-label={t(locale).back}>
+        <Icon name="back" />
+      </a>
+      <a href={pageUrl(locale, 'knowledge')}>{t(locale).knowledge}</a>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">{topic.title[locale]}</span>
+    </nav>
+    <h1>{topic.title[locale]}</h1>
+    <section class="reading-note">
+      <Icon name={topic.icon} />
+      <h2>{topic.question[locale]}</h2>
+      <p>{topic.note[locale]}</p>
+      <a class="inline-link" href={topic.source.url}>
+        {topic.source.label}
+        <Icon name="next" />
+      </a>
+    </section>
+  </article>
+</SiteLayout>

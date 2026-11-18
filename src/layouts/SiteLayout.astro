@@ -1,0 +1,94 @@
+---
+import '../styles/global.css';
+import { seasonPreview } from '../lib/preferences';
+import Icon from '../components/ui/Icon.vue';
+import Header from '../components/layout/Header.astro';
+import { pageUrl, t, locales, type Locale } from '../lib/i18n';
+interface Props {
+  locale: Locale;
+  title: string;
+  path?: string;
+}
+const { locale, title, path = '' } = Astro.props;
+const text = t(locale);
+---
+
+<!doctype html>
+<html
+  data-study={path === 'design' || undefined}
+  lang={locale}
+  data-theme="dark"
+  data-season="autumn"
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="description" content={text.intro} />
+    <title>{title} · upTilt</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href={`${import.meta.env.BASE_URL}favicon.svg`}
+    />
+    {locales.map((lang) => (
+      <link
+        rel="alternate"
+        hreflang={lang}
+        href={new URL(pageUrl(lang, path), Astro.site)}
+      />
+    ))}
+    <script is:inline define:vars={{ seasonPreview }}>
+      try {
+        const month = Number(
+          new Intl.DateTimeFormat('en', {
+            timeZone: 'Europe/Kyiv',
+            month: 'numeric',
+          }).format(new Date()),
+        );
+        document.documentElement.dataset.season = [
+          'winter',
+          'spring',
+          'summer',
+          'autumn',
+        ][Math.floor((month % 12) / 3)];
+        const season =
+          new URLSearchParams(location.search).get('season') ?? seasonPreview;
+        if (['winter', 'spring', 'summer', 'autumn'].includes(season))
+          document.documentElement.dataset.season = season;
+        const theme = localStorage.getItem('uptilt:theme');
+        const palette = localStorage.getItem('uptilt:palette');
+        if (theme === 'light' || theme === 'dark')
+          document.documentElement.dataset.theme = theme;
+        if (
+          document.documentElement.hasAttribute('data-study') &&
+          ['signal', 'copper', 'ice'].includes(palette)
+        )
+          document.documentElement.dataset.palette = palette;
+      } catch {
+        /* Preferences are optional. */
+      }
+    </script>
+  </head>
+  <body class="min-h-screen bg-surface font-sans text-ink antialiased">
+    <a
+      href="#main"
+      class="sr-only fixed top-3 left-3 z-50 bg-panel p-4 focus:not-sr-only"
+    >
+      {text.skip}
+    </a>
+    <Header locale={locale} path={path} />
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    <footer class="author-edge">
+      <a
+        href="https://github.com/AnnaKotl"
+        class="edge-tab"
+        aria-label={text.author}
+      >
+        <Icon name="github" />
+        <span class="hint">{text.author}</span>
+      </a>
+    </footer>
+  </body>
+</html>

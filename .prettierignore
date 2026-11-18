@@ -1,0 +1,11 @@
+node_modules
+dist
+.astro
+package-lock.json
+.local
+AGENTS.md
+agent.md
+private-materials
+playwright-report
+test-results
+output

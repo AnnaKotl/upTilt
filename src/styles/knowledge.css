@@ -1,0 +1,68 @@
+.reading-page {
+  max-width: 64rem;
+  min-height: calc(100svh - 5.5rem);
+  margin: auto;
+  padding: clamp(4rem, 9vw, 8rem) clamp(4rem, 7vw, 7rem);
+}
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  font: 500 0.88rem/1.6 var(--font-mono);
+  color: var(--muted);
+}
+.reading-page h1 {
+  margin: 2.4rem 0;
+}
+.reading-note {
+  border-top: 1px solid var(--line);
+  padding-top: 2rem;
+}
+.reading-note > svg {
+  color: var(--accent);
+}
+.reading-note h2 {
+  font:
+    700 1.6rem 'Play',
+    sans-serif;
+  margin: 1.4rem 0 0.6rem;
+}
+.search-line {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line);
+  padding: 0.8rem 0;
+  color: var(--muted);
+}
+.search-line input {
+  min-width: 0;
+  width: 100%;
+  padding: 0.4rem;
+  background: transparent;
+  color: var(--ink);
+}
+.topic-row {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  padding: 1.35rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.topic-row:hover {
+  color: var(--accent);
+}
+.topic-row small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+}
+.topic-row strong {
+  font:
+    700 1.4rem 'Play',
+    sans-serif;
+}
+.topic-row > svg:last-child {
+  margin-left: auto;
+}

@@ -1,0 +1,13 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import { pageUrl } from '../lib/i18n';
+---
+
+<SiteLayout locale="uk" title="404">
+  <section class="min-h-[70svh] px-12 py-24">
+    <h1 class="font-display text-6xl">404</h1>
+    <a href={pageUrl('uk')} class="mt-8 inline-block text-accent">
+      До початку / Back to start
+    </a>
+  </section>
+</SiteLayout>

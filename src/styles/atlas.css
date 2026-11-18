@@ -1,0 +1,274 @@
+.page-pad {
+  padding-inline: clamp(4rem, 8vw, 10rem);
+}
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.55fr);
+  align-items: center;
+  min-height: 100svh;
+  position: relative;
+  isolation: isolate;
+}
+.hero-copy {
+  position: relative;
+  z-index: 2;
+}
+.hero h1 {
+  font:
+    400 clamp(3rem, 6.8vw, 7.5rem)/1.16 'Press Start 2P',
+    monospace;
+  letter-spacing: -0.09em;
+}
+.hero-copy > p {
+  color: var(--muted);
+  font-size: clamp(1rem, 1.6vw, 1.55rem);
+  margin-top: 0.8rem;
+}
+.specimen {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 1.42;
+  display: grid;
+  align-items: center;
+}
+.specimen::before {
+  content: '';
+  position: absolute;
+  inset: 5% -5% -5%;
+  z-index: -1;
+  background: radial-gradient(
+    ellipse at 50% 64%,
+    color-mix(in srgb, var(--muted) 14%, transparent),
+    transparent 66%
+  );
+}
+.specimen::after {
+  content: '';
+  position: absolute;
+  bottom: 9%;
+  left: 19%;
+  height: 9%;
+  width: 62%;
+  background: radial-gradient(ellipse, #0007, transparent 70%);
+  z-index: -1;
+}
+.specimen img {
+  width: 100%;
+  height: auto;
+  position: relative;
+}
+.specimen figcaption {
+  position: absolute;
+  right: 1%;
+  bottom: -7%;
+  font: 500 0.72rem/1.5 var(--font-mono);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.caption-rule {
+  width: 2.7rem;
+  height: 1px;
+  background: var(--muted);
+}
+.loading-mark {
+  display: none;
+  position: absolute;
+  width: 2.8rem;
+  inset: 40% auto auto 48%;
+  color: var(--accent);
+  animation: orbit 1.5s linear infinite;
+}
+[data-loading] .loading-mark {
+  display: block;
+}
+@keyframes orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.scroll-cue {
+  position: absolute;
+  bottom: 3vh;
+  left: 50%;
+  font: 1.5rem var(--font-mono);
+  color: var(--muted);
+  padding: 0.7rem;
+}
+.pass {
+  height: 135svh;
+  position: relative;
+  --fly-x: 0%;
+  --fly-y: 0%;
+  --tilt: 0deg;
+}
+.pass-stage {
+  height: 85svh;
+  position: sticky;
+  top: 5svh;
+  display: grid;
+  align-items: center;
+  isolation: isolate;
+  overflow: hidden;
+}
+.pass-art {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.pass-art img {
+  position: absolute;
+  width: clamp(16rem, 42vw, 48rem);
+  left: 28%;
+  top: 26%;
+  transform: translate(var(--fly-x), var(--fly-y)) rotate(var(--tilt));
+  z-index: 2;
+}
+.gate {
+  position: absolute;
+  left: 54%;
+  top: 15%;
+  width: clamp(7rem, 12vw, 14rem);
+  height: 58%;
+  transform: rotate(-14deg);
+  border: 4px solid var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 9px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.gate-front {
+  z-index: 3;
+  clip-path: inset(0 50% 0 0);
+}
+.through .gate-front {
+  z-index: 1;
+}
+[data-theme='light'] .gate {
+  border-color: var(--muted);
+  box-shadow: none;
+}
+.pass-label {
+  position: absolute;
+  right: 9%;
+  bottom: 12%;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font:
+    700 clamp(1.4rem, 2.8vw, 3rem) 'Play',
+    sans-serif;
+}
+.pass-label:hover {
+  color: var(--accent);
+}
+.study {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  align-items: center;
+  gap: 6vw;
+  min-height: 85svh;
+}
+.study-photo {
+  position: relative;
+  aspect-ratio: 1.35;
+}
+.study-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.locator {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  color: var(--accent);
+}
+.locator svg {
+  width: 24px;
+  height: 24px;
+  background: var(--surface);
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  stroke-width: 3px;
+}
+.part-dialog {
+  padding: 0;
+  margin: auto;
+  width: min(23rem, calc(100% - 2rem));
+  max-height: 80svh;
+  color: var(--ink);
+  background: var(--panel);
+  border-radius: 1.4rem;
+}
+.part-dialog::backdrop {
+  background: #080a0d88;
+}
+.part-dialog > div {
+  padding: 1.6rem;
+}
+.part-dialog h3 {
+  font:
+    700 1.7rem 'Play',
+    sans-serif;
+}
+.part-dialog p {
+  margin: 0.7rem 0;
+  line-height: 1.7;
+}
+.part-dialog button {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--accent);
+}
+
+.study h2,
+.reading-page h1 {
+  font:
+    700 clamp(2.4rem, 5vw, 5rem)/1.05 'Play',
+    sans-serif;
+  letter-spacing: -0.04em;
+}
+.part-list {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 1.7rem 0 0.7rem;
+}
+.part-list button {
+  padding: 0.55rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+.part-list button[aria-pressed='true'] {
+  color: var(--accent);
+  border-color: currentColor;
+}
+.study-note,
+.reading-note p {
+  font-size: 1.08rem;
+  line-height: 1.75;
+  color: var(--muted);
+  max-width: 52ch;
+}
+.study-note {
+  min-height: 6em;
+}
+.inline-link,
+.plain-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+}
+.inline-link {
+  margin-top: 1.2rem;
+}
+.inline-link svg,
+.topic-row > svg:last-child {
+  width: 1rem;
+}

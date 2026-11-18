@@ -1,0 +1,16 @@
+---
+import { pageUrl } from '../lib/i18n';
+---
+
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta http-equiv="refresh" content={`0;url=${pageUrl('uk')}`} />
+    <title>upTilt</title>
+  </head>
+  <body>
+    <a href={pageUrl('uk')}>Українська</a> / <a href={pageUrl('en')}>English</a>
+  </body>
+</html>
