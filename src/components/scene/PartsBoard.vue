@@ -1,16 +1,17 @@
 <script setup lang="ts">
+import { usePageLanguage } from '../../lib/page-language';
 import { currentAircraft, type Aircraft } from '../../lib/aircraft';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { parts, boardX, boardY } from '../../data/airframe';
+import { parts } from '../../data/airframe';
 import { useStudySelection } from '../../lib/useStudySelection';
 import { type Locale } from '../../lib/i18n';
 import Icon from '../ui/Icon.vue';
-const props = defineProps<{ locale: Locale }>();
+const input = defineProps<{ locale: Locale }>();
+const locale = usePageLanguage(input.locale);
 const { selected, choose, ready } = useStudySelection(parts, 'part');
 const hover = ref<number | null>(null),
   dialog = ref<HTMLDialogElement>(),
   opener = ref<HTMLElement>();
-const shown = computed(() => parts[hover.value ?? selected.value]);
 const base = import.meta.env.BASE_URL + 'media/study/';
 const model = ref<Aircraft>('whoop');
 function syncModel() {
@@ -32,33 +33,38 @@ function art(id: string) {
 }
 function name(part: (typeof parts)[number]) {
   if (model.value === 'seven' && part.id === 'canopy')
-    return props.locale === 'uk' ? 'Верхня пластина' : 'Top plate';
-  return part[props.locale];
+    return locale.value === 'uk' ? 'Верхня пластина' : 'Top plate';
+  return part[locale.value];
 }
 function description(part: (typeof parts)[number]) {
   if (model.value === 'seven') {
     if (part.id === 'frame')
-      return props.locale === 'uk'
+      return locale.value === 'uk'
         ? 'Від центральної пластини до двигунів розходяться чотири карбонові промені.'
         : 'Four carbon arms run from the centre plate to the motors.';
     if (part.id === 'canopy')
-      return props.locale === 'uk'
+      return locale.value === 'uk'
         ? 'Верхня пластина спирається на чотири стійки. Між пластинами видно камеру й плату.'
         : 'Four posts support the top plate. The camera and electronics sit between the plates.';
     if (part.id === 'camera')
-      return props.locale === 'uk'
+      return locale.value === 'uk'
         ? 'Передня камера передає зображення з борту.'
         : 'The camera at the front provides the onboard view.';
     if (part.id === 'antenna')
-      return props.locale === 'uk'
+      return locale.value === 'uk'
         ? 'Антена виступає за задній край рами.'
         : 'The antenna extends beyond the rear of the frame.';
   }
-  return part.description[props.locale];
+  return part.description[locale.value];
 }
 const themed = ['frame', 'canopy', 'camera', 'antenna'];
 function highlight(index: number | null) {
   hover.value = index;
+  const board = document.querySelector<HTMLElement>('.parts-board');
+  if (board && index !== null) {
+    board.style.setProperty('--focus-x', parts[index].x * 100 + '%');
+    board.style.setProperty('--focus-y', parts[index].y * 100 + '%');
+  }
   document.querySelector('[data-story]')?.dispatchEvent(
     new CustomEvent('part-focus', {
       detail: index === null ? '' : parts[index].id,
@@ -84,8 +90,9 @@ function open(event: Event, index: number) {
           v-for="(part, i) in parts"
           :key="part.id"
           :style="{
-            '--x': boardX[part.col] * 100 + '%',
-            '--y': boardY[part.row] * 100 + '%',
+            '--part-width': part.width * 100 + '%',
+            '--x': part.x * 100 + '%',
+            '--y': part.y * 100 + '%',
           }"
           class="board-part"
           :class="{ dim: hover !== null && hover !== i }"
@@ -111,18 +118,6 @@ function open(event: Event, index: number) {
               loading="lazy"
           /></span>
           <span class="part-label">{{ name(part) }}</span>
-        </button>
-      </div>
-      <div class="board-foot">
-        <span class="study-note">{{ description(shown) }}</span><button
-          :disabled="!ready"
-          :aria-label="
-            (locale === 'uk' ? 'Докладніше: ' : 'Details: ') +
-            name(parts[selected])
-          "
-          @click="open($event, selected)"
-        >
-          <Icon name="details" />
         </button>
       </div>
     </div>
@@ -153,7 +148,7 @@ function open(event: Event, index: number) {
         <form method="dialog">
           <button autofocus>
             {{ locale === 'uk' ? 'До огляду' : 'Back to the board' }}
-            <Icon name="back" />
+            <Icon name="forward" />
           </button>
         </form>
       </div>

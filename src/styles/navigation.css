@@ -159,34 +159,62 @@
 }
 
 #aircraft-options {
-  position: fixed;
-  inset: calc(clamp(1rem, 6vh, 4rem) + 6rem) auto auto 3.75rem;
-  margin: 0;
-  background: var(--panel);
-  color: var(--ink);
-  padding: 0.4rem;
-  border: 1px solid var(--line);
-  border-radius: 0.65rem;
-  box-shadow: 0 0.4rem 2rem #0002;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition:
+    grid-template-rows 0.32s ease,
+    opacity 0.24s;
+  opacity: 0;
 }
-#aircraft-options button {
-  display: block;
-  min-height: 44px;
-  padding: 0 0.85rem;
-  text-align: left;
-  font: 0.82rem var(--font-mono);
+.aircraft-picker:has([aria-expanded='true']) #aircraft-options {
+  grid-template-rows: 1fr;
+  opacity: 1;
 }
-#aircraft-options button::before {
+.model-rows {
+  min-height: 0;
+  visibility: hidden;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.24rem;
+}
+#aircraft-options:not([inert]) .model-rows {
+  visibility: visible;
+  pointer-events: auto;
+}
+.model-row {
+  width: 40.5px;
+  flex: none;
+  margin-top: 0.25rem;
+}
+.model-row:enabled:is(:hover, :focus-visible) {
+  width: 49px;
+}
+.model-row:disabled {
+  cursor: default;
+  width: 40.5px;
+  border-color: var(--line);
+  color: var(--muted);
+}
+.model-row:disabled .hint {
+  opacity: 0;
+}
+.model-row:disabled::after {
   content: '';
-  display: inline-block;
-  width: 0.43em;
-  height: 0.43em;
-  border: 1px solid var(--muted);
-  border-radius: 50%;
-  margin-right: 0.8em;
-  vertical-align: middle;
-}
-#aircraft-options button[aria-pressed='true']::before {
+  position: absolute;
+  right: 4px;
+  bottom: 5px;
+  width: 4px;
+  height: 4px;
   background: var(--accent);
-  border-color: var(--accent);
+  border-radius: 50%;
+}
+.author-tab {
+  position: fixed;
+  left: 0;
+  bottom: 1.5rem;
+  z-index: 20;
+}
+[data-tour][aria-pressed='true'] {
+  color: var(--accent);
 }

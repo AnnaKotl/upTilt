@@ -1,10 +1,63 @@
 <script setup lang="ts">
+import { usePageLanguage } from '../../lib/page-language';
 import { radioControls as controls } from '../../data/radio-controls';
 import posterControls from '../../data/radio-poster.json';
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import type { Locale } from '../../lib/i18n';
 import { usePointerNote } from '../../lib/usePointerNote';
-defineProps<{ locale: Locale }>();
+import StudyNote from './StudyNote.vue';
+const input = defineProps<{ locale: Locale }>();
+const locale = usePageLanguage(input.locale);
+const modal = ref<InstanceType<typeof StudyNote>>(),
+  chosen = ref(0),
+  screen = ref(''),
+  cue = ref('');
+const notes = [
+  [
+    'Перемикач фіксується в обраному положенні. Тут він перемикає стан моделі.',
+    'A switch stays in position. Here it changes the state of the model.',
+  ],
+  [
+    'Throttle — тяга. Yaw — поворот навколо вертикальної осі.',
+    'Throttle changes thrust. Yaw turns the nose left or right.',
+  ],
+  [
+    'Pitch — нахил носа вперед і назад. Roll — крен ліворуч або праворуч.',
+    'Pitch tilts the nose up or down. Roll banks the quad left or right.',
+  ],
+  [
+    'ANGLE вирівнює коптер, коли стік повертається в центр. HORIZON поєднує самовирівнювання й вільніший нахил. В ACRO стік задає швидкість обертання.',
+    'Angle mode self-levels when the stick returns to centre. Horizon blends self-levelling with rate control. In Acro the stick commands a rotation rate.',
+  ],
+];
+const switchNote = [
+  'Призначення цього перемикача залежить від профілю моделі в передавачі.',
+  'The model profile determines what this switch does.',
+];
+const phases = [
+  { id: 3, term: 'Pitch', x: 0, y: 1, arrow: '↑' },
+  { id: 3, term: 'Roll', x: 1, y: 0, arrow: '→' },
+  { id: 3, term: 'Pitch', x: 0, y: -1, arrow: '↓' },
+  { id: 3, term: 'Roll', x: -1, y: 0, arrow: '←' },
+  { id: 2, term: 'Throttle', x: 0, y: 1, arrow: '↑' },
+  { id: 2, term: 'Yaw', x: 1, y: 0, arrow: '↻' },
+  { id: 2, term: 'Throttle', x: 0, y: -1, arrow: '↓' },
+  { id: 2, term: 'Yaw', x: -1, y: 0, arrow: '↺' },
+  ...['ANGLE', 'HORIZON', 'ACRO'].map((term, i) => ({
+    id: 4,
+    term,
+    x: 0,
+    y: i - 1,
+    arrow: '',
+  })),
+  { id: 2, term: 'Throttle', x: 0, y: -1, arrow: '↓' },
+  { id: 1, term: 'DISARMED', x: 0, y: 0, arrow: '' },
+];
+function open(i: number, event: MouseEvent) {
+  preview(i, event);
+  chosen.value = i;
+  modal.value?.show();
+}
 const { surface, place, noteAt } = usePointerNote();
 const active = ref(0);
 const hover = ref<number | null>(null);
@@ -23,6 +76,14 @@ function alignPosterControls() {
   );
   const w = img.naturalWidth * scale,
     h = img.naturalHeight * scale;
+  scene.style.setProperty(
+    '--poster-screen-x',
+    box.left - bounds.left + (box.width - w) / 2 + 0.52 * w + 'px',
+  );
+  scene.style.setProperty(
+    '--poster-screen-y',
+    box.top - bounds.top + (box.height - h) / 2 + 0.76 * h + 'px',
+  );
   posterControls.forEach(({ x, y }, i) => {
     scene.style.setProperty(
       '--poster-' + i + '-x',
@@ -34,43 +95,90 @@ function alignPosterControls() {
     );
   });
 }
-let observer: IntersectionObserver | undefined;
+
 let timer = 0;
 let visible = false;
-let next = 1;
+let next = 0,
+  manualArmed = false,
+  manualLift = false,
+  lastControl = -1,
+  gesture = 0;
+const modeNames = ['ANGLE', 'HORIZON', 'ACRO'];
 const complete = ref(false);
-function pose(i: number) {
+function pose(i: number, term = '', x = 0, y = 0, arrow = '') {
   active.value = i;
+  screen.value = term;
+  cue.value = arrow;
   const story = surface.value?.closest<HTMLElement>('[data-story]');
-  if (story) {
-    story.dataset.radioPose = String(i);
-    story.dispatchEvent(new CustomEvent('radio-pose', { detail: i }));
-  }
+  if (!story) return;
+  story.dataset.radioLanded = String(term === 'DISARMED');
+  story.dataset.radioIdle = String(
+    complete.value && manualArmed && !manualLift,
+  );
+  story.dataset.radioX = String(x);
+  story.dataset.radioY = String(y);
+  story.dataset.radioPose = String(i);
+  story.dispatchEvent(new CustomEvent('radio-pose', { detail: i }));
 }
 function run() {
   clearTimeout(timer);
   if (!visible || document.hidden || complete.value) return;
   timer = window.setTimeout(
     () => {
-      if (next > controls.length) {
+      const phase = phases[next++];
+      pose(phase.id, phase.term, phase.x, phase.y, phase.arrow);
+      if (next === phases.length) {
         complete.value = true;
-        pose(0);
-      } else {
-        pose(next++);
-        run();
-      }
+        pose(0, 'DISARMED');
+      } else run();
     },
-    next === 1 ? 450 : 775,
+    next === 0 ? 400 : 790,
   );
+}
+function reset() {
+  next = 0;
+  manualArmed = false;
+  manualLift = false;
+  lastControl = -1;
+  gesture = 0;
+  complete.value = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  pose(0);
+  run();
+}
+function settle() {
+  const box = surface.value?.getBoundingClientRect();
+  const inside = Boolean(
+    box && box.top <= innerHeight * 0.08 && box.bottom >= innerHeight * 0.65,
+  );
+  if (visible !== inside) {
+    visible = inside;
+    run();
+  }
 }
 function preview(i: number, event: MouseEvent | FocusEvent) {
   hover.value = i;
   place(event);
   if (!complete.value) return;
   clearTimeout(timer);
-  pose(i + 1);
-  if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
-    timer = window.setTimeout(() => pose(0), 1050);
+  if (lastControl !== i) {
+    gesture++;
+    lastControl = i;
+  }
+  if (i === 0) {
+    manualArmed = true;
+    manualLift = false;
+    pose(1, 'ARMED');
+    return;
+  }
+  const strokes = phases.filter((p) => p.id === i + 1);
+  const sample = strokes[gesture % Math.max(1, strokes.length)];
+  if (i === 1) manualLift = true;
+  const term = i === 3 ? modeNames[gesture % 3] : (sample?.term ?? 'SW');
+  pose(i + 1, term, sample?.x ?? 0, sample?.y ?? 0, sample?.arrow ?? '');
+  timer = window.setTimeout(
+    () => pose(0, manualArmed || manualLift ? 'ARMED' : 'DISARMED'),
+    1500,
+  );
 }
 onMounted(() => {
   sizeObserver = new ResizeObserver(alignPosterControls);
@@ -78,19 +186,17 @@ onMounted(() => {
   sizeObserver.observe(poster.value!);
   alignPosterControls();
   complete.value = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  observer = new IntersectionObserver(
-    ([entry]) => {
-      visible = entry.isIntersecting;
-      run();
-    },
-    { threshold: 0.55 },
-  );
-  observer.observe(surface.value!);
+  window.addEventListener('scroll', settle, { passive: true });
+  window.addEventListener('tour-restart', reset);
+  window.addEventListener('scene-reset', reset);
+  settle();
   document.addEventListener('visibilitychange', run);
 });
 onBeforeUnmount(() => {
   clearTimeout(timer);
-  observer?.disconnect();
+  window.removeEventListener('scroll', settle);
+  window.removeEventListener('tour-restart', reset);
+  window.removeEventListener('scene-reset', reset);
   sizeObserver?.disconnect();
   document.removeEventListener('visibilitychange', run);
 });
@@ -116,6 +222,17 @@ onBeforeUnmount(() => {
         /> </span
       ><slot />
     </div>
+    <span class="radio-screen" aria-hidden="true">{{ screen }}</span><span
+      class="radio-cue"
+      aria-hidden="true"
+      >{{ cue || (screen === 'DISARMED' ? screen : '') }}</span
+    >
+    <StudyNote
+      ref="modal"
+      :title="controls[chosen][locale]"
+      :body="(chosen < 4 ? notes[chosen] : switchNote)[locale === 'uk' ? 0 : 1]"
+      :back="locale === 'uk' ? 'До пульта' : 'Back to the radio'"
+    />
     <div class="radio-controls">
       <button
         v-for="(control, i) in controls"
@@ -133,7 +250,7 @@ onBeforeUnmount(() => {
         @pointerleave="hover = null"
         @focus="preview(i, $event)"
         @blur="hover = null"
-        @click="preview(i, $event)"
+        @click="open(i, $event)"
       />
     </div>
     <span

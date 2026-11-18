@@ -12,6 +12,10 @@ export const paths = {
   circuit: 'M3 4h7v6l4 4h7M3 19h5l5-5M15 4h6v5',
   classify: 'M9 3h6v5H9z M12 8v4M5 16v-4h14v4M2 16h6v5H2zM16 16h6v5h-6z',
   up: 'M12 20V4m-7 7 7-7 7 7',
+  forward: 'M4 12h16m-7-7 7 7-7 7',
+  replay: 'M4 9a8 8 0 1 1-.2 6M4 3v6h6',
+  openFrame:
+    'm3 3 18 18m0-18L3 21M1 5l4-4m14 22 4-4M1 19l4 4M19 1l4 4M10 8h4l1 7-3 2-3-2z',
   back: 'M20 12H4m7 7-7-7 7-7',
   next: 'm9 5 7 7-7 7',
   search: 'M16.5 16.5 21 21 M18 10.5a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0',

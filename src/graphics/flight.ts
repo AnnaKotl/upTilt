@@ -1,7 +1,8 @@
 import { radioControls } from '../data/radio-controls';
 import { currentAircraft } from '../lib/aircraft';
 import * as T from 'three';
-import { parts, boardX, boardY } from '../data/airframe';
+import { raceReplays } from './race-replays';
+import { parts } from '../data/airframe';
 import {
   makeWhoop,
   makeGate,
@@ -19,7 +20,29 @@ function sample(keys: number[][], p: number) {
   while (i < keys.length - 1 && keys[i][0] < p) i++;
   const a = keys[i - 1],
     b = keys[i];
-  return a.slice(1).map((v, j) => mix(v, b[j + 1], ease(a[0], b[0], p)));
+  // Monotone cubic interpolation keeps velocity continuous through the gate.
+  const span = b[0] - a[0],
+    t = clamp((p - a[0]) / span, 0, 1),
+    t2 = t * t,
+    t3 = t2 * t;
+  function tangent(index: number, column: number) {
+    if (index === 0 || index === keys.length - 1) return 0;
+    const l = keys[index - 1],
+      m = keys[index],
+      r = keys[index + 1];
+    const left = (m[column] - l[column]) / (m[0] - l[0]),
+      right = (r[column] - m[column]) / (r[0] - m[0]);
+    return left * right > 0 ? (2 * left * right) / (left + right) : 0;
+  }
+  return a
+    .slice(1)
+    .map(
+      (v, j) =>
+        (2 * t3 - 3 * t2 + 1) * v +
+        (t3 - 2 * t2 + t) * span * tangent(i - 1, j + 1) +
+        (3 * t2 - 2 * t3) * b[j + 1] +
+        (t3 - t2) * span * tangent(i, j + 1),
+    );
 }
 function fadeTexture() {
   const canvas = document.createElement('canvas');
@@ -59,16 +82,16 @@ function rotorExposure() {
 // Positions are composed for the page in fractions of the viewport. They are
 // animation keyframes, not flight dynamics or a transmitter configuration.
 const path = [
-  [0, 0.704, 0.434, 1, 0.49, -0.4, -0.085, 3.5],
-  [0.2, 0.738, 0.38, 0.88, 0.43, -0.52, -0.16, 3.3],
-  [0.48, 0.726, 0.32, 0.47, 0.34, -0.92, 0.22, 2.7],
-  [0.78, 0.573, 0.435, 0.22, 0.25, -1.18, 0.27, 0],
+  [0, 0.704, 0.439, 0.66, 0.32, -0.38, 0, 3.5],
+  [0.2, 0.738, 0.38, 0.84, 0.43, -0.52, -0.16, 3.3],
+  [0.48, 0.78, 0.32, 0.47, 0.34, -0.92, 0.22, 2.7],
+  [0.78, 0.69, 0.435, 0.22, 0.25, -1.18, 0.27, 0],
   [1.08, 0.31, 0.54, 0.61, 0.43, -0.65, 0.16, -2.8],
   [1.34, 0.266, 0.51, 0.63, 0.56, -0.3, -0.115, -3.2],
   [1.65, 0.49, 0.49, 0.72, 0.67, -0.23, -0.025, 0],
   [2, 0.5, 0.5, 0.58, 0.54, -0.32, 0, 0],
   [2.31, 0.5, 0.5, 0.58, 0.54, -0.32, 0, 0],
-  [2.7, 0.54, 0.485, 0.7, 0.55, -0.31, -0.06, 0],
+  [2.84, 0.37, 0.485, 0.7, 0.55, -0.31, -0.06, 0],
   [3, 0.726, 0.465, 0.7, 0.43, -0.16, 0, 0],
   [4, 0.726, 0.465, 0.7, 0.43, -0.16, 0, 0],
 ];
@@ -89,6 +112,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     gate = makeGate(),
     radio = makeRadio();
   scene.add(quad.root, gate.root, radio.root);
+  const ghosts = raceReplays(gate.root);
   const texture = fadeTexture(),
     smear = rotorExposure();
   const exposure = new T.MeshBasicMaterial({
@@ -116,17 +140,14 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   }
   const shadow = sprite(scene, '#000000'),
     gateShade = sprite(scene, '#000000');
-  const lamps = [-1, 1].map((s) => {
-    const lamp = sprite(quad.parts.frame, '#a8e4ff');
-    lamp.position.set(
-      s * (openFrame ? 0.32 : 1.02),
-      0.15,
-      openFrame ? 0.52 : 2.025,
-    );
-    lamp.scale.set(0.74, 0.27, 1);
-    lamp.material.blending = T.AdditiveBlending;
-    return lamp;
-  });
+  const lamps = [sprite(quad.parts['light-strip'], '#bff7dd')];
+  lamps[0].position.set(0, 0.072, 0.685);
+  lamps[0].scale.set(0.55, 0.17, 1);
+  lamps[0].material.blending = T.AdditiveBlending;
+  const bounce = new T.PointLight(0xffffff, 0.4, 1.1);
+  bounce.position.set(0, 0.073, 0.74);
+  quad.parts['light-strip'].add(bounce);
+  const spill = sprite(scene, '#bff7dd');
   const controlNodes = radioControls.map(
     (c) => (c.kind === 'switch' ? radio.switches : radio.sticks)[c.slot],
   );
@@ -147,7 +168,27 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     new T.TorusGeometry(1.72, 0.155, 8, 80),
     haloMaterial,
   );
-  gate.root.add(halo);
+  // A narrow luminous insert sits on the inner, front-facing lip of the hoop.
+  const insertMaterial = new T.MeshBasicMaterial({
+    transparent: true,
+    depthWrite: false,
+  });
+  const insert = new T.Mesh(
+    new T.TorusGeometry(1.664, 0.019, 6, 80),
+    insertMaterial,
+  );
+  insert.position.z = 0.085;
+  gate.root.add(halo, insert);
+  const solids = new Set<T.MeshStandardMaterial>();
+  quad.root.traverse((n) => {
+    if (
+      n instanceof T.Mesh &&
+      n.material instanceof T.MeshStandardMaterial &&
+      n.material !== quad.blade
+    )
+      solids.add(n.material);
+  });
+  let oldDiagram = 0;
   const units = parts.map((part) => {
     const node = quad.parts[part.id];
     const first = node.children[0];
@@ -185,9 +226,11 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     previous = 0,
     disposed = false,
     visible = true;
-  const introStart = Number(story.dataset.takeoff ?? performance.now());
+  let introStart = Number(story.dataset.takeoff ?? performance.now());
   let slowFrames = 0;
   let lastCaption = '';
+  let radioPitch = 0,
+    radioYaw = 0;
   let elapsed = 0,
     lastMove = 0,
     hoverX = 0,
@@ -208,6 +251,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const inv = new T.Quaternion(),
     target = new T.Vector3();
 
+  const leaves = story.querySelector<HTMLElement>('.scatter');
   function invalidate() {
     if (!disposed && visible && !document.hidden && !raf)
       raf = requestAnimationFrame(draw);
@@ -231,6 +275,10 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       0,
       4,
     );
+    if (goal > 0.008) {
+      tx = 0;
+      ty = 0;
+    }
     invalidate();
   }
   function positionPart(
@@ -239,8 +287,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     dt: number,
   ) {
     const { part, node, centre } = unit;
-    const destX = (boardX[part.col] - 0.5) * w,
-      destY = (0.5 - boardY[part.row]) * 10;
+    const destX = (part.x - 0.5) * w,
+      destY = (0.5 - part.y) * 10;
     const emphasis = focus === part.id ? 1 : 0;
     unit.emphasis = mix(unit.emphasis, emphasis, dt);
     const size = mix(
@@ -279,7 +327,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const delta = Math.min(frameMs / 1000, 0.055);
     previous = now;
     const follow = 1 - Math.exp(-delta * 13);
-    elapsed = Math.max(0, (now - introStart) / 1000);
+    elapsed = story.dataset.bookPaused
+      ? 0
+      : Math.max(0, (now - introStart) / 1000);
     scrollMotion = mix(
       scrollMotion,
       Math.min(1, Math.abs(goal - p) * 9),
@@ -291,23 +341,60 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     if (Math.abs(day - dayGoal) < 0.002) day = dayGoal;
     hoverX = mix(hoverX, tx, follow * 0.67);
     hoverY = mix(hoverY, ty, follow * 0.67);
-    const take = ease(1.52, 3.08, elapsed),
+    const take = ease(1.82, 3.56, elapsed),
       hero = 1 - ease(0.03, 0.46, p);
 
     const [x, y, k, rx, ry, rz, z] = sample(path, p);
-    const spread = ease(1.64, 1.99, p) * (1 - ease(2.32, 2.77, p));
+    const spread = ease(1.77, 1.99, p) * (1 - ease(2.5, 2.84, p));
+    const boardReady = String(spread > 0.995);
+    if (story.dataset.boardReady !== boardReady)
+      story.dataset.boardReady = boardReady;
+    story.style.setProperty(
+      '--mat-opacity',
+      String(ease(1.69, 1.95, p) * (1 - ease(2.54, 2.85, p))),
+    );
+    story.style.setProperty(
+      '--intro-opacity',
+      String(p > 0.02 ? 1 : ease(0.64, 1.14, elapsed)),
+    );
     const drawing =
       ease(1.38, 1.65, p) * (1 - ease(1.88, 2.08, p)) + 0.16 * spread;
+    const diagram = ease(1.49, 1.73, p) * (1 - ease(1.79, 1.96, p));
+    if (diagram !== oldDiagram) {
+      for (const material of solids) {
+        const translucent = diagram > 0.003;
+        if (material.transparent !== translucent) {
+          material.transparent = translucent;
+          material.depthWrite = !translucent;
+          material.needsUpdate = true;
+        }
+        material.opacity = 1 - 0.9 * diagram;
+      }
+      oldDiagram = diagram;
+    }
     const inRadio = ease(2.77, 2.99, p);
-    const targetLift = pose === 2 || pose === 3 ? 1 : 0;
-    const targetBank = pose === 3 ? 1 : 0;
+    const ax = Number(story.dataset.radioX ?? 0),
+      ay = Number(story.dataset.radioY ?? 0);
+    const targetLift =
+      story.dataset.radioLanded === 'true'
+        ? 0
+        : story.dataset.radioIdle === 'true'
+          ? 0.05
+          : pose === 2
+            ? 0.74 + ay * 0.25
+            : pose === 1
+              ? 0.09
+              : 1;
+    const targetBank = pose === 3 ? ax : 0;
+    radioPitch = mix(radioPitch, pose === 3 ? ay : 0, follow * 0.6);
+    radioYaw = mix(radioYaw, pose === 2 ? ax : 0, follow * 0.6);
     lift = mix(lift, targetLift, follow * 0.65);
     bank = mix(bank, targetBank, follow * 0.65);
+    if (leaves && !leaves.hidden)
+      leaves.style.opacity = String(1 - ease(0.15, 0.35, p));
+    const exitLanding = 1 - ease(3.16, 3.72, p);
     radioSettling =
       Math.abs(targetLift - lift) + Math.abs(targetBank - bank) > 0.002;
-    exposure.opacity =
-      (1 - spread) * (inRadio > 0.5 ? lift : Math.max(take, 1 - hero));
-    quad.blade.opacity = 0.68 - 0.32 * exposure.opacity;
     const bob =
       hero *
       take *
@@ -319,13 +406,13 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       (0.5 - y) * 10 -
         1.2 * (1 - take) * hero +
         bob +
-        (0.92 * lift - 0.42) * inRadio,
+        (0.92 * lift * exitLanding - 0.42) * inRadio,
       z,
     );
     quad.root.rotation.order = 'ZXY';
     quad.root.rotation.set(
-      rx + hoverY * 0.1 * hero,
-      ry + hoverX * 0.13 * hero,
+      rx + hoverY * 0.1 * hero + radioPitch * 0.27 * inRadio,
+      ry + hoverX * 0.13 * hero + radioYaw * 0.35 * inRadio,
       rz - hoverX * 0.095 * hero + bank * 0.33 * inRadio,
       'ZXY',
     );
@@ -338,7 +425,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       positionPart(unit, spread, follow);
       const pinned = focus === unit.part.id;
       unit.ink.color.set(
-        pinned ? '#72cde5' : day > 0.5 ? '#357483' : '#b3dce4',
+        pinned ? haloMaterial.color : day > 0.5 ? '#357483' : '#b3dce4',
       );
       unit.ink.opacity = clamp(
         drawing * (focus && !pinned ? 0.3 : 1) + (pinned ? 0.46 : 0),
@@ -351,20 +438,21 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       repeat.scale.setScalar(1 - ease(0, 0.65, spread));
       repeat.visible = spread < 0.64;
     }
-    const speed =
-      (1 - spread) *
-      (inRadio > 0.5 ? lift : Math.max(1 - hero, ease(1.25, 1.95, elapsed)));
-    const spinning = speed > 0.005 && (p < 1.99 || p > 2.76);
-    if (spinning) {
-      exposure.opacity = speed * (0.68 + 0.32 * scrollMotion);
-      quad.blade.opacity = 0.68 - speed * (0.26 + 0.32 * scrollMotion);
-    }
+    const departure =
+      Math.max(1 - hero, ease(1.38, 2.05, elapsed)) * (1 - ease(1.46, 1.69, p));
+    const arrival =
+      ease(2.84, 2.95, p) * (1 - inRadio + inRadio * lift * exitLanding);
+    const speed = Math.max(departure, arrival);
+    const spinning = speed > 0.005;
+    exposure.opacity = speed * (0.88 + 0.12 * scrollMotion);
+    quad.blade.opacity =
+      0.68 * (1 - speed) + (0.055 - 0.045 * scrollMotion) * speed;
     quad.rotors.forEach((r, i) => {
       if (spinning)
         r.rotation.y +=
           delta *
           speed *
-          (24 + 38 * scrollMotion) *
+          (78 + 58 * scrollMotion) *
           (i === 0 || i === 3 ? 1 : -1) *
           (1 - spread);
     });
@@ -372,7 +460,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       lamp.material.opacity = 0.84 * (1 - day) * (1 - spread);
     gate.root.visible = p > 0.16 && p < 1.69;
     gate.root.position.set(
-      0.073 * w,
+      0.19 * w,
       (0.5 - 0.435) * 10 -
         (1 - ease(0.15, 0.6, p)) * 6 +
         ease(1.14, 1.69, p) * 6,
@@ -380,9 +468,12 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     );
     gate.root.rotation.set(0.045, 0.76, 0.018);
     gate.root.scale.setScalar(Math.min(w / 16, 1.15));
-    halo.visible = day < 0.98;
-    haloMaterial.opacity = (1 - day) * 0.095;
-    gate.accent.emissiveIntensity = (1 - day) * 1.05;
+    const replaying = ghosts.update(p, now, day);
+    insert.visible = halo.visible = day < 0.98;
+    insertMaterial.opacity = (1 - day) * (0.8 + 0.1 * Math.sin(now * 0.0019));
+    haloMaterial.opacity = (1 - day) * (0.16 + 0.04 * Math.sin(now * 0.0019));
+    gate.accent.emissiveIntensity =
+      (1 - day) * (1.6 + 0.28 * Math.sin(now * 0.0019));
     const caption = (ease(0.9, 1.04, p) * (1 - ease(1.35, 1.58, p))).toFixed(3);
     if (lastCaption !== caption) {
       story.style.setProperty('--caption-opacity', caption);
@@ -396,7 +487,11 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     gateShade.material.opacity = 0.41;
     shadow.position.set(
       quad.root.position.x,
-      mix((0.5 - y) * 10 - quad.root.scale.x * 1.42, -2.72, hero),
+      mix(
+        (0.5 - y) * 10 - quad.root.scale.x * 1.05,
+        (0.5 - y) * 10 - 1.2 - quad.root.scale.x * 0.84,
+        hero,
+      ),
       -3,
     );
     shadow.scale.set(
@@ -405,16 +500,41 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       1,
     );
     shadow.material.opacity = (0.5 - 0.18 * take) * (1 - spread);
+    bounce.intensity = (1 - day) * 0.65;
+    spill.position.copy(shadow.position);
+    spill.position.y += 0.01;
+    spill.position.z += 0.04;
+    spill.scale.set(
+      quad.root.scale.x * (1.28 + 0.45 * take),
+      quad.root.scale.x * 0.21,
+      1,
+    );
+    spill.material.opacity = (1 - day) * (1 - spread) * (0.53 - 0.19 * take);
     radio.root.visible = p > 2.59;
     radio.root.position.set((-0.21 - (1 - inRadio) * 0.49) * w, -0.27, 0);
-    radio.root.rotation.set(-0.13, 0.18, -0.025);
-    radio.root.scale.setScalar(Math.min(w * 0.102, 1.42));
-    radio.sticks[0].rotation.x = -lift * 0.8;
-    radio.sticks[1].rotation.y = 0.61 * bank;
+    radio.root.rotation.set(-0.24 * inRadio, 0.32 * inRadio, -0.035 * inRadio);
+    radio.root.scale.setScalar(Math.min(w * 0.112, 1.61));
+    radio.sticks[0].rotation.x = mix(
+      radio.sticks[0].rotation.x,
+      pose === 2 ? -ay * 0.7 : 0,
+      follow,
+    );
+    radio.sticks[0].rotation.y = mix(
+      radio.sticks[0].rotation.y,
+      pose === 2 ? ax * 0.7 : 0,
+      follow,
+    );
+    radio.sticks[1].rotation.x = mix(
+      radio.sticks[1].rotation.x,
+      pose === 3 ? -ay * 0.65 : 0,
+      follow,
+    );
+    radio.sticks[1].rotation.y = 0.68 * bank;
     for (const [index, control] of radioControls.entries()) {
       if (control.kind !== 'switch') continue;
       const toggle = radio.switches[control.slot];
-      const angle = pose === index + 1 ? 0.55 : -0.45;
+      const angle =
+        pose === index + 1 ? (pose === 4 ? ay * 0.54 : 0.55) : -0.45;
       toggle.rotation.x = mix(toggle.rotation.x, angle, follow * 0.8);
       if (Math.abs(toggle.rotation.x - angle) > 0.002) radioSettling = true;
     }
@@ -424,6 +544,10 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     if (radio.root.visible) {
       radio.root.updateWorldMatrix(true, false);
       camera.updateMatrixWorld();
+      radio.root.localToWorld(target.set(0, -0.95, 0.38)).project(camera);
+      const panel = chapters[3].firstElementChild as HTMLElement;
+      panel.style.setProperty('--screen-x', (1 + target.x) * 50 + '%');
+      panel.style.setProperty('--screen-y', (1 - target.y) * 50 + '%');
       for (const [index, control] of gimbalLights.entries()) {
         control.getWorldPosition(target).project(camera);
         const pin = chapters[3].firstElementChild as HTMLElement;
@@ -438,10 +562,14 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       }
     }
     renderer.render(scene, camera);
-    story.dataset.live = 'true';
+    if (!story.dataset.live) {
+      story.dataset.live = 'true';
+      story.dispatchEvent(new Event('scene-painted'));
+    }
     if (
+      replaying ||
       spinning ||
-      (elapsed < 3.25 && p < 0.45) ||
+      (!story.dataset.bookPaused && elapsed < 3.72 && p < 0.45) ||
       p !== goal ||
       day !== dayGoal ||
       Math.abs(hoverX - tx) + Math.abs(hoverY - ty) > 0.002 ||
@@ -451,7 +579,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       invalidate();
   }
   function pointer(ev: PointerEvent) {
-    if (!story.dataset.airborne || goal > 0.25 || ev.pointerType !== 'mouse')
+    if (!story.dataset.airborne || goal > 0.008 || ev.pointerType !== 'mouse')
       return;
     tx = clamp((ev.clientX / innerWidth - 0.7) * 3.0, -1, 1);
     ty = clamp((ev.clientY / innerHeight - 0.45) * 2, -1, 1);
@@ -473,6 +601,16 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     },
     { signal },
   );
+  story.addEventListener(
+    'restart-intro',
+    () => {
+      introStart = Number(story.dataset.takeoff);
+      ghosts.reset();
+      hoverX = hoverY = tx = ty = 0;
+      invalidate();
+    },
+    { signal },
+  );
   story.addEventListener('part-focus', highlight, { signal });
   story.addEventListener(
     'radio-pose',
@@ -488,7 +626,10 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       .trim();
     for (const lamp of [...lamps, ...gimbalLights])
       lamp.material.color.set(accent);
+    spill.material.color.set(accent);
+    bounce.color.set(accent);
     haloMaterial.color.set(accent);
+    insertMaterial.color.set(accent).lerp(new T.Color(0xfffaf2), 0.24);
     quad.led.emissive.set(accent);
     gate.accent.color.set(accent);
     gate.accent.emissive.set(accent);
@@ -527,7 +668,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     mo.disconnect();
     ro.disconnect();
     disposeScene(scene);
-    [shadow, gateShade, ...lamps, ...gimbalLights].forEach((s) =>
+    [shadow, gateShade, spill, ...lamps, ...gimbalLights].forEach((s) =>
       s.material.dispose(),
     );
     texture.dispose();

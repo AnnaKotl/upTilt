@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { usePageLanguage } from '../../lib/page-language';
 import { onMounted, ref } from 'vue';
 import Icon from '../ui/Icon.vue';
 import { topics } from '../../data/topics';
 import { pageUrl, t, type Locale } from '../../lib/i18n';
-const props = defineProps<{ locale: Locale }>();
+const input = defineProps<{ locale: Locale }>();
+const locale = usePageLanguage(input.locale);
 const expanded = ref(false);
 const trigger = ref<HTMLButtonElement>();
 const menu = ref<HTMLElement>();
@@ -47,14 +49,23 @@ function port(i: number) {
 }
 function trace(i: number) {
   const { x, y } = port(i);
-  return `M135 ${height / 2} L${x} ${y}`;
+  const cx = 135,
+    cy = height / 2,
+    dx = x - cx,
+    dy = y - cy;
+  const signX = Math.sign(dx) || 1,
+    signY = Math.sign(dy) || 1;
+  const bend = Math.min(14, Math.abs(dx) * 0.32 + 5);
+  return Math.abs(dx) > Math.abs(dy)
+    ? `M${cx} ${cy} h${dx * 0.34} l${signX * bend} ${signY * bend} H${x - signX * 14} V${y} H${x}`
+    : `M${cx} ${cy} v${dy * 0.36} l${signX * bend} ${signY * bend} V${y - signY * 10} H${x} V${y}`;
 }
 </script>
 <template>
   <nav
     ref="menu"
     class="book-nav"
-    :aria-label="t(props.locale).knowledge"
+    :aria-label="t(locale).knowledge"
     @keydown.esc.prevent="escape"
     @focusout="leave"
     @pointerleave="pointerLeave"
@@ -76,8 +87,7 @@ function trace(i: number) {
         @focus="expanded = true"
         @click="toggle"
       >
-        <span class="book-chip"><Icon name="book" /></span
-        ><span class="core-caption">{{ t(locale).knowledge }}</span>
+        <span class="book-chip"><Icon name="book" /></span>
       </button>
       <div id="book-branches" :hidden="!expanded" class="core-branches">
         <svg
@@ -92,6 +102,7 @@ function trace(i: number) {
             :style="{ '--delay': i * 38 + 'ms' }"
           >
             <path :d="trace(i)" pathLength="1" />
+            <path class="trace-current" :d="trace(i)" pathLength="1" />
             <circle :cx="port(i).x" :cy="port(i).y" r="4" />
           </g>
         </svg>

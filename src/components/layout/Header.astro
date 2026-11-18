@@ -11,6 +11,14 @@ const alt = locale === 'uk' ? 'en' : 'uk';
 const languageLabel =
   alt === 'en' ? 'Switch to English' : 'Перейти на українську';
 const text = t(locale);
+const models = [
+  { id: 'whoop', icon: 'quad', name: 'Whoop' },
+  {
+    id: 'seven',
+    icon: 'openFrame',
+    name: locale === 'uk' ? 'Карбонова рама · 7″' : 'Open frame · 7″',
+  },
+] as const;
 ---
 
 <nav
@@ -32,12 +40,14 @@ const text = t(locale);
     <b class="font-mono text-xs">{alt.toUpperCase()}</b>
     <span class="hint">{languageLabel}</span>
   </a>
-  <ThemeToggle client:load label={text.theme} />
+  <ThemeToggle client:load locale={locale} />
   {!path && (
     <div class="aircraft-picker">
       <button
         class="edge-tab"
-        popovertarget="aircraft-options"
+        data-model-menu
+        aria-expanded="false"
+        aria-controls="aircraft-options"
         aria-label={locale === 'uk' ? 'Вибрати коптер' : 'Choose aircraft'}
       >
         <Icon name="quad" />
@@ -45,17 +55,22 @@ const text = t(locale);
           {locale === 'uk' ? 'Вибрати коптер' : 'Choose aircraft'}
         </span>
       </button>
-      <div
-        id="aircraft-options"
-        popover="auto"
-        aria-label={locale === 'uk' ? 'Модель' : 'Aircraft'}
-      >
-        <button type="button" data-aircraft-option="whoop" aria-pressed="true">
-          Whoop
-        </button>
-        <button type="button" data-aircraft-option="seven" aria-pressed="false">
-          {locale === 'uk' ? 'Карбонова рама · 7″' : 'Open frame · 7″'}
-        </button>
+      <div id="aircraft-options" inert>
+        <div class="model-rows">
+          {models.map((item) => (
+            <button
+              class="edge-tab model-row"
+              type="button"
+              data-aircraft-option={item.id}
+              aria-label={item.name}
+              aria-pressed={item.id === 'whoop'}
+              disabled={item.id === 'whoop'}
+            >
+              <Icon name={item.icon} />
+              <span class="hint">{item.name}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )}
@@ -82,7 +97,32 @@ const text = t(locale);
     <Icon name="book" />
     <span class="hint">{text.knowledge}</span>
   </a>
+  {!path && (
+    <button
+      type="button"
+      class="edge-tab"
+      data-tour
+      hidden
+      aria-pressed="false"
+    >
+      <Icon name="replay" />
+      <span class="hint">
+        {locale === 'uk' ? 'Візуальна демонстрація' : 'Play the guided tour'}
+      </span>
+    </button>
+  )}
 </nav>
+{!path && (
+  <a
+    class="edge-tab author-tab"
+    data-author
+    hidden
+    href="https://github.com/AnnaKotl/upTilt"
+  >
+    <Icon name="github" />
+    <span class="hint">{locale === 'uk' ? 'Автор' : 'Author'}</span>
+  </a>
+)}
 <a class="back-top" href="#main" hidden data-top aria-label={text.home}>
   <Icon name="up" />
   <span class="hint">{text.home}</span>
@@ -93,7 +133,29 @@ const text = t(locale);
     '[data-aircraft-option]',
   );
   const picker = document.querySelector<HTMLElement>('#aircraft-options');
+  const menu = document.querySelector<HTMLButtonElement>('[data-model-menu]');
+  function reveal(open: boolean) {
+    menu?.setAttribute('aria-expanded', String(open));
+    if (picker) picker.inert = !open;
+  }
+  menu?.addEventListener('click', () =>
+    reveal(menu.getAttribute('aria-expanded') !== 'true'),
+  );
+  document.addEventListener('pointerdown', (e) => {
+    if (!(e.target as Element).closest('.aircraft-picker')) reveal(false);
+  });
+  menu?.parentElement?.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      reveal(false);
+      menu.focus();
+    }
+  });
+  menu?.parentElement?.addEventListener('focusout', (e) => {
+    if (!menu.parentElement?.contains(e.relatedTarget as Node)) reveal(false);
+  });
   function updatePicker() {
+    for (const option of options)
+      option.disabled = option.dataset.aircraftOption === currentAircraft();
     for (const option of options)
       option.setAttribute(
         'aria-pressed',
@@ -105,7 +167,8 @@ const text = t(locale);
       selectAircraft(
         option.dataset.aircraftOption === 'seven' ? 'seven' : 'whoop',
       );
-      picker?.hidePopover();
+      reveal(false);
+      menu?.focus({ preventScroll: true });
     });
   updatePicker();
   window.addEventListener('aircraft-change', updatePicker);
@@ -140,6 +203,13 @@ const text = t(locale);
     const target = new URL(language.href);
     target.search = location.search;
     target.hash = location.hash;
+    if (hero) {
+      event.preventDefault();
+      window.dispatchEvent(
+        new CustomEvent('choose-language', { detail: target.href }),
+      );
+      return;
+    }
     language.href = target.href;
     try {
       sessionStorage.setItem(

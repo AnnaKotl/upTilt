@@ -165,12 +165,12 @@ test('switching languages keeps the selected part and section', async ({
   ).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#anatomy')).toBeInViewport();
   await page.getByRole('button', { name: 'Battery voltage · 3.8 V' }).click();
-  await expect(page.locator('.osd-note')).toContainText('volts');
+  await expect(page.getByRole('dialog')).toContainText('volts');
 });
 
 test('the detail card returns focus to its trigger', async ({ page }) => {
   await page.goto('en/');
-  const details = page.getByRole('button', { name: 'Details: Frame' });
+  const details = page.getByRole('button', { name: 'Frame', exact: true });
   await details.click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Escape');

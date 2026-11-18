@@ -9,6 +9,47 @@ const mat = (color: string, roughness = 0.46, metalness = 0.12) =>
 const vector = (xyz: number[]) =>
   new T.Vector3(...(xyz as [number, number, number]));
 
+// A small repeating satin twill picked out by the studio light on the open frame.
+function wovenFrameMaterial() {
+  const size = 32;
+  const pixels = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const warp = (Math.floor(x / 8) + Math.floor(y / 8)) % 4 < 2;
+      const along = warp ? x : y;
+      const crown = Math.sin((Math.PI * ((along % 8) + 0.5)) / 8);
+      const value = Math.round(
+        (warp ? 213 : 189) + 23 * crown + 3 * Math.cos(Math.PI * along),
+      );
+      pixels.set([value, value, value, 255], 4 * (y * size + x));
+    }
+  }
+  const texture = new T.DataTexture(pixels, size, size);
+  texture.wrapS = texture.wrapT = T.RepeatWrapping;
+  texture.colorSpace = T.SRGBColorSpace;
+  texture.magFilter = T.LinearFilter;
+  texture.minFilter = T.LinearMipmapLinearFilter;
+  texture.generateMipmaps = true;
+  texture.needsUpdate = true;
+  const material = mat('#40464b', 0.6, 0.12);
+  material.map = texture;
+  return material;
+}
+
+// Project the weave after baking so the arm and plate use the same yarn scale.
+function frameTextureCoordinates(geometry: T.BufferGeometry) {
+  const positions = geometry.getAttribute('position');
+  const normals = geometry.getAttribute('normal');
+  const uv = new Float32Array(positions.count * 2);
+  for (let i = 0; i < positions.count; i++) {
+    const side = Math.abs(normals.getX(i)) > 0.75;
+    const front = Math.abs(normals.getZ(i)) > 0.75;
+    uv[2 * i] = 3 * (side ? positions.getZ(i) : positions.getX(i));
+    uv[2 * i + 1] = 3 * (side || front ? positions.getY(i) : positions.getZ(i));
+  }
+  geometry.setAttribute('uv', new T.BufferAttribute(uv, 2));
+}
+
 // Bake the fixed pieces of each moving part into one draw call per material.
 function batch(group: T.Group) {
   const buckets = new Map<T.Material, T.BufferGeometry[]>();
@@ -27,7 +68,11 @@ function batch(group: T.Group) {
   }
   for (const [material, list] of buckets) {
     const geometry = mergeGeometries(list);
-    if (geometry) group.add(new T.Mesh(geometry, material));
+    if (geometry) {
+      if (material instanceof T.MeshStandardMaterial && material.map)
+        frameTextureCoordinates(geometry);
+      group.add(new T.Mesh(geometry, material));
+    }
     list.forEach((g) => g.dispose());
   }
 }
@@ -187,6 +232,7 @@ export function makeWhoop(openFrame = false) {
     copper = mat('#b66943', 0.42, 0.38),
     board = mat('#284941'),
     gold = mat('#c5a45d', 0.35, 0.42);
+  const framePlate = openFrame ? wovenFrameMaterial() : frame;
   const lens = mat('#254254', 0.12, 0.52),
     optic = mat('#afd8e1', 0.2, 0.27),
     cell = mat('#a2aab1', 0.48, 0.36),
@@ -216,24 +262,16 @@ export function makeWhoop(openFrame = false) {
     canopy = part('canopy'),
     camera = part('camera'),
     battery = part('battery'),
-    antenna = part('antenna');
+    antenna = part('antenna'),
+    strip = part('light-strip'),
+    mounts = part('mounts'),
+    plug = part('connector');
   let index = 0;
   const span = openFrame ? 1.42 : 1.02;
   for (const x of [-span, span])
     for (const z of [-span, span]) {
       if (!openFrame) {
         shellProfile(chassis, guard, x, z);
-        if (z > 0) {
-          const marker = mesh(
-            chassis,
-            new T.TorusGeometry(1.002, 0.024, 6, 16, 0.34),
-            led,
-            x,
-            0.14,
-            z,
-          );
-          marker.rotation.set(Math.PI / 2, 0, Math.PI / 2 - 0.17);
-        }
         loop(chassis, lip, x, 0.145, z, 1.002, 0.018);
         for (let i = 0; i < 3; i++) {
           const a = (tau * i) / 3 + 0.29;
@@ -241,7 +279,7 @@ export function makeWhoop(openFrame = false) {
             chassis,
             frame,
             [x, -0.19, z],
-            [x + 0.93 * Math.cos(a), -0.16, z + 0.93 * Math.sin(a)],
+            [x + 0.975 * Math.cos(a), -0.16, z + 0.975 * Math.sin(a)],
             0.043,
             0.028,
           );
@@ -250,13 +288,13 @@ export function makeWhoop(openFrame = false) {
       if (openFrame) {
         const arm = box(
           chassis,
-          carbon,
+          framePlate,
           [0.21, 0.1, Math.hypot(x, z)],
           [x / 2, -0.18, z / 2],
           0.025,
         );
         arm.rotation.y = Math.atan2(x, z);
-        cyl(chassis, carbon, 0.22, 0.2, 0.1, [x, -0.19, z]);
+        cyl(chassis, framePlate, 0.22, 0.2, 0.1, [x, -0.19, z]);
       } else
         rod(
           chassis,
@@ -311,7 +349,33 @@ export function makeWhoop(openFrame = false) {
       index++;
     }
   // Open protective canopy: moulded rails leave the camera and board visible.
-  box(circuits, board, [0.93, 0.077, 1.02], [0, -0.095, 0], 0.09);
+  // Chamfer the corners that face the rotor ducts. An orthogonal full-width
+  // plate pokes through the inner duct wall on the assembled whoop.
+  const pcb = new T.Shape();
+  const outline = [
+    [-0.16, -0.48],
+    [0.16, -0.48],
+    [0.44, -0.16],
+    [0.44, 0.16],
+    [0.16, 0.48],
+    [-0.16, 0.48],
+    [-0.44, 0.16],
+    [-0.44, -0.16],
+  ];
+  outline.forEach(([x, z], i) => {
+    if (i) pcb.lineTo(x, -z);
+    else pcb.moveTo(x, -z);
+  });
+  pcb.closePath();
+  const pcbGeometry = new T.ExtrudeGeometry(pcb, {
+    depth: 0.069,
+    bevelEnabled: true,
+    bevelThickness: 0.004,
+    bevelSize: 0.006,
+    bevelSegments: 1,
+  });
+  pcbGeometry.rotateX(-Math.PI / 2);
+  mesh(circuits, pcbGeometry, board, 0, -0.132, 0);
   box(
     circuits,
     carbon,
@@ -322,18 +386,28 @@ export function makeWhoop(openFrame = false) {
   for (const s of [-1, 1])
     for (let j = 0; j < 6; j++) {
       const z = (j - 2.5) * 0.134;
-      cyl(circuits, gold, 0.035, 0.035, 0.012, [s * 0.406, -0.047, z], 10);
+      cyl(
+        circuits,
+        gold,
+        0.035,
+        0.035,
+        0.012,
+        [s * (0.399 - Math.max(0, Math.abs(z) - 0.12)), -0.054, z],
+        10,
+      );
       box(
         circuits,
         j % 2 ? steel : cap,
         [0.065, 0.048, 0.08],
-        [s * 0.275, -0.04, z],
+        [s * (0.28 - Math.max(0, Math.abs(z) - 0.18) * 0.55), -0.044, z],
         0.008,
       );
     }
   if (openFrame) {
-    box(chassis, carbon, [0.85, 0.09, 1.94], [0, -0.21, 0]);
-    box(canopy, carbon, [0.71, 0.085, 1.72], [0, 0.49, -0.08]);
+    for (const s of [-1, 1])
+      rod(camera, cap, [s * 0.21, 0.33, 0.3], [s * 0.29, 0.33, 0.63], 0.047);
+    box(chassis, framePlate, [0.85, 0.09, 1.94], [0, -0.21, 0]);
+    box(canopy, framePlate, [0.71, 0.085, 1.72], [0, 0.49, -0.08]);
     for (const side of [-1, 1])
       for (const end of [-1, 1]) {
         cyl(canopy, trim, 0.047, 0.047, 0.65, [side * 0.29, 0.12, end * 0.64]);
@@ -349,31 +423,39 @@ export function makeWhoop(openFrame = false) {
       }
   } else {
     for (const s of [-1, 1]) {
+      // Keep both feet inside the web between the ducts, with a continuous load path.
+      for (const end of [-1, 1]) {
+        const x = s * 0.255,
+          z = end * 0.23;
+        rod(chassis, frame, [s * 0.18, -0.21, z], [x, -0.14, z], 0.088);
+        cyl(chassis, frame, 0.104, 0.125, 0.13, [x, -0.15, z]);
+        cyl(mounts, cap, 0.083, 0.087, 0.115, [x, -0.062, z]);
+        cyl(canopy, shell, 0.097, 0.1, 0.055, [x, 0.012, z]);
+      }
       tube(
         canopy,
         shell,
         [
-          [s * 0.49, -0.025, 0.5],
-          [s * 0.39, 0.32, 0.44],
-          [s * 0.27, 0.67, 0.16],
-          [s * 0.22, 0.69, -0.19],
-          [s * 0.32, 0.34, -0.56],
-          [s * 0.47, -0.025, -0.5],
+          [s * 0.255, 0.018, 0.23],
+          [s * 0.35, 0.3, 0.26],
+          [s * 0.27, 0.66, 0.13],
+          [s * 0.23, 0.69, -0.14],
+          [s * 0.31, 0.36, -0.27],
+          [s * 0.255, 0.018, -0.23],
         ],
-        0.089,
+        0.077,
       );
       tube(
         canopy,
         trim,
         [
-          [s * 0.47, -0.015, 0.44],
-          [s * 0.43, 0.047, -0.03],
-          [s * 0.28, 0.4, -0.43],
+          [s * 0.255, 0.04, 0.23],
+          [s * 0.332, 0.09, -0.05],
+          [s * 0.31, 0.36, -0.27],
         ],
-        0.045,
+        0.032,
       );
-      box(canopy, shell, [0.27, 0.07, 0.24], [s * 0.43, -0.015, -0.49]);
-      cyl(canopy, steel, 0.039, 0.039, 0.025, [s * 0.45, 0.032, -0.48], 10);
+      rod(camera, cap, [s * 0.2, 0.34, 0.3], [s * 0.345, 0.34, 0.25], 0.059);
     }
     sphere(canopy, shell, [0, 0.64, -0.053], [0.3, 0.097, 0.37]);
     box(canopy, trim, [0.082, 0.022, 0.44], [0, 0.727, -0.045]);
@@ -387,12 +469,56 @@ export function makeWhoop(openFrame = false) {
   glass(lip, 0.224, 0.115, 0.513);
   glass(cap, 0.197, 0.064, 0.589);
   glass(lens, 0.166, 0.059, 0.638);
-  sphere(camera, optic, [-0.056, 0.424, 0.674], [0.041, 0.019, 0.009]);
-  const evening = glass(trim, 0.235, 0.048, 0.54);
+  sphere(camera, lens, [0, 0.36, 0.661], [0.152, 0.152, 0.028]);
+  sphere(camera, optic, [-0.056, 0.424, 0.684], [0.036, 0.014, 0.005]);
+  // An annular collar can slide forward at dusk without covering the glass.
+  const evening = new T.Group();
+  camera.add(evening);
+  evening.position.set(0, 0.36, 0.54);
+  const collar = new T.LatheGeometry(
+    [
+      [0.166, -0.055],
+      [0.201, -0.058],
+      [0.215, -0.041],
+      [0.215, 0.027],
+      [0.203, 0.039],
+      [0.167, 0.031],
+      [0.166, -0.055],
+    ].map(([r, h]) => new T.Vector2(r, h)),
+    36,
+  );
+  collar.rotateX(Math.PI / 2);
+  mesh(evening, collar, cap);
+  mesh(evening, new T.TorusGeometry(0.204, 0.008, 6, 40), trim, 0, 0, 0.034);
   evening.name = 'evening-bezel';
-  for (const s of [-1, 1]) {
-    box(canopy, led, [0.105, 0.038, 0.048], [s * 0.37, 0.164, 0.48], 0.014);
-  }
+  // The emitter sits on the lower lip of the camera cradle. Its diodes face forward and down.
+  for (const side of [-1, 1])
+    rod(
+      chassis,
+      frame,
+      [side * 0.18, -0.17, 0.29],
+      [side * 0.14, 0.088, 0.54],
+      0.04,
+    );
+  box(chassis, frame, [0.36, 0.05, 0.17], [0, 0.088, 0.53], 0.022);
+  box(strip, cap, [0.32, 0.055, 0.078], [0, 0.079, 0.621], 0.012);
+  for (const x of [-0.1125, -0.0375, 0.0375, 0.1125])
+    box(strip, led, [0.05, 0.024, 0.024], [x, 0.071, 0.663], 0.007);
+  if (openFrame)
+    for (const s of [-1, 1])
+      cyl(mounts, cap, 0.075, 0.08, 0.065, [s * 0.29, -0.12, 0.64]);
+  box(plug, cap, [0.22, 0.13, 0.19], [0, -0.23, -0.65], 0.024);
+  tube(
+    plug,
+    frame,
+    [
+      [-0.06, -0.24, -0.69],
+      [-0.09, -0.35, -0.71],
+      [-0.09, -0.35, -0.6],
+    ],
+    0.021,
+  );
+
   tube(
     antenna,
     carbon,
@@ -699,7 +825,11 @@ export function disposeScene(scene: T.Object3D) {
     }
   });
   for (const material of materials) {
-    if (material instanceof T.MeshBasicMaterial) material.map?.dispose();
+    if (
+      material instanceof T.MeshBasicMaterial ||
+      material instanceof T.MeshStandardMaterial
+    )
+      material.map?.dispose();
     material.dispose();
   }
 }

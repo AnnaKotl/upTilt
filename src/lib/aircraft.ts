@@ -5,6 +5,7 @@ export function currentAircraft(): Aircraft {
     : 'whoop';
 }
 export function selectAircraft(model: Aircraft) {
+  if (currentAircraft() === model) return;
   document.documentElement.dataset.aircraft = model;
   try {
     sessionStorage.setItem('uptilt:aircraft', model);

@@ -34,7 +34,7 @@ export function capture(id: string, day: boolean) {
   let obj: T.Group;
   if (id === 'whoop') {
     obj = quad.root.clone();
-    obj.rotation.set(0.47, -0.4, -0.09, 'ZXY');
+    obj.rotation.set(0.32, -0.38, 0, 'ZXY');
   } else if (id.startsWith('radio')) {
     const pose = Number(id.split('-')[1] ?? 0);
     radio.sticks[0].rotation.x = pose === 2 ? -0.8 : 0;
@@ -45,7 +45,7 @@ export function capture(id: string, day: boolean) {
         picked?.kind === 'switch' && picked.slot === slot ? 0.55 : -0.45;
     });
     obj = radio.root.clone();
-    obj.rotation.set(-0.13, 0.18, -0.025);
+    obj.rotation.set(-0.24, 0.32, -0.035);
   } else if (id === 'gate') {
     obj = gate.root.clone();
     obj.rotation.y = 0.68;

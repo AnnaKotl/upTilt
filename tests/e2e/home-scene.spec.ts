@@ -94,12 +94,70 @@ test('the mobile poster follows the selected frame and keeps its controls reacha
   await page.keyboard.press('Escape');
   const stick = page.getByRole('button', { name: 'Right stick', exact: true });
   await stick.click();
-  await expect(page.getByRole('tooltip')).toContainText('Pitch / Roll');
+  await expect(page.getByRole('dialog')).toContainText('Roll banks');
   await expect(page.locator('.radio-study')).toHaveAttribute('data-pose', '3');
   await expect(page.locator('.radio-pair img').first()).toHaveAttribute(
     'src',
     /radio-3-dark.webp$/,
   );
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Compass · N' }).click();
-  await expect(page.getByRole('tooltip')).toContainText('north');
+  await expect(page.getByRole('dialog')).toContainText('north');
+});
+
+test('the title, aircraft menu and language switch preserve the live scene', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(
+    browserName !== 'chromium',
+    'This check compares live WebGL node identity.',
+  );
+  await page.goto('uk/');
+  const story = page.locator('[data-story]');
+  await expect(story).toHaveAttribute('data-airborne', 'true');
+  const canvas = await story.locator('canvas').elementHandle();
+  const book = page.locator('.book-chip'),
+    before = await book.boundingBox();
+  await page.locator('.hero-type abbr').hover();
+  await page.waitForTimeout(780);
+  expect((await book.boundingBox())?.x).toBe(before?.x);
+  expect((await book.boundingBox())?.y).toBe(before?.y);
+  const start = await story.getAttribute('data-takeoff');
+  await page.locator('[data-model-menu]').click();
+  await expect(page.locator('[data-aircraft-option="whoop"]')).toBeDisabled();
+  await page.locator('[data-language]').click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  expect(await story.getAttribute('data-takeoff')).toBe(start);
+  expect(
+    await canvas!.evaluate(
+      (n) => document.querySelector('.scene-canvas canvas') === n,
+    ),
+  ).toBe(true);
+  await page.getByRole('switch').click();
+  expect(await story.getAttribute('data-takeoff')).toBe(start);
+  await page.goBack();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
+});
+test('the final bookmark starts an optional tour and Escape releases scrolling', async ({
+  page,
+}) => {
+  await page.goto('en/');
+  const tour = page.locator('[data-tour]'),
+    author = page.locator('[data-author]');
+  await expect(author).toBeHidden();
+  await page.locator('#before-flight').scrollIntoViewIfNeeded();
+  await expect(author).toHaveAttribute(
+    'href',
+    'https://github.com/AnnaKotl/upTilt',
+  );
+  await expect(author).toBeVisible();
+  await tour.click();
+  await expect(tour).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#hero')).toBeInViewport();
+  await expect(author).toBeHidden();
+  await page.keyboard.press('Escape');
+  await expect(tour).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('#before-flight').scrollIntoViewIfNeeded();
+  await expect(tour).toBeVisible();
 });
