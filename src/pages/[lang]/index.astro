@@ -14,11 +14,6 @@ export function getStaticPaths() {
 }
 const locale = Astro.params.lang as Locale,
   uk = locale === 'uk';
-const chapters = [
-  ['anatomy', uk ? 'Будова' : 'Anatomy'],
-  ['radio', uk ? 'Пульт' : 'Radio'],
-  ['display', uk ? 'Окуляри' : 'Goggles'],
-];
 const kit = [
   { name: uk ? 'Коптер' : 'Quadcopter', asset: 'whoop', topic: 'anatomy' },
   { name: uk ? 'Пульт' : 'Transmitter', asset: 'radio', topic: 'equipment' },
@@ -38,23 +33,7 @@ const kit = [
       <div class="scene-canvas"></div>
     </div>
     <section data-stop id="hero" class="flight-hero">
-      <header class="atlas-mast">
-        <a class="wordmark" href={pageUrl(locale)} aria-label="upTilt">
-          <i aria-hidden="true"></i>upTilt
-        </a>
-        <nav aria-label={uk ? 'Сцени' : 'Scenes'}>
-          {chapters.map(([slug, label]) => (
-            <a href={'#' + slug}>{label}</a>
-          ))}
-        </nav>
-      </header>
-      <div class="hero-ground" aria-hidden="true">
-        <div class="floor-rings">
-          {[1, 2, 3].map(() => (
-            <i></i>
-          ))}
-        </div>
-      </div>
+      <div class="rest-shadow" aria-hidden="true"></div>
       <div class="hero-machine">
         <StudyPoster
           name="whoop"
@@ -69,37 +48,21 @@ const kit = [
       <SeasonIntro />
       <div class="hero-type">
         <h1>
-          <abbr
-            title="First-person view"
-            tabindex="0"
-            aria-label="FPV — First-person view"
-          >
-            <span>FPV</span>
-            <em lang="en">
-              First-person
-              <br />
-              view
-            </em>
+          <abbr tabindex="0" aria-label="FPV — First-person view" lang="en">
+            {['First-', 'person ', 'view'].map((word, i) => (
+              <span class="fpv-word" aria-hidden="true" style={`--i:${i}`}>
+                <b data-initial>{word[0].toUpperCase()}</b>
+                <span class="fpv-tail">
+                  <i>{word.slice(1)}</i>
+                </span>
+              </span>
+            ))}
           </abbr>
         </h1>
         <BookNav client:load locale={locale} />
         <noscript>
           <a href={pageUrl(locale, 'knowledge')}>{t(locale).knowledge}</a>
         </noscript>
-      </div>
-      <div class="hero-bottom">
-        <a class="next-chapter" href="#motion">
-          <span>↓</span>
-          {uk ? 'До кільця' : 'Through the gate'}
-        </a>
-        <button
-          data-replay
-          type="button"
-          aria-label={uk ? 'Повторити зліт' : 'Replay takeoff'}
-        >
-          <span aria-hidden="true">↻</span>
-          {uk ? 'Повторити зліт' : 'Replay takeoff'}
-        </button>
       </div>
     </section>
     <section data-stop id="motion" class="gate-chapter">
@@ -115,25 +78,11 @@ const kit = [
           <h2>{uk ? 'Фізика польоту' : 'Flight physics'}</h2>
           <Icon name="next" />
         </a>
-        <p>
-          {uk
-            ? 'Перед кільцем коптер нахиляється. За кільцем — гальмує й вирівнюється.'
-            : 'The quad banks into the gate, slows on the far side and levels out.'}
-        </p>
       </div>
     </section>
     <PartsBoard client:load locale={locale} />
     <section data-stop id="radio" class="radio-chapter">
       <div class="radio-pin">
-        <header class="chapter-head">
-          <h2>{uk ? 'Пульт керування' : 'The transmitter'}</h2>
-          <a
-            class="radio-source"
-            href="https://radiomasterrc.com/products/tx16s-mk3-radio-controller"
-          >
-            RadioMaster TX16S MK3 <Icon name="next" />
-          </a>
-        </header>
         <RadioStudy client:load locale={locale}>
           <StudyPoster name="whoop" />
         </RadioStudy>
@@ -171,6 +120,7 @@ const kit = [
     </a>
   </section>
   <script>
+    import { currentAircraft } from '../../lib/aircraft';
     const story = document.querySelector<HTMLElement>('[data-story]');
     if (story) {
       const host = story.querySelector<HTMLElement>('.scene-canvas')!;
@@ -197,45 +147,72 @@ const kit = [
         }
       }
       const leaves = story.querySelector<HTMLElement>('.scatter')!;
+      const storyEl = story;
+      const started = performance.now();
+      story.dataset.takeoff = String(started);
+      story.classList.add('lifting');
+      let scattered = false;
+      try {
+        scattered = sessionStorage.getItem('uptilt:scattered') === 'yes';
+      } catch {}
+      leaves.hidden = scattered || reduced.matches;
       let timer = 0;
-      function replay() {
-        delete story!.dataset.parked;
-        story!.dataset.takeoff = String(performance.now());
-        window.clearTimeout(timer);
-        leaves.classList.remove('blown');
-        story!.classList.remove('lifting');
-        void leaves.offsetWidth;
-        story!.classList.add('lifting');
-        story!.dispatchEvent(new Event('replay-flight'));
-        timer = window.setTimeout(() => leaves.classList.add('blown'), 850);
+      function advance() {
+        clearTimeout(timer);
+        if (document.hidden) return;
+        const ms = performance.now() - started;
+        if (ms < 1500) {
+          timer = window.setTimeout(advance, 1500 - ms);
+          return;
+        }
+        if (!leaves.hidden && !scattered) {
+          leaves.classList.add('blown');
+          scattered = true;
+          try {
+            sessionStorage.setItem('uptilt:scattered', 'yes');
+          } catch {}
+        }
+        if (ms < 3100) timer = window.setTimeout(advance, 3100 - ms);
+        else {
+          leaves.hidden = true;
+          storyEl.dataset.airborne = 'true';
+        }
       }
-      const replayButton =
-        story.querySelector<HTMLButtonElement>('[data-replay]')!;
-      replayButton.addEventListener('click', replay);
-      const book = story.querySelector<HTMLButtonElement>('.book-trigger');
-      if (book) {
-        const waitForBook = new MutationObserver(() => {
-          if (
-            book.getAttribute('aria-expanded') === 'true' &&
-            performance.now() - Number(story.dataset.takeoff) < 640
-          ) {
-            story.dataset.parked = 'true';
-            window.clearTimeout(timer);
-            story.classList.remove('lifting');
-          } else if (
-            book.getAttribute('aria-expanded') === 'false' &&
-            story.hasAttribute('data-parked')
-          )
-            replay();
-        });
-        waitForBook.observe(book, {
-          attributes: true,
-          attributeFilter: ['aria-expanded'],
-        });
+      function refreshAircraft() {
+        for (const art of document.querySelectorAll<HTMLElement>(
+          '[data-aircraft-art]',
+        )) {
+          if (art.hasAttribute('aria-label'))
+            art.setAttribute(
+              'aria-label',
+              currentAircraft() === 'seven'
+                ? document.documentElement.lang === 'uk'
+                  ? 'Коптер із відкритою карбоновою рамою'
+                  : 'Open-frame quadcopter'
+                : document.documentElement.lang === 'uk'
+                  ? 'Спортивний мікрокоптер із захистом пропелерів'
+                  : 'Ducted sport micro quadcopter',
+            );
+          for (const img of art.querySelectorAll('img')) {
+            const file =
+              currentAircraft() +
+              (img.classList.contains('day-image')
+                ? '-light.webp'
+                : '-dark.webp');
+            if (!img.src.endsWith('/' + file))
+              img.src = import.meta.env.BASE_URL + 'media/study/' + file;
+          }
+        }
       }
+      window.addEventListener('aircraft-change', () => {
+        refreshAircraft();
+        void sync();
+      });
+      refreshAircraft();
+      advance();
+      document.addEventListener('visibilitychange', advance);
       media.addEventListener('change', sync);
       void sync();
-      replay();
       let paused = false;
       window.addEventListener('pagehide', () => {
         version++;
@@ -247,6 +224,7 @@ const kit = [
       window.addEventListener('pageshow', () => {
         if (paused) {
           paused = false;
+          advance();
           void sync();
         }
       });
@@ -258,6 +236,10 @@ const kit = [
           raf = 0;
           if (active && !reduced.matches) {
             const offset = view!.getBoundingClientRect().top / innerHeight;
+            view!.style.setProperty(
+              '--tilt',
+              Math.max(-1.6, Math.min(1.6, offset * 1.6)) + 'deg',
+            );
             view!.style.setProperty(
               '--drift',
               Math.max(-42, Math.min(42, offset * 38)) + 'px',

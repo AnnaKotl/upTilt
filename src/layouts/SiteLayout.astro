@@ -1,7 +1,6 @@
 ---
 import '../styles/global.css';
 import { seasonPreview } from '../lib/preferences';
-import Icon from '../components/ui/Icon.vue';
 import Header from '../components/layout/Header.astro';
 import { pageUrl, t, locales, type Locale } from '../lib/i18n';
 interface Props {
@@ -55,6 +54,8 @@ const text = t(locale);
           new URLSearchParams(location.search).get('season') ?? seasonPreview;
         if (['winter', 'spring', 'summer', 'autumn'].includes(season))
           document.documentElement.dataset.season = season;
+        if (sessionStorage.getItem('uptilt:aircraft') === 'seven')
+          document.documentElement.dataset.aircraft = 'seven';
         const theme = localStorage.getItem('uptilt:theme');
         const palette = localStorage.getItem('uptilt:palette');
         if (theme === 'light' || theme === 'dark')
@@ -80,15 +81,5 @@ const text = t(locale);
     <main id="main" tabindex="-1">
       <slot />
     </main>
-    <footer class="author-edge">
-      <a
-        href="https://github.com/AnnaKotl"
-        class="edge-tab"
-        aria-label={text.author}
-      >
-        <Icon name="github" />
-        <span class="hint">{text.author}</span>
-      </a>
-    </footer>
   </body>
 </html>

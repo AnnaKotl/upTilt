@@ -167,7 +167,7 @@ export function studioLights(scene: T.Scene) {
   scene.add(new T.HemisphereLight(0xfffaf2, 0x8b9cb9, 1.65));
   for (const [pos, power, color] of [
     [[1, 5, 4], 3.0, 0xfff7ed],
-    [[-5, 2, -1], 3.0, 0xe7f1ff],
+    [[-5, 2, -1], 1.7, 0xe7f1ff],
     [[3, 1, -4], 2.4, 0xbddaff],
   ] as const) {
     const light = new T.DirectionalLight(color, power);
@@ -175,11 +175,12 @@ export function studioLights(scene: T.Scene) {
     scene.add(light);
   }
 }
-export function makeWhoop() {
+export function makeWhoop(openFrame = false) {
   const root = new T.Group();
-  const frame = mat('#363e48', 0.33),
-    lip = mat('#69737a', 0.34, 0.28),
-    shell = mat('#232b34', 0.27, 0.26),
+  const frame = mat('#202328', 0.86, 0.035),
+    guard = mat('#373b41', 0.82, 0.05),
+    lip = mat('#494e53', 0.69, 0.1),
+    shell = mat('#202329', 0.78, 0.08),
     trim = mat('#72878c', 0.35, 0.28);
   const carbon = mat('#20262c'),
     steel = mat('#9faab0', 0.3, 0.65),
@@ -217,40 +218,54 @@ export function makeWhoop() {
     battery = part('battery'),
     antenna = part('antenna');
   let index = 0;
-  for (const x of [-1.02, 1.02])
-    for (const z of [-1.02, 1.02]) {
-      shellProfile(chassis, frame, x, z);
-      if (z > 0) {
-        const marker = mesh(
-          chassis,
-          new T.TorusGeometry(1.002, 0.024, 6, 16, 0.34),
-          led,
-          x,
-          0.14,
-          z,
-        );
-        marker.rotation.set(Math.PI / 2, 0, Math.PI / 2 - 0.17);
+  const span = openFrame ? 1.42 : 1.02;
+  for (const x of [-span, span])
+    for (const z of [-span, span]) {
+      if (!openFrame) {
+        shellProfile(chassis, guard, x, z);
+        if (z > 0) {
+          const marker = mesh(
+            chassis,
+            new T.TorusGeometry(1.002, 0.024, 6, 16, 0.34),
+            led,
+            x,
+            0.14,
+            z,
+          );
+          marker.rotation.set(Math.PI / 2, 0, Math.PI / 2 - 0.17);
+        }
+        loop(chassis, lip, x, 0.145, z, 1.002, 0.018);
+        for (let i = 0; i < 3; i++) {
+          const a = (tau * i) / 3 + 0.29;
+          rod(
+            chassis,
+            frame,
+            [x, -0.19, z],
+            [x + 0.93 * Math.cos(a), -0.16, z + 0.93 * Math.sin(a)],
+            0.043,
+            0.028,
+          );
+        }
       }
-      loop(chassis, lip, x, 0.145, z, 1.002, 0.018);
-      for (let i = 0; i < 3; i++) {
-        const a = (tau * i) / 3 + 0.29;
+      if (openFrame) {
+        const arm = box(
+          chassis,
+          carbon,
+          [0.21, 0.1, Math.hypot(x, z)],
+          [x / 2, -0.18, z / 2],
+          0.025,
+        );
+        arm.rotation.y = Math.atan2(x, z);
+        cyl(chassis, carbon, 0.22, 0.2, 0.1, [x, -0.19, z]);
+      } else
         rod(
           chassis,
           frame,
-          [x, -0.19, z],
-          [x + 0.93 * Math.cos(a), -0.16, z + 0.93 * Math.sin(a)],
-          0.043,
-          0.028,
+          [0.29 * Math.sign(x), -0.22, 0.28 * Math.sign(z)],
+          [x, -0.22, z],
+          0.087,
+          0.11,
         );
-      }
-      rod(
-        chassis,
-        frame,
-        [0.29 * Math.sign(x), -0.22, 0.28 * Math.sign(z)],
-        [x, -0.22, z],
-        0.087,
-        0.11,
-      );
       const motor = new T.Group();
       motors.add(motor);
       motor.position.set(x, -0.13, z);
@@ -316,35 +331,53 @@ export function makeWhoop() {
         0.008,
       );
     }
-  for (const s of [-1, 1]) {
-    tube(
-      canopy,
-      shell,
-      [
-        [s * 0.49, -0.025, 0.5],
-        [s * 0.39, 0.32, 0.44],
-        [s * 0.27, 0.67, 0.16],
-        [s * 0.22, 0.69, -0.19],
-        [s * 0.32, 0.34, -0.56],
-        [s * 0.47, -0.025, -0.5],
-      ],
-      0.089,
-    );
-    tube(
-      canopy,
-      trim,
-      [
-        [s * 0.47, -0.015, 0.44],
-        [s * 0.43, 0.047, -0.03],
-        [s * 0.28, 0.4, -0.43],
-      ],
-      0.045,
-    );
-    box(canopy, shell, [0.27, 0.07, 0.24], [s * 0.43, -0.015, -0.49]);
-    cyl(canopy, steel, 0.039, 0.039, 0.025, [s * 0.45, 0.032, -0.48], 10);
+  if (openFrame) {
+    box(chassis, carbon, [0.85, 0.09, 1.94], [0, -0.21, 0]);
+    box(canopy, carbon, [0.71, 0.085, 1.72], [0, 0.49, -0.08]);
+    for (const side of [-1, 1])
+      for (const end of [-1, 1]) {
+        cyl(canopy, trim, 0.047, 0.047, 0.65, [side * 0.29, 0.12, end * 0.64]);
+        cyl(
+          canopy,
+          steel,
+          0.065,
+          0.065,
+          0.025,
+          [side * 0.29, 0.54, end * 0.64],
+          8,
+        );
+      }
+  } else {
+    for (const s of [-1, 1]) {
+      tube(
+        canopy,
+        shell,
+        [
+          [s * 0.49, -0.025, 0.5],
+          [s * 0.39, 0.32, 0.44],
+          [s * 0.27, 0.67, 0.16],
+          [s * 0.22, 0.69, -0.19],
+          [s * 0.32, 0.34, -0.56],
+          [s * 0.47, -0.025, -0.5],
+        ],
+        0.089,
+      );
+      tube(
+        canopy,
+        trim,
+        [
+          [s * 0.47, -0.015, 0.44],
+          [s * 0.43, 0.047, -0.03],
+          [s * 0.28, 0.4, -0.43],
+        ],
+        0.045,
+      );
+      box(canopy, shell, [0.27, 0.07, 0.24], [s * 0.43, -0.015, -0.49]);
+      cyl(canopy, steel, 0.039, 0.039, 0.025, [s * 0.45, 0.032, -0.48], 10);
+    }
+    sphere(canopy, shell, [0, 0.64, -0.053], [0.3, 0.097, 0.37]);
+    box(canopy, trim, [0.082, 0.022, 0.44], [0, 0.727, -0.045]);
   }
-  sphere(canopy, shell, [0, 0.64, -0.053], [0.3, 0.097, 0.37]);
-  box(canopy, trim, [0.082, 0.022, 0.44], [0, 0.727, -0.045]);
   box(camera, carbon, [0.5, 0.39, 0.33], [0, 0.34, 0.31], 0.075);
   const glass = (m: Material, r: number, h: number, z: number) => {
     const o = cyl(camera, m, r, r, h, [0, 0.36, z], 32);
@@ -382,8 +415,9 @@ export function makeWhoop() {
   for (const p of Object.values(parts)) batch(p);
   camera.add(evening);
   const palette = [
-    [frame, '#333b44', '#e4eced'],
-    [lip, '#647481', '#a6c7d7'],
+    [frame, '#1d1e21', '#f1f3f3'],
+    [guard, '#35373b', '#86c4e3'],
+    [lip, '#4b4d50', '#a6d8eb'],
     [shell, '#232b34', '#f7faf9'],
     [trim, '#617780', '#53a5cb'],
     [lens, '#536e80', '#2b5269'],
@@ -400,7 +434,7 @@ export function makeWhoop() {
     evening.scale.setScalar(1.08 - 0.18 * day);
     evening.position.z = 0.64 - 0.12 * day;
   }
-  return { root, parts, rotors, repeats, theme, blade };
+  return { root, parts, rotors, repeats, theme, blade, led };
 }
 export function makeGate() {
   const root = new T.Group(),

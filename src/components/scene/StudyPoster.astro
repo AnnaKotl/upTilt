@@ -11,6 +11,7 @@ const base = import.meta.env.BASE_URL + 'media/study/' + name;
 
 <span
   class="study-poster"
+  data-aircraft-art={name === 'whoop' || undefined}
   role={alt ? 'img' : undefined}
   aria-label={alt || undefined}
   aria-hidden={alt ? undefined : true}

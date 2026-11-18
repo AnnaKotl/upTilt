@@ -10,10 +10,10 @@ const leaves = [
 ];
 ---
 
-<div class="scatter" aria-hidden="true">
+<div class="scatter" hidden aria-hidden="true">
   {leaves.map(([x, y, r], i) => (
     <i
-      style={`--x:${50 + x * 32}%;--y:${12 + y * 46}%;--r:${r}deg;--dx:${x * 176 + (x < 0 ? -18 : 18)}px;--dy:${-27 - (i % 3) * 19}px;--delay:${(i % 3) * 85}ms;--sz:${18 + (i % 4) * 3}px`}
+      style={`--x:${50 + x * 32}%;--y:${12 + y * 46}%;--r:${r}deg;--dx:${x < 0 ? -92 + x * 16 : 65 + x * 24}vw;--dy:${[-39, 32, -12, 65, -65, 35, -21][i]}vh;--delay:${(i % 3) * 85}ms;--sz:${18 + (i % 4) * 3}px`}
     ></i>
   ))}
 </div>

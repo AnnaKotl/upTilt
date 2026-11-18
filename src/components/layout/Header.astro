@@ -33,6 +33,32 @@ const text = t(locale);
     <span class="hint">{languageLabel}</span>
   </a>
   <ThemeToggle client:load label={text.theme} />
+  {!path && (
+    <div class="aircraft-picker">
+      <button
+        class="edge-tab"
+        popovertarget="aircraft-options"
+        aria-label={locale === 'uk' ? 'Вибрати коптер' : 'Choose aircraft'}
+      >
+        <Icon name="quad" />
+        <span class="hint">
+          {locale === 'uk' ? 'Вибрати коптер' : 'Choose aircraft'}
+        </span>
+      </button>
+      <div
+        id="aircraft-options"
+        popover="auto"
+        aria-label={locale === 'uk' ? 'Модель' : 'Aircraft'}
+      >
+        <button type="button" data-aircraft-option="whoop" aria-pressed="true">
+          Whoop
+        </button>
+        <button type="button" data-aircraft-option="seven" aria-pressed="false">
+          {locale === 'uk' ? 'Карбонова рама · 7″' : 'Open frame · 7″'}
+        </button>
+      </div>
+    </div>
+  )}
   {path && (
     <a
       class="edge-tab"
@@ -62,6 +88,27 @@ const text = t(locale);
   <span class="hint">{text.home}</span>
 </a>
 <script>
+  import { currentAircraft, selectAircraft } from '../../lib/aircraft';
+  const options = document.querySelectorAll<HTMLButtonElement>(
+    '[data-aircraft-option]',
+  );
+  const picker = document.querySelector<HTMLElement>('#aircraft-options');
+  function updatePicker() {
+    for (const option of options)
+      option.setAttribute(
+        'aria-pressed',
+        String(option.dataset.aircraftOption === currentAircraft()),
+      );
+  }
+  for (const option of options)
+    option.addEventListener('click', () => {
+      selectAircraft(
+        option.dataset.aircraftOption === 'seven' ? 'seven' : 'whoop',
+      );
+      picker?.hidePopover();
+    });
+  updatePicker();
+  window.addEventListener('aircraft-change', updatePicker);
   const hero = document.querySelector('#hero');
   const library = document.querySelector<HTMLElement>('[data-library]');
   const top = document.querySelector<HTMLElement>('[data-top]');

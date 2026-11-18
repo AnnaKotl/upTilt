@@ -37,17 +37,17 @@ function hover(event: PointerEvent) {
 function pointerLeave() {
   if (!pinned.value && !menu.value?.contains(document.activeElement)) close();
 }
-// Two banks of terminals grow with the topic list; links stay in source order.
-const rows = Math.ceil(topics.length / 2);
-const height = Math.max(160, rows * 49);
+const height = Math.max(208, topics.length * 23);
 function port(i: number) {
-  return { x: i < rows ? 163 : 239, y: 23 + (i % rows) * 49 };
+  const angle = (i * 2 * Math.PI) / topics.length - Math.PI / 2;
+  return {
+    x: 135 + 112 * Math.cos(angle),
+    y: height / 2 + (height / 2 - 22) * Math.sin(angle),
+  };
 }
 function trace(i: number) {
   const { x, y } = port(i);
-  const mid = height / 2;
-  const lane = 69 + (i % rows) * 10;
-  return `M 27 ${mid} H ${lane - 14} L ${lane} ${mid + (y < mid ? -14 : 14)} V ${y + (y < mid ? 9 : -9)} L ${lane + 9} ${y} H ${x}`;
+  return `M135 ${height / 2} L${x} ${y}`;
 }
 </script>
 <template>

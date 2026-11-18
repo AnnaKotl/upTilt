@@ -22,8 +22,20 @@ try {
   const page = await browser.newPage();
   await page.setContent('<body></body>');
   await page.addScriptTag({ content: bundle.code });
-  const themed = new Set(['whoop', 'frame', 'canopy', 'camera', 'antenna']);
+  const themed = new Set([
+    'whoop',
+    'frame',
+    'canopy',
+    'camera',
+    'antenna',
+    'seven',
+    'seven-frame',
+    'seven-canopy',
+  ]);
   for (const id of [
+    'seven',
+    'seven-frame',
+    'seven-canopy',
     'whoop',
     'frame',
     'canopy',
@@ -38,6 +50,11 @@ try {
     'radio-1',
     'radio-2',
     'radio-3',
+    'radio-4',
+    'radio-5',
+    'radio-6',
+    'radio-7',
+    'radio-8',
   ]) {
     for (const theme of themed.has(id) ? ['dark', 'light'] : ['dark']) {
       const data = await page.evaluate(
@@ -50,6 +67,13 @@ try {
       );
     }
   }
+  const controlPositions = await page.evaluate(
+    () => window.StudyPoster.posterControls,
+  );
+  await writeFile(
+    'src/data/radio-poster.json',
+    JSON.stringify(controlPositions, null, 2) + '\n',
+  );
 } finally {
   await browser.close();
 }

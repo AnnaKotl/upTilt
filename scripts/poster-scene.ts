@@ -1,3 +1,4 @@
+import { radioControls } from '../src/data/radio-controls';
 import * as T from 'three';
 import {
   makeGate,
@@ -19,28 +20,37 @@ const scene = new T.Scene(),
 camera.position.z = 15;
 studioLights(scene);
 const whoop = makeWhoop(),
+  seven = makeWhoop(true),
   radio = makeRadio(),
   gate = makeGate();
+export const posterControls: { x: number; y: number }[] = [];
 export function capture(id: string, day: boolean) {
-  whoop.theme(day ? 1 : 0);
+  const quad = id.startsWith('seven') ? seven : whoop;
+  if (id === 'seven') id = 'whoop';
+  else if (id.startsWith('seven-')) id = id.slice(6);
+  quad.theme(day ? 1 : 0);
   const subject = new T.Group();
   scene.add(subject);
   let obj: T.Group;
   if (id === 'whoop') {
-    obj = whoop.root.clone();
+    obj = quad.root.clone();
     obj.rotation.set(0.47, -0.4, -0.09, 'ZXY');
   } else if (id.startsWith('radio')) {
     const pose = Number(id.split('-')[1] ?? 0);
     radio.sticks[0].rotation.x = pose === 2 ? -0.8 : 0;
     radio.sticks[1].rotation.y = pose === 3 ? -0.54 : 0;
-    radio.switches[0].rotation.x = pose > 0 ? 0.45 : -0.55;
+    radio.switches.forEach((toggle, slot) => {
+      const picked = radioControls[pose - 1];
+      toggle.rotation.x =
+        picked?.kind === 'switch' && picked.slot === slot ? 0.55 : -0.45;
+    });
     obj = radio.root.clone();
-    obj.rotation.set(0.13, -0.21, 0.035);
+    obj.rotation.set(-0.13, 0.18, -0.025);
   } else if (id === 'gate') {
     obj = gate.root.clone();
-    obj.rotation.y = -0.65;
+    obj.rotation.y = 0.68;
   } else {
-    obj = whoop.parts[id].clone();
+    obj = quad.parts[id].clone();
     if (id === 'motor' || id === 'propeller')
       obj.children.slice(1).forEach((n) => (n.visible = false));
     obj.rotation.set(id === 'board' ? 0.8 : 0.46, -0.35, 0.03);
@@ -84,6 +94,26 @@ export function capture(id: string, day: boolean) {
     w = r - l + 1,
     h = b - t + 1,
     ratio = Math.min(1, (id === 'whoop' ? 850 : 560) / Math.max(w, h));
+  if (id === 'radio') {
+    for (const entry of radioControls) {
+      const node = (entry.kind === 'stick' ? radio.sticks : radio.switches)[
+        entry.slot
+      ];
+      const point =
+        entry.kind === 'stick'
+          ? new T.Vector3(0, 0.05, 0.29)
+          : new T.Vector3(Math.sign(node.position.x) * 0.12, 0.24, 0.08);
+      node.updateMatrix();
+      point
+        .applyMatrix4(node.matrix)
+        .applyMatrix4(obj.matrixWorld)
+        .project(camera);
+      posterControls.push({
+        x: +((((point.x + 1) * width) / 2 - l) / w).toFixed(4),
+        y: +((((1 - point.y) * height) / 2 - t) / h).toFixed(4),
+      });
+    }
+  }
   out.width = Math.round(ratio * w);
   out.height = Math.round(ratio * h);
   out

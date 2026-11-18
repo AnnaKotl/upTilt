@@ -157,3 +157,36 @@
     min-width: 44px;
   }
 }
+
+#aircraft-options {
+  position: fixed;
+  inset: calc(clamp(1rem, 6vh, 4rem) + 6rem) auto auto 3.75rem;
+  margin: 0;
+  background: var(--panel);
+  color: var(--ink);
+  padding: 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  box-shadow: 0 0.4rem 2rem #0002;
+}
+#aircraft-options button {
+  display: block;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  text-align: left;
+  font: 0.82rem var(--font-mono);
+}
+#aircraft-options button::before {
+  content: '';
+  display: inline-block;
+  width: 0.43em;
+  height: 0.43em;
+  border: 1px solid var(--muted);
+  border-radius: 50%;
+  margin-right: 0.8em;
+  vertical-align: middle;
+}
+#aircraft-options button[aria-pressed='true']::before {
+  background: var(--accent);
+  border-color: var(--accent);
+}
