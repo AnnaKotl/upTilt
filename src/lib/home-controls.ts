@@ -97,8 +97,19 @@ export function initPresentation() {
     'kit',
     'before-flight',
   ].map((id) => document.getElementById(id)!);
-  const dwell = [4100, 3300, 2900, 15000, 8500, 1700, 0];
+  const dwell = [5300, 12300, 3200, 15000, 8500, 1700, 0];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const stopPosition = (node: HTMLElement) => {
+    const live =
+      !reduced.matches && document.querySelector('[data-story][data-live]');
+    const offset =
+      live && node.id === 'motion'
+        ? node.offsetHeight * 0.09
+        : live && node.id === 'radio'
+          ? innerHeight * 0.16
+          : 0;
+    return node.getBoundingClientRect().top + scrollY + offset;
+  };
   let atEnd = false,
     playing = false,
     frame = 0;
@@ -162,11 +173,11 @@ export function initPresentation() {
       const moving = Math.max(0, time - dwell[index]);
       if (moving > 0) {
         const t = Math.min(1, moving / (reduced.matches ? 1 : 2900));
-        const top = (node: HTMLElement) =>
-          node.getBoundingClientRect().top + scrollY;
         const ease = t * t * (3 - 2 * t);
         window.scrollTo({
-          top: top(stops[index]) * (1 - ease) + top(stops[index + 1]) * ease,
+          top:
+            stopPosition(stops[index]) * (1 - ease) +
+            stopPosition(stops[index + 1]) * ease,
           behavior: 'instant',
         });
         if (t === 1) {

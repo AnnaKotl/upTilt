@@ -34,15 +34,21 @@ const switchNote = [
   'Призначення цього перемикача залежить від профілю моделі в передавачі.',
   'The model profile determines what this switch does.',
 ];
+const cueRotation: Record<string, number> = {
+  up: 0,
+  right: 90,
+  down: 180,
+  left: -90,
+};
 const phases = [
-  { id: 3, term: 'Pitch', x: 0, y: 1, arrow: '↑' },
-  { id: 3, term: 'Roll', x: 1, y: 0, arrow: '→' },
-  { id: 3, term: 'Pitch', x: 0, y: -1, arrow: '↓' },
-  { id: 3, term: 'Roll', x: -1, y: 0, arrow: '←' },
-  { id: 2, term: 'Throttle', x: 0, y: 1, arrow: '↑' },
-  { id: 2, term: 'Yaw', x: 1, y: 0, arrow: '↻' },
-  { id: 2, term: 'Throttle', x: 0, y: -1, arrow: '↓' },
-  { id: 2, term: 'Yaw', x: -1, y: 0, arrow: '↺' },
+  { id: 3, term: 'Pitch', x: 0, y: 1, arrow: 'up' },
+  { id: 3, term: 'Roll', x: 1, y: 0, arrow: 'right' },
+  { id: 3, term: 'Pitch', x: 0, y: -1, arrow: 'down' },
+  { id: 3, term: 'Roll', x: -1, y: 0, arrow: 'left' },
+  { id: 2, term: 'Throttle', x: 0, y: 1, arrow: 'up' },
+  { id: 2, term: 'Yaw', x: 1, y: 0, arrow: 'cw' },
+  { id: 2, term: 'Throttle', x: 0, y: -1, arrow: 'down' },
+  { id: 2, term: 'Yaw', x: -1, y: 0, arrow: 'ccw' },
   ...['ANGLE', 'HORIZON', 'ACRO'].map((term, i) => ({
     id: 4,
     term,
@@ -50,7 +56,7 @@ const phases = [
     y: i - 1,
     arrow: '',
   })),
-  { id: 2, term: 'Throttle', x: 0, y: -1, arrow: '↓' },
+  { id: 2, term: 'Throttle', x: 0, y: -1, arrow: 'down' },
   { id: 1, term: 'DISARMED', x: 0, y: 0, arrow: '' },
 ];
 function open(i: number, event: MouseEvent) {
@@ -141,7 +147,7 @@ function run() {
         pose(0, 'DISARMED');
       } else run();
     },
-    next === 0 ? 400 : 790,
+    next === 0 ? 1050 : 790,
   );
 }
 function reset() {
@@ -156,8 +162,15 @@ function reset() {
 }
 function settle() {
   const box = surface.value?.getBoundingClientRect();
+  const chapter = surface.value?.closest('.radio-chapter');
+  const arrival =
+    !document.querySelector('[data-story][data-live]') ||
+    (chapter && chapter.getBoundingClientRect().top <= -innerHeight * 0.12);
   const inside = Boolean(
-    box && box.top <= innerHeight * 0.08 && box.bottom >= innerHeight * 0.65,
+    arrival &&
+    box &&
+    box.top <= innerHeight * 0.012 &&
+    box.bottom >= innerHeight * 0.65,
   );
   if (visible !== inside) {
     visible = inside;
@@ -234,7 +247,29 @@ onBeforeUnmount(() => {
     <span class="radio-screen" aria-hidden="true">{{ screen }}</span><span
       class="radio-cue"
       aria-hidden="true"
-      >{{ cue || (screen === 'DISARMED' ? screen : '') }}</span
+    >
+      <svg
+        v-if="cue"
+        viewBox="0 0 48 48"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="3.4"
+        stroke-linejoin="round"
+        stroke-linecap="round"
+      >
+        <g
+          v-if="cue in cueRotation"
+          :transform="'rotate(' + cueRotation[cue] + ' 24 24)'"
+        >
+          <path d="M24 39V9m-10 10L24 9l10 10" />
+        </g>
+        <g
+          v-else
+          :transform="cue === 'ccw' ? 'translate(48 0) scale(-1 1)' : undefined"
+        >
+          <path d="M34 36a15 15 0 1 1 5-11m-9-9 9 9 8-9" />
+        </g></svg
+      ><template v-else-if="screen === 'DISARMED'">{{ screen }}</template></span
     >
     <StudyNote
       ref="modal"

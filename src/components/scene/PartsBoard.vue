@@ -2,7 +2,7 @@
 import { usePageLanguage } from '../../lib/page-language';
 import { currentAircraft, type Aircraft } from '../../lib/aircraft';
 import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue';
-import { parts } from '../../data/airframe';
+import { parts, matPosition, separateBoards } from '../../data/airframe';
 import { useStudySelection } from '../../lib/useStudySelection';
 import { type Locale } from '../../lib/i18n';
 import Icon from '../ui/Icon.vue';
@@ -46,13 +46,16 @@ onBeforeUnmount(() => {
 function art(id: string) {
   return (
     base +
-    (model.value === 'seven' && ['frame', 'canopy'].includes(id)
+    (model.value === 'seven' &&
+    (['frame', 'canopy', 'antenna'].includes(id) || separateBoards.has(id))
       ? 'seven-'
       : '') +
     id
   );
 }
 function name(part: (typeof parts)[number]) {
+  if (model.value === 'seven' && part.id === 'antenna')
+    return locale.value === 'uk' ? 'Антени RX / VTX' : 'RX / VTX antennas';
   if (model.value === 'seven' && part.id === 'canopy')
     return locale.value === 'uk' ? 'Верхня пластина' : 'Top plate';
   return part[locale.value];
@@ -76,6 +79,10 @@ function description(part: (typeof parts)[number]) {
         ? 'Антена виступає за задній край рами.'
         : 'The antenna extends beyond the rear of the frame.';
   }
+  if (model.value === 'whoop' && part.id === 'board')
+    return locale.value === 'uk'
+      ? 'У компактній моделі електроніку згруповано на одній платі. Тут представлені польотний контролер, регулятори обертів, радіоприймач і відеопередавач.'
+      : 'The compact study groups the flight controller, electronic speed controllers, radio receiver and video transmitter on one board.';
   return part.description[locale.value];
 }
 const themed = ['frame', 'canopy', 'camera', 'antenna'];
@@ -84,8 +91,9 @@ function highlight(index: number | null) {
   hover.value = index;
   const board = document.querySelector<HTMLElement>('.parts-board');
   if (board && index !== null) {
-    board.style.setProperty('--focus-x', parts[index].x * 100 + '%');
-    board.style.setProperty('--focus-y', parts[index].y * 100 + '%');
+    const point = matPosition(parts[index], model.value === 'seven');
+    board.style.setProperty('--focus-x', point.x * 100 + '%');
+    board.style.setProperty('--focus-y', point.y * 100 + '%');
   }
   document.querySelector('[data-story]')?.dispatchEvent(
     new CustomEvent('part-focus', {
@@ -108,13 +116,20 @@ function positionDialog() {
   const rect = button.getBoundingClientRect();
   const cx = rect.left + rect.width / 2,
     cy = rect.top + rect.height / 2;
+  const mat = document.querySelector('.bench-mat')?.getBoundingClientRect();
+  const bounded =
+    mat && document.querySelector('[data-story][data-live]') && mat.width > 0;
+  const left = bounded ? Math.max(0, mat.left) : 0;
+  const right = bounded ? Math.min(innerWidth, mat.right) : innerWidth;
+  const top = bounded ? Math.max(0, mat.top) : 0;
+  const bottom = bounded ? Math.min(innerHeight, mat.bottom) : innerHeight;
   const x = Math.max(
-    12,
-    Math.min(innerWidth - box.offsetWidth - 12, cx - box.offsetWidth / 2),
+    left + 12,
+    Math.min(right - box.offsetWidth - 12, cx - box.offsetWidth / 2),
   );
   const y = Math.max(
-    12,
-    Math.min(innerHeight - box.offsetHeight - 12, cy - box.offsetHeight / 2),
+    top + 12,
+    Math.min(bottom - box.offsetHeight - 12, cy - box.offsetHeight / 2),
   );
   box.style.left = x + 'px';
   box.style.top = y + 'px';
@@ -141,10 +156,12 @@ async function open(event: Event, index: number) {
         <button
           v-for="(part, i) in parts"
           :key="part.id"
+          v-show="model === 'seven' || !separateBoards.has(part.id)"
           :style="{
+            '--label-offset': 'var(--label-' + part.id + ',7svh)',
             '--part-width': part.width * 100 + '%',
-            '--x': part.x * 100 + '%',
-            '--y': part.y * 100 + '%',
+            '--x': matPosition(part, model === 'seven').x * 100 + '%',
+            '--y': matPosition(part, model === 'seven').y * 100 + '%',
           }"
           class="board-part"
           :class="{ dim: hover !== null && hover !== i }"
@@ -158,7 +175,10 @@ async function open(event: Event, index: number) {
           @blur="highlight(null)"
           @click="open($event, i)"
         >
-          <span class="part-render" aria-hidden="true"
+          <span
+            v-if="model === 'seven' || !separateBoards.has(part.id)"
+            class="part-render"
+            aria-hidden="true"
             ><img
               :class="{ 'night-image': themed.includes(part.id) }"
               :src="art(part.id) + '-dark.webp'"

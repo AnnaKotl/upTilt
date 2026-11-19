@@ -52,11 +52,18 @@ function pointerLeave() {
 }
 const height = Math.max(208, topics.length * 23);
 function port(i: number) {
-  const angle = (i * 2 * Math.PI) / topics.length - Math.PI / 2;
-  return {
-    x: 135 + 112 * Math.cos(angle),
-    y: height / 2 + (height / 2 - 22) * Math.sin(angle),
-  };
+  const sockets = [
+    [81, 28],
+    [173, 17],
+    [235, 48],
+    [245, 120],
+    [195, 168],
+    [113, 181],
+    [47, 151],
+    [24, 80],
+  ];
+  const [x, y] = sockets[i % sockets.length];
+  return { x, y: (y * height) / 208 };
 }
 function trace(i: number) {
   const { x, y } = port(i);
@@ -117,9 +124,15 @@ function trace(i: number) {
             <g
               v-for="(topic, i) in topics"
               :key="topic.id"
-              :style="{ '--delay': i * 38 + 'ms' }"
+              :style="{ '--delay': i * 23 + 'ms' }"
             >
               <path :d="trace(i)" pathLength="1" />
+              <path
+                class="trace-rail"
+                :d="trace(i)"
+                :transform="'translate(' + (i % 2 ? 2 : -2) + ' 2)'"
+                pathLength="1"
+              />
               <path class="trace-current" :d="trace(i)" pathLength="1" />
               <circle :cx="port(i).x" :cy="port(i).y" r="4" />
             </g>
@@ -128,12 +141,13 @@ function trace(i: number) {
             v-for="(topic, i) in topics"
             :key="topic.id"
             class="core-port"
+            :class="{ 'label-below': port(i).y >= height / 2 }"
             :href="pageUrl(locale, 'knowledge/' + topic.id)"
             :aria-label="topic.title[locale]"
             :style="{
               '--x': (port(i).x / 270) * 100 + '%',
               '--y': (port(i).y / height) * 100 + '%',
-              '--delay': i * 38 + 'ms',
+              '--delay': i * 23 + 'ms',
             }"
             ><Icon :name="topic.icon" /><span>{{
               topic.title[locale]

@@ -503,9 +503,9 @@ export function makeWhoop(openFrame = false) {
       0.04,
     );
   box(chassis, frame, [0.36, 0.05, 0.17], [0, 0.088, 0.53], 0.022);
-  box(strip, cap, [0.32, 0.055, 0.078], [0, 0.079, 0.621], 0.012);
-  for (const x of [-0.1125, -0.0375, 0.0375, 0.1125])
-    box(strip, led, [0.05, 0.024, 0.024], [x, 0.071, 0.663], 0.007);
+  box(strip, cap, [0.26, 0.06, 0.078], [0, 0.112, 0.55], 0.012);
+  for (const x of [-0.09, -0.03, 0.03, 0.09])
+    box(strip, led, [0.05, 0.024, 0.024], [x, 0.11, 0.592], 0.007);
   if (openFrame)
     for (const s of [-1, 1])
       cyl(mounts, cap, 0.075, 0.08, 0.065, [s * 0.29, -0.12, 0.64]);
@@ -538,6 +538,40 @@ export function makeWhoop(openFrame = false) {
     box(battery, cap, [0.51, 0.27, 0.14], [0, -0.345, 0.03 + s * 0.59]);
     box(holder, frame, [0.57, 0.06, 0.09], [0, -0.49, s * 0.33]);
   }
+  box(battery, cap, [0.505, 0.267, 0.48], [0, -0.345, 0.08], 0.035);
+  for (const z of [-0.04, 0.02, 0.08]) {
+    box(battery, cell, [0.26, 0.01, 0.018], [0, -0.207, z]);
+  }
+  if (openFrame) {
+    // Simplified silhouettes for the component atlas.
+    for (const [i, id] of ['esc', 'receiver', 'video'].entries()) {
+      const module = part(id);
+      const z = [-0.05, -0.52, -0.68][i],
+        y = [-0.16, 0.08, 0.23][i];
+      const width = [0.68, 0.29, 0.46][i];
+      box(module, board, [width, 0.045, width * 0.83], [0, y, z], 0.025);
+      for (const side of [-1, 1]) {
+        box(
+          module,
+          cap,
+          [width * 0.26, 0.055, width * 0.42],
+          [side * width * 0.22, y + 0.045, z],
+          0.012,
+        );
+        for (const end of [-1, 1])
+          cyl(
+            module,
+            gold,
+            0.025,
+            0.025,
+            0.013,
+            [side * width * 0.41, y + 0.03, z + end * width * 0.3],
+            10,
+          );
+      }
+    }
+    rod(antenna, carbon, [-0.15, 0.06, -0.31], [-0.44, 0.14, -0.94], 0.022);
+  }
   // Keep the optical bezel independently movable for the dusk transition.
   camera.remove(evening);
   for (const p of Object.values(parts)) batch(p);
@@ -563,6 +597,37 @@ export function makeWhoop(openFrame = false) {
     evening.position.z = 0.64 - 0.12 * day;
   }
   return { root, parts, rotors, repeats, theme, blade, led };
+}
+export function makeViewingKit() {
+  const root = new T.Group();
+  const shell = mat('#242a30'),
+    bezel = mat('#404952'),
+    glass = mat('#28404b', 0.22, 0.34);
+  const rubber = mat('#15191e'),
+    trim = mat('#728087');
+  // A small monitor behind the goggles keeps both viewing options in silhouette.
+  box(root, bezel, [1.62, 1.05, 0.15], [0.32, 0.4, -0.48], 0.07);
+  box(root, glass, [1.49, 0.91, 0.025], [0.32, 0.4, -0.395], 0.018);
+  rod(root, rubber, [0.96, 0.91, -0.47], [1.14, 1.46, -0.47], 0.041);
+  box(root, rubber, [2.08, 0.29, 0.21], [-0.15, -0.18, -0.06], 0.1);
+  box(root, shell, [1.54, 0.4, 0.62], [-0.15, -0.06, 0.09], 0.17);
+  for (const sign of [-1, 1]) {
+    const x = -0.15 + sign * 0.39;
+    const eye = box(root, shell, [0.82, 0.55, 0.6], [x, -0.2, 0.1], 0.16);
+    eye.rotation.z = sign * 0.08;
+    for (let j = 0; j < 4; j++)
+      box(
+        root,
+        rubber,
+        [0.052, 0.11, 0.015],
+        [x + (j - 1.5) * 0.08, -0.15, 0.407],
+        0.015,
+      );
+    rod(root, trim, [x, 0.15, 0.01], [x + sign * 0.12, 0.42, 0.01], 0.031);
+    box(root, rubber, [0.18, 0.24, 0.12], [x + sign * 0.12, 0.43, 0.01], 0.05);
+  }
+  batch(root);
+  return root;
 }
 export function makeGate() {
   const root = new T.Group(),

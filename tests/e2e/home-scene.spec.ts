@@ -33,7 +33,7 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
   }
   await page.locator('#radio').evaluate((e) =>
     window.scrollTo({
-      top: e.getBoundingClientRect().top + scrollY,
+      top: e.getBoundingClientRect().top + scrollY + innerHeight * 0.16,
       behavior: 'instant',
     }),
   );
@@ -115,7 +115,9 @@ test('the title, aircraft menu and language switch preserve the live scene', asy
   );
   await page.goto('uk/');
   const story = page.locator('[data-story]');
-  await expect(story).toHaveAttribute('data-airborne', 'true');
+  await expect(story).toHaveAttribute('data-airborne', 'true', {
+    timeout: 8500,
+  });
   const canvas = await story.locator('canvas').elementHandle();
   const book = page.locator('.book-chip'),
     before = await book.boundingBox();
@@ -189,4 +191,56 @@ test('the moving board is locked and opens a card at the settled battery', async
   );
   await page.keyboard.press('Escape');
   await expect(battery).toBeFocused();
+});
+
+test('both settled layouts keep the names and the opened corner card inside the mat', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'Measures the live WebGL board.');
+  await page.setViewportSize({ width: 1360, height: 720 });
+  await page.goto('uk/');
+  await expect(page.locator('[data-story]')).toHaveAttribute(
+    'data-live',
+    'true',
+  );
+  for (const model of ['whoop', 'seven']) {
+    if (model === 'seven') {
+      await page.locator('[data-model-menu]').click();
+      await page.locator('[data-aircraft-option="seven"]').click();
+    }
+    await page
+      .locator('#anatomy')
+      .evaluate((el) =>
+        scrollTo({
+          top:
+            scrollY + el.getBoundingClientRect().top + el.offsetHeight * 0.075,
+          behavior: 'instant',
+        }),
+      );
+    const buttons = page.locator('.board-part:visible');
+    await expect(page.locator('[data-story]')).toHaveAttribute(
+      'data-board-ready',
+      'true',
+    );
+    await expect(buttons).toHaveCount(model === 'seven' ? 16 : 13);
+    const mat = await page.locator('.bench-mat').boundingBox();
+    for (const label of await buttons.locator('.part-label').all()) {
+      const box = await label.boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(mat!.x);
+      expect(box!.y).toBeGreaterThanOrEqual(mat!.y);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(mat!.x + mat!.width);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(mat!.y + mat!.height);
+    }
+    await page.locator('[data-part="mounts"]').click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.evaluate(async (el) => {
+      await Promise.all(el.getAnimations().map((a) => a.finished));
+    });
+    const card = await dialog.boundingBox();
+    expect(card!.x + card!.width).toBeLessThanOrEqual(mat!.x + mat!.width);
+    expect(card!.y + card!.height).toBeLessThanOrEqual(mat!.y + mat!.height);
+    await page.keyboard.press('Escape');
+  }
 });

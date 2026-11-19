@@ -2,7 +2,7 @@ import { radioControls } from '../data/radio-controls';
 import { currentAircraft } from '../lib/aircraft';
 import * as T from 'three';
 import { raceReplays } from './race-replays';
-import { parts } from '../data/airframe';
+import { parts, matPosition, separateBoards } from '../data/airframe';
 import {
   makeWhoop,
   makeGate,
@@ -57,6 +57,32 @@ function fadeTexture() {
   return new T.CanvasTexture(canvas);
 }
 // Four softened contact patches preserve the footprint as the craft lifts.
+function beamTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 96;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d')!;
+  for (let row = 0; row < canvas.height; row++) {
+    const t = row / canvas.height;
+    const radius = 5 + 42 * t;
+    const intensity = Math.min(1, t * 20) * Math.pow(1 - t, 1.6);
+    const fade = ctx.createLinearGradient(48 - radius, 0, 48 + radius, 0);
+    for (const [offset, opacity] of [
+      [0, 0],
+      [0.22, 0.16],
+      [0.5, 0.63],
+      [0.78, 0.16],
+      [1, 0],
+    ])
+      fade.addColorStop(
+        offset,
+        'rgba(255,255,255,' + opacity * intensity + ')',
+      );
+    ctx.fillStyle = fade;
+    ctx.fillRect(0, row, 96, 1);
+  }
+  return new T.CanvasTexture(canvas);
+}
 function groundTexture() {
   const canvas = document.createElement('canvas');
   canvas.width = 192;
@@ -110,17 +136,19 @@ function rotorExposure() {
 // animation keyframes, not flight dynamics or a transmitter configuration.
 const path = [
   [0, 0.72, 0.5, 0.66, 0.32, -0.38, 0, 3.5],
-  [0.24, 0.738, 0.48, 0.89, 0.43, -0.52, -0.16, 3.3],
-  [0.48, 0.76, 0.58, 0.49, 0.34, -0.92, 0.22, 2.7],
+  [0.12, 0.72, 0.49, 0.77, 0.08, 0, 0, 3.6],
+  [0.26, 0.738, 0.46, 0.89, -0.13, 0.49, -0.12, 3.3],
+  [0.48, 0.76, 0.58, 0.49, 0.57, 0.63, 0.22, 2.7],
   [0.78, 0.58, 0.435, 0.22, 0.25, -1.18, 0.27, 0],
-  [1.08, 0.31, 0.54, 0.61, 0.43, -0.65, 0.16, -2.8],
-  [1.34, 0.266, 0.51, 0.63, 0.56, -0.3, -0.115, -3.2],
-  [1.65, 0.49, 0.49, 0.72, 0.67, -0.23, -0.025, 0],
-  [2, 0.5, 0.5, 0.58, 0.54, -0.32, 0, 0],
-  [2.31, 0.5, 0.5, 0.58, 0.54, -0.32, 0, 0],
+  [0.98, 0.31, 0.54, 0.61, 0.32, 0.36, 0.08, -2.8],
+  [1.32, 0.31, 0.54, 0.61, 0.32, 0.36, 0.08, -2.8],
+  [1.57, 0.5, 0.46, 0.68, 1.03, 0, 0, 0],
+  [1.8, 0.5, 0.46, 0.68, 1.03, 0, 0, 0],
+  [2, 0.5, 0.5, 0.58, 0.58, -0.15, 0, 0],
+  [2.31, 0.5, 0.5, 0.58, 0.58, -0.15, 0, 0],
   [2.84, 0.37, 0.485, 0.7, 0.55, -0.31, -0.06, 0],
-  [3, 0.77, 0.41, 0.53, 0.43, -0.16, 0, 0],
-  [4, 0.77, 0.41, 0.53, 0.43, -0.16, 0, 0],
+  [3, 0.77, 0.41, 0.53, 0.23, 0.24, 0, 0],
+  [4, 0.77, 0.41, 0.53, 0.23, 0.24, 0, 0],
 ];
 export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const renderer = new T.WebGLRenderer({
@@ -200,17 +228,22 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const footprint = groundTexture();
   shadow.material.map = footprint;
   const lamps = [sprite(quad.parts['light-strip'], '#bff7dd')];
-  lamps[0].position.set(0, 0.072, 0.685);
+  lamps[0].position.set(0, 0.11, 0.604);
   lamps[0].scale.set(0.55, 0.17, 1);
   lamps[0].material.blending = T.AdditiveBlending;
   const bounce = new T.PointLight(0xffffff, 0.4, 1.1);
-  bounce.position.set(0, 0.073, 0.74);
+  bounce.position.set(0, -0.05, 0.61);
   quad.parts['light-strip'].add(bounce);
   const spill = sprite(scene, '#bff7dd');
   const underglow = sprite(quad.parts['light-strip'], '#bff7dd');
-  underglow.position.set(0, -0.065, 0.68);
-  underglow.scale.set(0.62, 0.4, 1);
+  underglow.position.set(0, 0.09, 0.6);
+  const beam = beamTexture();
+  underglow.material.map = beam;
+  underglow.center.set(0.5, 0.98);
+  underglow.scale.set(1.36, 1.72, 1);
   underglow.material.blending = T.AdditiveBlending;
+  underglow.material.depthTest = false;
+  underglow.renderOrder = 2;
   const controlNodes = radioControls.map(
     (c) => (c.kind === 'switch' ? radio.switches : radio.sticks)[c.slot],
   );
@@ -227,20 +260,28 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     depthWrite: false,
     blending: T.AdditiveBlending,
   });
-  const halo = new T.Mesh(
-    new T.TorusGeometry(1.72, 0.155, 8, 80),
-    haloMaterial,
-  );
+  const halo = new T.Group();
   // A narrow luminous insert sits on the inner, front-facing lip of the hoop.
   const insertMaterial = new T.MeshBasicMaterial({
     transparent: true,
     depthWrite: false,
   });
-  const insert = new T.Mesh(
-    new T.TorusGeometry(1.655, 0.034, 6, 80),
-    insertMaterial,
-  );
-  insert.position.z = 0.105;
+  const insert = new T.Group();
+  for (let quadrant = 0; quadrant < 4; quadrant++) {
+    const arc = Math.PI / 6 - 0.055;
+    const light = new T.Mesh(
+      new T.TorusGeometry(1.72, 0.029, 8, 20, arc),
+      insertMaterial,
+    );
+    const glow = new T.Mesh(
+      new T.TorusGeometry(1.72, 0.137, 10, 20, arc),
+      haloMaterial,
+    );
+    light.rotation.z = glow.rotation.z = (quadrant * Math.PI) / 2 + 0.04;
+    light.position.z = 0.103;
+    insert.add(light);
+    halo.add(glow);
+  }
   gate.root.add(halo, insert);
   const solids = new Set<T.MeshStandardMaterial>();
   quad.root.traverse((n) => {
@@ -252,30 +293,54 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       solids.add(n.material);
   });
   let oldDiagram = 0;
-  const units = parts.map((part) => {
-    const node = quad.parts[part.id];
-    const first = node.children[0];
-    const representative = ['motor', 'propeller'].includes(part.id);
-    const bounds = new T.Box3().setFromObject(representative ? first : node);
-    const centre = bounds.getCenter(new T.Vector3());
-    const ink = new T.LineBasicMaterial({
-      color: 0x99c3cc,
-      transparent: true,
-      depthWrite: false,
-    });
-    const edges: T.LineSegments[] = [];
-    node.traverse((child) => {
-      if (child instanceof T.Mesh && child.material !== exposure) {
-        const wire = new T.LineSegments(
-          new T.EdgesGeometry(child.geometry, 42),
-          ink,
+  const units = parts
+    .filter((part) => openFrame || !separateBoards.has(part.id))
+    .map((part) => {
+      const node = quad.parts[part.id];
+      const first = node.children[0];
+      const representative = ['motor', 'propeller'].includes(part.id);
+      const bounds = new T.Box3();
+      node.updateWorldMatrix(true, true);
+      (representative ? first : node).traverse((child) => {
+        if (!(child instanceof T.Mesh) || child.material === exposure) return;
+        child.geometry.computeBoundingBox();
+        bounds.union(
+          child.geometry.boundingBox!.clone().applyMatrix4(child.matrixWorld),
         );
-        edges.push(wire);
-        child.add(wire);
-      }
+      });
+      const corners: T.Vector3[] = [];
+      for (const x of [bounds.min.x, bounds.max.x])
+        for (const y of [bounds.min.y, bounds.max.y])
+          for (const z of [bounds.min.z, bounds.max.z])
+            corners.push(new T.Vector3(x, y, z));
+      const centre = bounds.getCenter(new T.Vector3());
+      const ink = new T.LineBasicMaterial({
+        color: 0x99c3cc,
+        transparent: true,
+        depthWrite: false,
+      });
+      const edges: T.LineSegments[] = [];
+      node.traverse((child) => {
+        if (child instanceof T.Mesh && child.material !== exposure) {
+          const wire = new T.LineSegments(
+            new T.EdgesGeometry(child.geometry, 42),
+            ink,
+          );
+          edges.push(wire);
+          child.add(wire);
+        }
+      });
+      return {
+        part,
+        corners,
+        slot: matPosition(part, openFrame),
+        node,
+        centre,
+        ink,
+        edges,
+        emphasis: 0,
+      };
     });
-    return { part, node, centre, ink, edges, emphasis: 0 };
-  });
   const abort = new AbortController(),
     signal = abort.signal;
   const chapters = ['hero', 'motion', 'anatomy', 'radio', 'display'].map((id) =>
@@ -350,13 +415,14 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     dt: number,
   ) {
     const { part, node, centre } = unit;
-    const destX = (part.x - 0.5) * w,
-      destY = (0.5 - part.y) * 10;
+    const destX = (unit.slot.x - 0.5) * w,
+      destY = (0.5 - unit.slot.y) * 10;
     const emphasis = focus === part.id ? 1 : 0;
     unit.emphasis = mix(unit.emphasis, emphasis, dt);
     const size = mix(
       1,
-      ((part.scale * Math.min(1, w / 16)) / quad.root.scale.x) *
+      ((part.scale * (openFrame ? 0.89 : 1) * Math.min(1, w / 16)) /
+        quad.root.scale.x) *
         (1 + 0.085 * unit.emphasis),
       spread,
     );
@@ -390,9 +456,11 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const delta = Math.min(frameMs / 1000, 0.055);
     previous = now;
     const follow = 1 - Math.exp(-delta * 13);
-    elapsed = story.dataset.bookPaused
+    elapsed = story.dataset.awaiting
       ? 0
-      : Math.max(0, (now - introStart) / 1000);
+      : story.dataset.bookPaused
+        ? 0
+        : Math.max(0, (now - introStart) / 1000);
     scrollMotion = mix(
       scrollMotion,
       Math.min(1, Math.abs(goal - p) * 9),
@@ -407,9 +475,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const take = ease(1.82, 3.56, elapsed),
       hero = 1 - ease(0.03, 0.46, p);
 
-    const departRadio = ease(3.26, 3.56, p);
+    const departRadio = ease(3.5, 3.83, p);
     const [x, y, k, rx, ry, rz, z] = sample(path, p);
-    const spread = ease(1.77, 1.99, p) * (1 - ease(2.5, 2.84, p));
+    const spread = ease(1.8, 1.995, p) * (1 - ease(2.5, 2.84, p));
     const boardReady = String(spread >= 1);
     if (spread < 1) focus = '';
     if (story.dataset.boardReady !== boardReady)
@@ -420,11 +488,11 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     );
     story.style.setProperty(
       '--intro-opacity',
-      String(p > 0.02 ? 1 : ease(0.64, 1.14, elapsed)),
+      String(p > 0.02 ? 1 : ease(0.22, 0.75, elapsed)),
     );
     const drawing =
-      ease(1.38, 1.65, p) * (1 - ease(1.88, 2.08, p)) + 0.16 * spread;
-    const diagram = ease(1.49, 1.73, p) * (1 - ease(1.79, 1.96, p));
+      ease(1.59, 1.75, p) * (1 - ease(1.88, 2.08, p)) + 0.16 * spread;
+    const diagram = ease(1.59, 1.75, p) * (1 - ease(1.79, 1.96, p));
     if (diagram !== oldDiagram) {
       for (const material of solids) {
         const translucent = diagram > 0.003;
@@ -500,6 +568,23 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       );
       for (const wire of unit.edges) wire.visible = unit.ink.opacity > 0.035;
     }
+    if (spread === 1) {
+      quad.root.updateWorldMatrix(true, true);
+      for (const { node, part, corners, slot } of units) {
+        let bottom = slot.y;
+        for (const corner of corners) {
+          const projected = target
+            .copy(corner)
+            .applyMatrix4(node.matrixWorld)
+            .project(camera);
+          bottom = Math.max(bottom, (1 - projected.y) / 2);
+        }
+        story.style.setProperty(
+          '--label-' + part.id,
+          (100 * (bottom - slot.y)).toFixed(2) + 'svh',
+        );
+      }
+    }
     for (const repeat of quad.repeats) {
       repeat.scale.setScalar(1 - ease(0, 0.65, spread));
       repeat.visible = spread < 0.64;
@@ -526,13 +611,13 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       (1 - day) * (1 - spread) * (0.9 + 0.06 * Math.sin(now * 0.0025));
     for (const lamp of lamps) lamp.material.opacity = ledPower;
     quad.led.emissiveIntensity = ledPower * 2.1;
-    underglow.material.opacity = ledPower * 0.38;
-    gate.root.visible = p > 0.36 && p < 1.69;
+    underglow.material.opacity = ledPower * 0.9;
+    gate.root.visible = p > 0.36 && p < 1.55;
     gate.root.position.set(
-      0.08 * w,
+      (0.08 + 0.62 * ease(1.32, 1.55, p)) * w,
       (0.5 - 0.435) * 10 -
         (1 - ease(0.35, 0.72, p)) * 6 +
-        ease(1.14, 1.69, p) * 6,
+        ease(1.32, 1.55, p) * 8,
       0,
     );
     gate.root.rotation.set(0.045, 0.76, 0.018);
@@ -543,7 +628,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     haloMaterial.opacity = (1 - day) * (0.27 + 0.045 * Math.sin(now * 0.0019));
     gate.accent.emissiveIntensity =
       (1 - day) * (0.56 + 0.12 * Math.sin(now * 0.0019));
-    const caption = (ease(0.9, 1.04, p) * (1 - ease(1.35, 1.58, p))).toFixed(3);
+    const caption = (ease(0.98, 1.045, p) * (1 - ease(1.23, 1.315, p))).toFixed(
+      3,
+    );
     if (lastCaption !== caption) {
       story.style.setProperty('--caption-opacity', caption);
       lastCaption = caption;
@@ -564,12 +651,15 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       -3,
     );
     shadow.scale.set(
-      3.65 * quad.root.scale.x * (1 + 0.29 * take),
+      (3.65 + 0.6 * day) * quad.root.scale.x * (1 + 0.29 * take),
       (0.46 + take * 0.32) * quad.root.scale.x,
       1,
     );
-    shadow.material.opacity = (0.46 - 0.26 * take) * (1 - spread);
-    bounce.intensity = ledPower * 1.9;
+    shadow.material.opacity =
+      (0.46 + day * 0.22 - 0.22 * take) *
+      (1 - spread) *
+      (1 - hero + hero * ease(0.72, 1.08, elapsed));
+    bounce.intensity = ledPower * 0.55;
     spill.position.copy(shadow.position);
     lamps[0].getWorldPosition(target);
     spill.position.x = target.x - quad.root.scale.x * 0.1;
@@ -751,6 +841,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     );
     texture.dispose();
     footprint.dispose();
+    beam.dispose();
     smear.dispose();
     lcdTexture.dispose();
     renderer.dispose();

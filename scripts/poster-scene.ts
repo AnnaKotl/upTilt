@@ -2,6 +2,7 @@ import { radioControls } from '../src/data/radio-controls';
 import * as T from 'three';
 import {
   makeGate,
+  makeViewingKit,
   makeWhoop,
   makeRadio,
   studioLights,
@@ -25,6 +26,8 @@ const whoop = makeWhoop(),
   gate = makeGate();
 export const posterControls: { x: number; y: number }[] = [];
 export function capture(id: string, day: boolean) {
+  const front = id.startsWith('kit-');
+  if (front) id = id.slice(4);
   const quad = id.startsWith('seven') ? seven : whoop;
   if (id === 'seven') id = 'whoop';
   else if (id.startsWith('seven-')) id = id.slice(6);
@@ -34,7 +37,9 @@ export function capture(id: string, day: boolean) {
   let obj: T.Group;
   if (id === 'whoop') {
     obj = quad.root.clone();
-    obj.rotation.set(0.32, -0.38, 0, 'ZXY');
+    obj.rotation.set(front ? 0.19 : 0.32, front ? 0 : -0.38, 0, 'ZXY');
+  } else if (id === 'goggles') {
+    obj = makeViewingKit();
   } else if (id.startsWith('radio')) {
     const pose = Number(id.split('-')[1] ?? 0);
     radio.sticks[0].rotation.x = pose === 2 ? -0.8 : 0;
@@ -45,7 +50,7 @@ export function capture(id: string, day: boolean) {
         picked?.kind === 'switch' && picked.slot === slot ? 0.55 : -0.45;
     });
     obj = radio.root.clone();
-    obj.rotation.set(-0.21, 0.25, 0.34);
+    if (!front) obj.rotation.set(-0.21, 0.25, 0.34);
   } else if (id === 'gate') {
     obj = gate.root.clone();
     obj.rotation.y = 0.68;
@@ -53,7 +58,9 @@ export function capture(id: string, day: boolean) {
     obj = quad.parts[id].clone();
     if (id === 'motor' || id === 'propeller')
       obj.children.slice(1).forEach((n) => (n.visible = false));
-    obj.rotation.set(id === 'board' ? 0.8 : 0.46, -0.35, 0.03);
+    if (front && id === 'battery')
+      obj.rotation.set(1.35, 0, Math.PI / 2, 'ZXY');
+    else obj.rotation.set(id === 'board' ? 0.8 : 0.46, -0.35, 0.03);
   }
   subject.add(obj);
   obj.updateMatrixWorld(true);
@@ -94,7 +101,7 @@ export function capture(id: string, day: boolean) {
     w = r - l + 1,
     h = b - t + 1,
     ratio = Math.min(1, (id === 'whoop' ? 850 : 560) / Math.max(w, h));
-  if (id === 'radio') {
+  if (id === 'radio' && !front) {
     for (const entry of radioControls) {
       const node = (entry.kind === 'stick' ? radio.sticks : radio.switches)[
         entry.slot
@@ -114,7 +121,7 @@ export function capture(id: string, day: boolean) {
       });
     }
   }
-  if (id === 'radio') {
+  if (id === 'radio' && !front) {
     const lcd = new T.Vector3(0, -0.95, 0.368)
       .applyMatrix4(obj.matrixWorld)
       .project(camera);

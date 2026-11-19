@@ -23,17 +23,21 @@ try {
   await page.setContent('<body></body>');
   await page.addScriptTag({ content: bundle.code });
   const themed = new Set([
+    'kit-seven',
+    'kit-whoop',
     'whoop',
     'frame',
     'canopy',
     'camera',
     'antenna',
     'seven',
+    'seven-antenna',
     'seven-frame',
     'seven-canopy',
   ]);
   for (const id of [
     'seven',
+    'seven-antenna',
     'seven-frame',
     'seven-canopy',
     'whoop',
@@ -59,7 +63,15 @@ try {
     'radio-5',
     'radio-6',
     'radio-7',
+    'seven-esc',
+    'seven-receiver',
+    'seven-video',
     'radio-8',
+    'kit-seven',
+    'kit-whoop',
+    'kit-battery',
+    'kit-radio',
+    'kit-goggles',
   ]) {
     for (const theme of themed.has(id) ? ['dark', 'light'] : ['dark']) {
       const data = await page.evaluate(

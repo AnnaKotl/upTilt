@@ -14,8 +14,7 @@ let timer = 0,
   frame = 0,
   elapsed = 0,
   previous = 0,
-  visible = false,
-  returnedFromKit = false;
+  visible = false;
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 function advance() {
   clearTimeout(timer);
@@ -51,28 +50,28 @@ function measure() {
     advance();
   }
   const p = Math.max(0, Math.min(1, -box.top / Math.max(1, box.height - h)));
-  if (box.bottom <= 0) returnedFromKit = true;
-  if (p < 0.66) returnedFromKit = false;
-  const exit = returnedFromKit
-    ? 0
-    : Math.min(1, Math.max(0, (p - 0.53) / 0.34));
+  const exit = Math.min(1, Math.max(0, (p - 0.63) / 0.28));
   const approach = Math.min(1, Math.max(0, box.top / h));
   const style = surface.value.style;
   const imageIn = Math.max(0, Math.min(1, (0.65 - approach) / 0.49));
-  const dissolve = Math.max(0, Math.min(1, (p - 0.87) / 0.13));
+  const dissolve = Math.max(0, Math.min(1, (p - 0.91) / 0.09));
   style.setProperty(
     '--signal-image',
     String(reduced() ? 1 : imageIn * (1 - exit)),
   );
-  style.setProperty(
-    '--signal-visible',
-    String(reduced() || returnedFromKit ? 1 : 1 - dissolve),
-  );
-  style.setProperty('--edge', (reduced() ? 0 : approach * 19) + '%');
-  style.setProperty('--drift', (reduced() ? 0 : (p - 0.38) * 56) + 'px');
-  style.setProperty('--tilt', (reduced() ? 0 : (p - 0.38) * 2.8) + 'deg');
+  style.setProperty('--signal-visible', String(reduced() ? 1 : 1 - dissolve));
+  style.setProperty('--drift', (reduced() ? 0 : (p - 0.45) * 90) + 'px');
+  style.setProperty('--tilt', (reduced() ? 0 : (p - 0.45) * 3.8) + 'deg');
   style.setProperty('--dropout', String(reduced() ? 0 : exit));
   style.setProperty('--hud-opacity', String(reduced() ? 1 : 1 - exit));
+}
+function look(event: PointerEvent) {
+  if (!surface.value || reduced() || event.pointerType !== 'mouse') return;
+  const rect = surface.value.getBoundingClientRect();
+  surface.value.style.setProperty(
+    '--look',
+    ((event.clientX - rect.left) / rect.width - 0.5) * 32 + 'px',
+  );
 }
 function scroll() {
   if (!frame) frame = requestAnimationFrame(measure);
@@ -230,6 +229,8 @@ const shown = computed(() => fields[hover.value ?? selected.value]);
       @keydown.esc="hover = null"
       :data-phase="phase"
       class="goggle-view"
+      @pointermove="look"
+      @pointerleave="surface?.style.removeProperty('--look')"
     >
       <div class="view-land" aria-hidden="true">
         <img

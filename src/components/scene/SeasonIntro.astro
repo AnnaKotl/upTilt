@@ -14,7 +14,7 @@ const leaves = [
 <div class="scatter" hidden aria-hidden="true">
   {leaves.map(([x, y, r], i) => (
     <i
-      style={`--x:${50 + x * 48}%;--y:${y * 91}%;--r:${r}deg;--dx:${x < 0 ? -92 + x * 16 : 65 + x * 24}vw;--dy:${[-39, 32, -12, 65, -65, 35, -21][i]}vh;--delay:${Math.round(Math.hypot(x, y * 0.5) * 210)}ms;--sz:${17 + (i % 4) * 3}px`}
+      style={`--x:${50 + x * 48}%;--y:${y * 91}%;--r:${r}deg;--flutter:${[29, -24, 15, -34, 26, -17, 31][i]}deg;--lift:${[-21, 17, -34, 12, -19, 23, -12][i]}px;--dx:${x < 0 ? -41 + x * 9 : 34 + x * 12}vw;--dy:${[-13, 15, -7, 19, -17, 12, -9][i]}vh;--delay:${Math.round(Math.hypot(x, y * 0.5) * 210)}ms;--sz:${17 + (i % 4) * 3}px`}
     ></i>
   ))}
 </div>

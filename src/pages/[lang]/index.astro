@@ -52,6 +52,7 @@ const kit = [
       try {
         if (!sessionStorage.getItem('uptilt:boot') && !location.hash) {
           const root = document.documentElement;
+          root.dataset.bootStart = String(performance.now());
           root.dataset.boot = 'pending';
           sessionStorage.setItem('uptilt:boot', '1');
           setTimeout(() => {
@@ -84,7 +85,11 @@ const kit = [
           <h1>
             <abbr tabindex="0" aria-label="FPV — First-person view" lang="en">
               {['First', 'Person', 'View'].map((word, i) => (
-                <span class="fpv-word" aria-hidden="true" style={`--i:${i}`}>
+                <span
+                  class="fpv-word"
+                  aria-hidden="true"
+                  style={`--i:${i};--letters:${word.length - 1}`}
+                >
                   <b data-initial>{word[0].toUpperCase()}</b>
                   <span class="fpv-tail">
                     <i>{word.slice(1)}</i>
@@ -130,20 +135,7 @@ const kit = [
     <div class="kit-list">
       {kit.map((item) => (
         <a href={pageUrl(locale, 'knowledge/' + item.topic)}>
-          {item.asset === 'goggles' ? (
-            <svg
-              viewBox="0 0 180 100"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="3"
-              aria-hidden="true"
-            >
-              <path d="M31 32q10-12 59-12t59 12l10 33q0 14-15 14h-31l-13-14H80L67 79H36q-15-1-13-14z" />
-              <path d="m34 39 47-6-4 25-38 8zm112 0-47-6 4 25 38 8zM23 47l-15 6v13l15 1m135-20 15 6v13l-15 1" />
-            </svg>
-          ) : (
-            <StudyPoster name={item.asset} />
-          )}
+          <StudyPoster name={'kit-' + item.asset} />
           <span>{item.name}</span>
         </a>
       ))}
@@ -151,11 +143,16 @@ const kit = [
   </section>
   <section data-stop id="before-flight" class="before-flight">
     <div class="preflight-title">
-      <a href={pageUrl(locale, 'knowledge')} aria-label={t(locale).knowledge}>
-        <Icon name="book" />
-      </a>
+      <Icon name="quad" />
       <h2>{uk ? 'Перед польотом' : 'Before you fly'}</h2>
     </div>
+    <a
+      class="preflight-book"
+      href={pageUrl(locale, 'knowledge')}
+      aria-label={t(locale).knowledge}
+    >
+      <Icon name="book" />
+    </a>
     <p>
       {uk
         ? 'Розберися, що тримає коптер у повітрі, а перші кола пройди в симуляторі.'
@@ -231,8 +228,17 @@ const kit = [
       let timer = 0,
         waiting = true,
         bookPaused = false;
+      let releaseTimer = 0;
       function ready() {
         if (!waiting) return;
+        const root = document.documentElement;
+        const remaining =
+          Number(root.dataset.bootStart ?? 0) + 1000 - performance.now();
+        if (root.dataset.boot === 'pending' && remaining > 0) {
+          clearTimeout(releaseTimer);
+          releaseTimer = window.setTimeout(ready, remaining);
+          return;
+        }
         waiting = false;
         if (document.documentElement.dataset.boot === 'pending') {
           document.documentElement.dataset.boot = 'ready';
@@ -292,7 +298,7 @@ const kit = [
             sessionStorage.setItem('uptilt:scattered', 'yes');
           } catch {}
         }
-        if (ms < 3650) timer = window.setTimeout(advance, 3650 - ms);
+        if (ms < 4250) timer = window.setTimeout(advance, 4250 - ms);
         else {
           leaves.hidden = true;
           storyEl.dataset.airborne = 'true';
@@ -315,6 +321,7 @@ const kit = [
             );
           for (const img of art.querySelectorAll('img')) {
             const file =
+              (art.dataset.aircraftArt === 'kit' ? 'kit-' : '') +
               currentAircraft() +
               (img.classList.contains('day-image')
                 ? '-light.webp'
