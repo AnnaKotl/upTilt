@@ -21,6 +21,8 @@ const voltage = computed(() =>
     : Math.max(2.36, 4.35 - spentVoltage.value - 0.085 * throttle.value),
 );
 const jammed = ref(false);
+let loopOrigin: number | null = null;
+let lossTimer = 0;
 let sampledProgress = 0,
   sampledAt = 0,
   timer = 0,
@@ -54,44 +56,79 @@ function advance() {
           : time.value < 5.5
             ? 4
             : 5;
-  if (exhausted.value && chapter.value) {
-    const rect = chapter.value.getBoundingClientRect();
-    chapter.value.style.minHeight =
-      Math.min(rect.height, Math.max(0, -rect.top) + innerHeight * 1.06) + 'px';
-  } else timer = window.setTimeout(advance, 150);
+  if (loopOrigin !== null || exhausted.value) scroll();
+  if (!exhausted.value) timer = window.setTimeout(advance, 150);
+}
+function position(box: DOMRect) {
+  return Math.max(
+    0,
+    Math.min(1, -box.top / Math.max(1, box.height - innerHeight)),
+  );
+}
+function inView(box: DOMRect) {
+  return box.top < innerHeight * 0.38 && box.bottom > innerHeight * 0.36;
+}
+function flightProgress(progress: number) {
+  return loopOrigin === null
+    ? progress
+    : Math.max(0, Math.min(1, time.value / 32 + progress - loopOrigin));
+}
+function cancelReplay() {
+  clearTimeout(lossTimer);
+  lossTimer = 0;
+}
+function replayAfterLoss() {
+  lossTimer = 0;
+  const box = chapter.value?.getBoundingClientRect();
+  if (!box || !inView(box) || document.hidden || reduced()) return;
+  const anchor = position(box);
+  if (!exhausted.value && flightProgress(anchor) < 0.949) return;
+  loopOrigin = anchor;
+  resetFlight();
 }
 function measure() {
   frame = 0;
   if (!chapter.value || !surface.value) return;
   const box = chapter.value.getBoundingClientRect(),
     h = innerHeight;
-  const inside = box.top < h * 0.38 && box.bottom > h * 0.36;
+  const inside = inView(box);
   if (inside !== visible) {
     visible = inside;
     previous = 0;
     advance();
   }
-  const p = Math.max(0, Math.min(1, -box.top / Math.max(1, box.height - h)));
+  const progress = position(box);
   const now = performance.now();
   if (
     inside &&
     sampledAt &&
     !reduced() &&
     !exhausted.value &&
-    p !== sampledProgress
+    progress !== sampledProgress
   ) {
     const seconds = Math.max(0.016, Math.min(0.15, (now - sampledAt) / 1000));
     const screens =
-      Math.abs(p - sampledProgress) * Math.max(0, box.height / h - 1);
+      Math.abs(progress - sampledProgress) * Math.max(0, box.height / h - 1);
     const target = Math.min(1, screens / seconds / 2.2);
     advance();
     throttle.value +=
       (target - throttle.value) * (1 - Math.exp(-seconds / 0.08));
   }
   sampledAt = inside ? now : 0;
-  sampledProgress = p;
+  sampledProgress = progress;
+  const p = flightProgress(progress);
   const strength = Math.min(1, Math.max(0, (p - 0.24) / 0.71));
   jammed.value = !reduced() && p >= 0.949;
+  const canReplay =
+    inside &&
+    !document.hidden &&
+    !reduced() &&
+    (jammed.value || exhausted.value);
+  if (canReplay && !lossTimer) {
+    lossTimer = window.setTimeout(replayAfterLoss, 1100);
+  } else if (!canReplay) {
+    cancelReplay();
+  }
   const exit = jammed.value ? 1 : strength * strength * (3 - 2 * strength);
   const approach = Math.min(1, Math.max(0, box.top / h));
   const style = surface.value.style;
@@ -131,21 +168,23 @@ function scroll() {
   if (!frame) frame = requestAnimationFrame(measure);
 }
 function visibility() {
+  if (document.hidden) cancelReplay();
+  scroll();
   previous = 0;
   advance();
 }
 function reset() {
+  loopOrigin = null;
+  resetFlight();
+}
+function resetFlight() {
+  cancelReplay();
+  hover.value = null;
   sampledAt = sampledProgress = previous = phase.value = 0;
   throttle.value = spentVoltage.value = usedCharge.value = time.value = 0;
-  chapter.value?.style.removeProperty('min-height');
   centreView();
   advance();
   measure();
-}
-function replay() {
-  chapter.value?.scrollIntoView({ block: 'start', behavior: 'instant' });
-  reset();
-  surface.value?.focus({ preventScroll: true });
 }
 onMounted(() => {
   measure();
@@ -155,6 +194,7 @@ onMounted(() => {
   document.addEventListener('visibilitychange', visibility);
 });
 onBeforeUnmount(() => {
+  clearTimeout(lossTimer);
   clearTimeout(timer);
   cancelAnimationFrame(frame);
   window.removeEventListener('scroll', scroll);
@@ -342,14 +382,6 @@ const shown = computed(() => fields[hover.value ?? selected.value]);
         :style="{ backgroundImage: `url(${base}video-grain.png)` }"
         aria-hidden="true"
       ></div>
-      <button
-        v-if="jammed || exhausted"
-        type="button"
-        class="flight-again"
-        @click="replay"
-      >
-        {{ locale === 'uk' ? 'Почати політ знову' : 'Fly again' }}
-      </button>
       <div class="osd-hud" :inert="jammed || exhausted">
         <div class="osd-status">
           {{ voltage <= 3.48 ? 'LOW BATTERY' : phase === 1 ? 'ARMED' : '' }}

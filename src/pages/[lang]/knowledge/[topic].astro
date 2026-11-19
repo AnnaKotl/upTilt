@@ -37,10 +37,6 @@ const { topic } = Astro.props;
       <Icon name={topic.icon} />
       <h2>{topic.question[locale]}</h2>
       <p>{topic.note[locale]}</p>
-      <a class="inline-link" href={topic.source.url}>
-        {topic.source.label}
-        <Icon name="next" />
-      </a>
     </section>
   </article>
 </SiteLayout>

@@ -31,16 +31,7 @@ const { locale } = Astro.props;
   <SeasonIntro />
   <figcaption>
     <span class="caption-rule"></span>
-    <a
-      href={import.meta.env.BASE_URL + 'media/credits.txt'}
-      aria-label={
-        locale === 'uk'
-          ? 'ImpulseRC Alien 5″ — автор і ліцензія фото'
-          : 'ImpulseRC Alien 5″ — photo credit and licence'
-      }
-    >
-      ImpulseRC Alien 5″
-    </a>
+    <span>ImpulseRC Alien 5″</span>
   </figcaption>
 </figure>
 <script>

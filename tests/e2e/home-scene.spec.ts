@@ -324,20 +324,33 @@ test('the goggle picture recovers when scrolling back and retains the spent char
     'animation-name',
     'none',
   );
-  const again = page.getByRole('button', { name: 'Fly again' });
-  await expect(again).toBeVisible();
+  await expect(view).toHaveAttribute('data-lost', 'true');
   await scrollToFrame(0.18);
   await expect(view.locator('.video-noise')).toHaveCSS('opacity', '0');
   expect(await meter('.hud-voltage')).toBeLessThanOrEqual(beforeLoss + 0.1);
   expect(await meter('.hud-charge')).toBeGreaterThanOrEqual(spent);
   await scrollToFrame(0.97);
-  await again.click();
+  await expect(view).toHaveAttribute('data-lost', 'true');
+  const parked = await page.evaluate(() => scrollY);
+  await page.clock.runFor(1300);
   await expect(view).toHaveAttribute('data-lost', 'false');
+  expect(await page.evaluate(() => scrollY)).toBe(parked);
+  await expect(view.locator('.hud-time')).toContainText('00:00');
   expect(await meter('.hud-voltage')).toBeGreaterThan(4.3);
   await page.clock.fastForward(240_000);
   await expect(view).toHaveAttribute('data-exhausted', 'true');
   await expect(view.locator('.hud-voltage')).toHaveText(/2\.35 V/);
   await expect(view.locator('.osd-hud')).toBeHidden();
-  await again.click();
+  await page.clock.runFor(1400);
   await expect(view).toHaveAttribute('data-exhausted', 'false');
+  await expect(view).toHaveAttribute('data-lost', 'false');
+  expect(await meter('.hud-charge')).toBeLessThan(2);
+  await page.clock.fastForward(32_000);
+  await expect(view).toHaveAttribute('data-lost', 'true');
+  await page
+    .locator('#before-flight')
+    .evaluate((el) => el.scrollIntoView({ behavior: 'instant' }));
+  const nextSection = await page.evaluate(() => scrollY);
+  await page.clock.runFor(1500);
+  expect(await page.evaluate(() => scrollY)).toBe(nextSection);
 });

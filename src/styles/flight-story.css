@@ -2140,18 +2140,6 @@
   pointer-events: none;
 }
 
-.flight-again {
-  position: absolute;
-  left: 50%;
-  top: 56%;
-  transform: translate(-50%, -50%);
-  z-index: 2;
-  color: #f4f6f8;
-  background: #22282e;
-  border: 1px solid #78818b;
-  border-radius: 0.4rem;
-  padding: 0.7em 1.1em;
-}
 .goggle-view[data-lost='true'] .video-noise {
   animation: none;
   filter: brightness(0.37) contrast(0.58);
@@ -2163,9 +2151,4 @@
 .goggle-view[data-lost='true'] .osd-hud,
 .goggle-view[data-lost='true'] .season-weather {
   visibility: hidden;
-}
-.media-credits {
-  font: 0.75rem var(--font-mono);
-  color: var(--muted);
-  justify-self: center;
 }
