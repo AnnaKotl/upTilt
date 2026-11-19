@@ -99,7 +99,7 @@ export const topics = [
     id: 'workbench',
     icon: 'circuit',
     title: {
-      uk: 'Паяння та складання',
+      uk: 'Паяння та збірка',
       en: 'Soldering and assembly',
     },
     summary: {

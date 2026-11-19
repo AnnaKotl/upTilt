@@ -179,7 +179,6 @@
 @keyframes ports {
   from {
     opacity: 0;
-    translate: -6px 0;
   }
 }
 .hero-machine {
@@ -283,8 +282,7 @@
   );
 }
 .blown i {
-  animation: downwash 2.12s cubic-bezier(0.32, 0.03, 0.65, 0.95) var(--delay)
-    both;
+  animation: downwash 2.12s linear var(--delay) both;
 }
 .gate-chapter {
   height: 110svh;
@@ -382,7 +380,8 @@
   opacity: 0.55;
 }
 .board-part:is(:hover, :focus-visible) .part-render {
-  transform: scale(1.07);
+  transform: perspective(450px) translateY(-4px) rotateX(5deg) rotateY(-4deg);
+  filter: drop-shadow(1px 5px 3px #0008) drop-shadow(0 0 2px #ddd6);
 }
 .part-label {
   position: absolute;
@@ -785,12 +784,12 @@
 .fpv-tail i {
   font-style: normal;
 }
-.hero-type abbr:is(:hover, :focus-visible) .fpv-word {
+[data-airborne='true'] .hero-type abbr .fpv-word {
   left: 0.03em;
   top: calc(0.05em + var(--i) * 0.49em);
   transform: scale(0.419);
 }
-.hero-type abbr:is(:hover, :focus-visible) .fpv-tail {
+[data-airborne='true'] .hero-type abbr .fpv-tail {
   clip-path: inset(0);
   opacity: 1;
   transition-delay: 0.23s;
@@ -817,13 +816,13 @@
     transform: translate(0, 0) scaleY(0.63) rotate(var(--r));
   }
   20% {
-    transform: translate(calc(var(--dx) * 0.04), calc(var(--dy) * 0.08 - 12px))
+    transform: translate(calc(var(--dx) * 0.12), calc(var(--dy) * 0.08 - 12px))
       rotate(calc(var(--r) + var(--flutter)));
   }
   65% {
     opacity: 0.92;
     transform: translate(
-        calc(var(--dx) * 0.55),
+        calc(var(--dx) * 0.6),
         calc(var(--dy) * 0.48 + var(--lift))
       )
       rotate(calc(var(--r) - var(--flutter))) rotateX(52deg);
@@ -952,12 +951,12 @@
   --land-filter: saturate(1.15) sepia(0.08) brightness(1.08);
 }
 [data-theme='dark'] .goggle-view {
-  --exposure: saturate(0.36) brightness(0.61) contrast(1.12);
+  --exposure: saturate(0.36) brightness(0.38) contrast(1.22);
 }
 .view-land {
-  inset: -8%;
-  transform: perspective(1000px) translateY(var(--drift, 0px))
-    rotateX(var(--tilt, 0deg));
+  inset: -14%;
+  transform: perspective(1000px) scale(var(--zoom, 1))
+    translate(var(--look, 0px), var(--drift, 0px)) rotateX(var(--tilt, 0deg));
   transition: transform 0.18s ease-out;
 }
 .view-land img {
@@ -1192,7 +1191,7 @@
 .bench-mat,
 .flight-story:not([data-live]) .parts-board:before {
   position: absolute;
-  inset: 5% 3% 5% 5%;
+  inset: 9.05% 7.14% 9.05% 9.14%;
   --mat-surface: #214945;
   --mat-rim: #2c5955;
   --mat-tick: #e1f5e67a;
@@ -1234,32 +1233,16 @@
 }
 [data-theme='light']
   :is(.bench-mat, .flight-story:not([data-live]) .parts-board:before) {
-  --mat-surface: #9bbfb4;
-  --mat-rim: #88b0a6;
-  --mat-tick: #f0fff1b5;
-  --mat-guide: #f0fff170;
-}
-.parts-board::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse at var(--focus-x, 50%) var(--focus-y, 50%),
-    transparent 2%,
-    #06141166 16%
-  );
-  opacity: 0;
-  transition: opacity 0.25s;
-}
-.parts-board:has(.board-part:is(:hover, :focus-visible))::after {
-  opacity: 1;
+  --mat-surface: #292a2d;
+  --mat-rim: #414245;
+  --mat-tick: #e8e8e9a6;
+  --mat-guide: #e8e8e947;
 }
 .board-part {
   z-index: 1;
 }
 .part-label {
-  color: var(--ink);
+  color: #f0f1f1;
 }
 [data-live] .part-label {
   opacity: 0;
@@ -1363,7 +1346,7 @@
     top: 100%;
   }
   .flight-story:not([data-live]) .parts-board:before {
-    inset: 5% 3% 5% 5%;
+    inset: 9.05% 7.14% 9.05% 9.14%;
   }
 }
 @media (max-width: 840px), (max-height: 509px) {
@@ -1385,9 +1368,6 @@
   }
   .before-flight h2 {
     font-size: clamp(0.95rem, 4.7vw, 1.6rem);
-  }
-  .parts-board::after {
-    display: none;
   }
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -1431,17 +1411,7 @@
   text-shadow: 0 0 5px #94dacb99;
   pointer-events: none;
 }
-.radio-cue {
-  position: absolute;
-  top: 51%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font:
-    400 clamp(0.55rem, 1.15vw, 1rem)/1.5 'Press Start 2P',
-    monospace;
-  color: var(--muted);
-  pointer-events: none;
-}
+
 .goggle-chapter {
   position: relative;
   min-height: 170svh;
@@ -1458,8 +1428,29 @@
   background-size: 112px 112px;
   opacity: var(--dropout, 0);
 }
-.goggle-view[data-phase='3'] .video-noise {
-  opacity: max(0.19, var(--dropout, 0));
+.video-noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    176deg,
+    transparent 0 64px,
+    #c6d6de77 67px,
+    transparent 72px 130px
+  );
+}
+.goggle-view::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--bands, 0);
+  background: repeating-linear-gradient(
+    178deg,
+    transparent 0 72px,
+    #c7ccd9 75px,
+    transparent 84px 161px
+  );
 }
 .osd-hud {
   opacity: var(--hud-opacity, 1);
@@ -1478,7 +1469,7 @@
   bottom: 11%;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .goggle-view[data-phase='3'] .video-noise {
+  .goggle-view .video-noise {
     animation: video-grain 0.32s steps(3) infinite;
   }
   .osd-status {
@@ -1496,9 +1487,6 @@
   }
 }
 @media (max-width: 840px) {
-  .radio-cue {
-    top: 72%;
-  }
   .goggle-chapter {
     min-height: 147svh;
   }
@@ -1579,13 +1567,6 @@
   }
 }
 
-.flight-story[data-book-paused] .scene-canvas {
-  opacity: 1;
-}
-.flight-story[data-book-paused]:not([data-live]) .hero-machine {
-  transform: translateY(24%);
-}
-
 .boot-screen {
   display: none;
   position: fixed;
@@ -1594,17 +1575,25 @@
   pointer-events: none;
   place-items: center;
   background: var(--surface);
-  color: #79d9bc;
+  color: var(--muted);
 }
 [data-theme='light'] .boot-screen {
-  color: #287865;
+  color: var(--muted);
 }
 [data-boot] .boot-screen {
   display: grid;
 }
-.boot-screen svg {
-  width: min(23rem, 70vw);
-  overflow: visible;
+.boot-circuit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  stroke-width: 1.25;
+}
+.boot-mark {
+  width: clamp(1.8rem, 3.5vw, 3.4rem);
+  position: relative;
+  background: var(--surface);
 }
 .boot-trace {
   stroke-dasharray: 1;
@@ -1635,10 +1624,10 @@
 .fpv-tail {
   transition-delay: 0.24s;
 }
-.hero-type abbr:is(:hover, :focus-visible) .fpv-word {
+[data-airborne='true'] .hero-type abbr .fpv-word {
   transition-delay: 0.13s;
 }
-.hero-type abbr:is(:hover, :focus-visible) .fpv-tail {
+[data-airborne='true'] .hero-type abbr .fpv-tail {
   transition-delay: 0.34s;
 }
 .book-chip {
@@ -1760,7 +1749,7 @@
     height: 242svh;
   }
   .goggle-chapter {
-    min-height: 295svh;
+    min-height: 380svh;
   }
   .board-part[data-part='canopy'] .part-label,
   .board-part[data-part='battery'] .part-label {
@@ -1779,10 +1768,6 @@
     height: auto;
     min-height: 100svh;
   }
-}
-
-[data-live] .radio-cue {
-  opacity: var(--radio-exit, 1);
 }
 
 @media (max-width: 840px), (max-height: 509px) {
@@ -1823,11 +1808,77 @@
   pointer-events: none;
 }
 
-.radio-cue svg {
-  display: block;
-  width: clamp(3rem, 5vw, 5.2rem);
-  height: auto;
-  color: var(--ink);
+.radio-screen {
+  display: grid;
+  place-items: center;
+  color: #263b46;
+  text-shadow: none;
+}
+.radio-screen svg {
+  width: clamp(0.9rem, 1.8vw, 2.3rem);
+}
+.anchored-dialog form {
+  display: flex;
+  justify-content: flex-end;
+}
+.anchored-dialog form button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font: 500 0.73rem/1.4 var(--font-mono);
+  min-height: 44px;
+}
+.anchored-dialog form button svg {
+  width: 1em;
+  height: 1em;
+  opacity: 1;
+  transform: none;
+}
+.gate-copy a h2 {
+  display: grid;
+  justify-items: end;
+  font-size: clamp(0.92rem, 1.6vw, 1.88rem);
+}
+.gate-copy a svg {
+  opacity: 1;
+  transform: none;
+  width: 0.85em;
+  height: 0.85em;
+  justify-self: center;
+}
+@media (min-width: 841px) and (min-height: 510px) {
+  .gate-copy {
+    top: 77svh;
+    margin-left: auto;
+    margin-right: 5vw;
+    transform: none;
+  }
+}
+.hud-speed {
+  right: 0;
+  bottom: 22%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .goggle-view::after {
+    animation: video-grain 2.4s linear infinite alternate;
+  }
+  .osd-hud button {
+    animation: osd-flicker 5.7s linear infinite;
+  }
+}
+@keyframes osd-flicker {
+  0%,
+  76%,
+  79%,
+  100% {
+    opacity: 1;
+  }
+  77% {
+    opacity: 0.83;
+  }
+  78% {
+    opacity: 0.96;
+  }
 }
 .anchored-dialog {
   width: min(17rem, calc(100% - 2rem));
@@ -1868,7 +1919,7 @@
   .hero-type abbr {
     height: 1.76em;
   }
-  .hero-type abbr:is(:hover, :focus-visible) .fpv-word {
+  [data-airborne='true'] .hero-type abbr .fpv-word {
     transform: scale(0.48);
     top: calc(0.06em + var(--i) * 0.56em);
   }
@@ -1974,7 +2025,6 @@
 @keyframes socket-on {
   from {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.18) rotate(35deg);
   }
 }
 @keyframes socket-pulse {
@@ -2017,5 +2067,17 @@
     left: 50%;
     right: auto;
     transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 840px), (max-height: 509px) {
+  .gate-copy {
+    left: auto;
+    right: 6%;
+    margin: 0;
+    transform: none;
+  }
+  .hero-type abbr {
+    height: 1.56em;
   }
 }

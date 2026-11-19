@@ -218,10 +218,8 @@ const rows = [
   ['connector', 'power-lead', 'light-strip', 'mounts'],
 ];
 export function matPosition(part: StudyPart, openFrame: boolean) {
-  if (!openFrame) return part;
-  const row = rows.findIndex((ids) => ids.includes(part.id));
-  return {
-    x: 0.178 + rows[row].indexOf(part.id) * 0.222,
-    y: 0.16 + row * 0.217,
-  };
+  const row = openFrame ? rows.findIndex((ids) => ids.includes(part.id)) : -1;
+  const x = row < 0 ? part.x : 0.178 + rows[row].indexOf(part.id) * 0.222;
+  const y = row < 0 ? part.y : 0.16 + row * 0.217;
+  return { x: 0.51 + (x - 0.51) * 0.91, y: 0.5 + (y - 0.5) * 0.91 };
 }

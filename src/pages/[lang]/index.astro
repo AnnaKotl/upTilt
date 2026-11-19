@@ -30,22 +30,40 @@ const kit = [
 <SiteLayout locale={locale} title="FPV">
   <div class="flight-story" data-story>
     <div class="boot-screen" aria-hidden="true">
-      <svg viewBox="-150 -95 300 190" fill="none" stroke="currentColor">
-        {Array.from({ length: 8 }, (_, i) => (
-          <g transform={`rotate(${i * 45})`}>
-            <path
-              class="boot-trace"
-              d="M20 0h15l10 -10h16l12 12h14"
-              pathLength="1"
-            />
-            <circle cx="89" cy="2" r="2" />
+      <svg
+        class="boot-circuit"
+        viewBox="-500 -300 1000 600"
+        preserveAspectRatio="none"
+        fill="none"
+        stroke="currentColor"
+      >
+        {[1, -1].map((side) => (
+          <g transform={`scale(${side} 1)`}>
+            {[
+              'M24 -6 H96 L154 -64 H316 L370 -118 H484',
+              'M24 0 H99 L155 -56 H297 L360 7 H462',
+              'M24 7 H85 L142 64 H232 L294 126 H477',
+              'M15 -19 L69 -73 V-143 L144 -218 H270 L332 -280',
+              'M9 19 V74 L82 147 H202 L282 227 H407',
+              'M4 -18 V-119 L58 -173 V-286',
+            ].map((d) => (
+              <path
+                class="boot-trace"
+                d={d}
+                pathLength="1"
+                vector-effect="non-scaling-stroke"
+              />
+            ))}
           </g>
         ))}
-        <path
-          d={paths.quad}
-          transform="translate(-18 -18) scale(1.5)"
-          stroke-width="1.3"
-        />
+      </svg>
+      <svg
+        class="boot-mark"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+      >
+        <path d={paths.quad} stroke-width="1.3" />
       </svg>
     </div>
     <script is:inline>
@@ -83,7 +101,7 @@ const kit = [
         <SeasonIntro />
         <div class="hero-type">
           <h1>
-            <abbr tabindex="0" aria-label="FPV — First-person view" lang="en">
+            <abbr aria-label="FPV — First-person view" lang="en">
               {['First', 'Person', 'View'].map((word, i) => (
                 <span
                   class="fpv-word"
@@ -115,8 +133,10 @@ const kit = [
       </div>
       <div class="gate-copy">
         <a href={pageUrl(locale, 'knowledge/fundamentals')}>
-          <h2>{uk ? 'Фізика польоту' : 'Flight physics'}</h2>
-          <Icon name="forward" />
+          <h2>
+            <span>{uk ? 'Фізика' : 'Flight'}</span> <Icon name="forward" />
+            <span>{uk ? 'польоту' : 'physics'}</span>
+          </h2>
         </a>
       </div>
     </section>
@@ -226,8 +246,7 @@ const kit = [
       } catch {}
       leaves.hidden = scattered || reduced.matches;
       let timer = 0,
-        waiting = true,
-        bookPaused = false;
+        waiting = true;
       let releaseTimer = 0;
       function ready() {
         if (!waiting) return;
@@ -250,42 +269,9 @@ const kit = [
         restart(false);
       }
       storyEl.addEventListener('scene-painted', ready, { once: true });
-      const book = heroShot.querySelector('.book-nav');
-      function pauseForBook() {
-        if (
-          waiting ||
-          scattered ||
-          bookPaused ||
-          performance.now() - started >= 1280
-        )
-          return;
-        bookPaused = true;
-        clearTimeout(timer);
-        storyEl.dataset.bookPaused = 'true';
-        storyEl.classList.remove('lifting');
-        storyEl.dispatchEvent(new Event('restart-intro'));
-      }
-      function releaseBook() {
-        if (!bookPaused) return;
-        bookPaused = false;
-        delete storyEl.dataset.bookPaused;
-        restart(false);
-      }
-      book
-        ?.querySelector('.book-trigger')
-        ?.addEventListener('pointerenter', pauseForBook);
-      book?.addEventListener('focusin', pauseForBook);
-      book?.addEventListener('pointerleave', () => {
-        if (!book.contains(document.activeElement)) releaseBook();
-      });
-      book?.addEventListener('focusout', (e) => {
-        if (!book.contains((e as FocusEvent).relatedTarget as Node))
-          releaseBook();
-      });
-
       function advance() {
         clearTimeout(timer);
-        if (document.hidden || waiting || bookPaused) return;
+        if (document.hidden || waiting) return;
         const ms = performance.now() - started;
         if (ms < 1820) {
           timer = window.setTimeout(advance, 1820 - ms);
@@ -333,8 +319,6 @@ const kit = [
       }
       function restart(scatterAgain: boolean) {
         waiting = false;
-        bookPaused = false;
-        delete storyEl.dataset.bookPaused;
         delete storyEl.dataset.awaiting;
         started = performance.now();
         storyEl.dataset.takeoff = String(started);
@@ -383,7 +367,6 @@ const kit = [
       window.addEventListener('pageshow', () => {
         if (paused) {
           paused = false;
-          releaseBook();
           advance();
           void sync();
         }

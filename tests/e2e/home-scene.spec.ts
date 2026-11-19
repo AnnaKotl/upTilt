@@ -5,6 +5,7 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
   browserName,
 }) => {
   test.skip(browserName !== 'chromium', 'The GPU path is covered in Chromium.');
+  test.setTimeout(60000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -37,11 +38,16 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
       behavior: 'instant',
     }),
   );
+  const parked = await page.evaluate(() => scrollY);
+  await page.mouse.wheel(0, 420);
+  await page.waitForTimeout(150);
+  expect(await page.evaluate(() => scrollY)).toBe(parked);
+  await expect(scene).toHaveAttribute('data-radio-term', 'ARMED');
   await expect(page.locator('.radio-study')).toHaveAttribute(
     'data-complete',
     'true',
     {
-      timeout: 12000,
+      timeout: 32500,
     },
   );
   const stick = page.getByRole('button', { name: 'Правий стік' });
@@ -121,6 +127,10 @@ test('the title, aircraft menu and language switch preserve the live scene', asy
   const canvas = await story.locator('canvas').elementHandle();
   const book = page.locator('.book-chip'),
     before = await book.boundingBox();
+  await expect(page.locator('.fpv-tail').first()).toHaveCSS(
+    'clip-path',
+    'inset(0px)',
+  );
   await page.locator('.hero-type abbr').hover();
   await page.waitForTimeout(780);
   expect((await book.boundingBox())?.x).toBe(before?.x);
@@ -209,15 +219,15 @@ test('both settled layouts keep the names and the opened corner card inside the 
       await page.locator('[data-model-menu]').click();
       await page.locator('[data-aircraft-option="seven"]').click();
     }
-    await page
-      .locator('#anatomy')
-      .evaluate((el) =>
-        scrollTo({
-          top:
-            scrollY + el.getBoundingClientRect().top + el.offsetHeight * 0.075,
-          behavior: 'instant',
-        }),
-      );
+    await page.locator('#anatomy').evaluate((el) =>
+      scrollTo({
+        top:
+          scrollY +
+          el.getBoundingClientRect().top +
+          el.getBoundingClientRect().height * 0.075,
+        behavior: 'instant',
+      }),
+    );
     const buttons = page.locator('.board-part:visible');
     await expect(page.locator('[data-story]')).toHaveAttribute(
       'data-board-ready',
@@ -243,4 +253,35 @@ test('both settled layouts keep the names and the opened corner card inside the 
     expect(card!.y + card!.height).toBeLessThanOrEqual(mat!.y + mat!.height);
     await page.keyboard.press('Escape');
   }
+});
+
+test('the goggle picture recovers when scrolling back and retains the spent charge', async ({
+  page,
+}) => {
+  await page.goto('en/');
+  const view = page.locator('.goggle-view');
+  const scrollToFrame = async (progress: number) => {
+    await page.locator('#display').evaluate(
+      (el, p) =>
+        scrollTo({
+          top:
+            scrollY +
+            el.getBoundingClientRect().top +
+            p * (el.getBoundingClientRect().height - innerHeight),
+          behavior: 'instant',
+        }),
+      progress,
+    );
+  };
+  await scrollToFrame(0.63);
+  await expect(view.locator('.osd-status')).toHaveText('LOW BATTERY');
+  await expect(view.locator('.hud-voltage')).toHaveText(/3\.\d{2} V/);
+  const used = parseInt(await view.locator('.hud-charge').innerText());
+  await scrollToFrame(0.95);
+  await expect(view.locator('.video-noise')).toHaveCSS('opacity', '1');
+  await scrollToFrame(0.18);
+  await expect(view.locator('.video-noise')).toHaveCSS('opacity', '0');
+  expect(
+    parseInt(await view.locator('.hud-charge').innerText()),
+  ).toBeGreaterThanOrEqual(used);
 });

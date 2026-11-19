@@ -6,14 +6,26 @@ export function raceReplays(gate: T.Group) {
   const runs = ['#ff6875', '#ab87ff', '#42e8ac', '#ff64bc', '#ffd349'].map(
     (color, i) => {
       const d = i - 2;
-      const curve = new T.CatmullRomCurve3(
-        [
-          [2.5 + d * 1.15, 12 + Math.abs(d), 3.7],
-          [0.85 + d * 0.36, 0.53 - d * 0.24, 1.8],
-          [0, 0, 0],
-          [-1.25 - d * 0.15, -0.21 + d * 0.29, -1.9],
-          [-28 + d * 0.36, -0.35 + d * 1.65, -3.9],
-        ].map(([x, y, z]) => new T.Vector3(x, y, z)),
+      // The two cubics share a tangent at the hoop centre.
+      const v = (x: number, y: number, z: number) => new T.Vector3(x, y, z);
+      const tangent = v(3.4, 0.4 + d * 0.36, 1.85);
+      const centre = v(0, 0, 0);
+      const curve = new T.CurvePath<T.Vector3>();
+      curve.add(
+        new T.CubicBezierCurve3(
+          v(29, 3.1 + d * 0.6, 4.6),
+          v(11, 4.4 + d * 0.8, 3.2),
+          tangent,
+          centre,
+        ),
+      );
+      curve.add(
+        new T.CubicBezierCurve3(
+          centre,
+          tangent.clone().negate(),
+          v(-11, -2.4 + d * 0.88, -3.6),
+          v(-30, 0.8 + d * 0.95, -5.2),
+        ),
       );
       const group = new T.Group();
       swarm.add(group);
@@ -34,10 +46,16 @@ export function raceReplays(gate: T.Group) {
         transparent: true,
         depthWrite: false,
       });
-      const tube = new T.TubeGeometry(curve, 60, 0.014, 4, false);
-      group.add(hull, new T.Mesh(tube, material));
+      const layers = [0.014, 0.039, 0.083].map((radius, layer) => {
+        const tube = new T.TubeGeometry(curve, 160, radius, 6, false);
+        const ink = layer ? material.clone() : material;
+        if (layer) ink.blending = T.AdditiveBlending;
+        group.add(new T.Mesh(tube, ink));
+        return { tube, ink, strength: [0.83, 0.2, 0.075][layer] };
+      });
+      group.add(hull);
       group.visible = false;
-      return { curve, hull, tube, group, material };
+      return { curve, hull, layers, group, material };
     },
   );
   const reflected = new T.PointLight(0xffffff, 0, 3.8);
@@ -60,16 +78,16 @@ export function raceReplays(gate: T.Group) {
     reflected.intensity = 0;
     if (!swarm.visible) return false;
     let active = false;
-    runs.forEach(({ curve, hull, tube, group, material }, i) => {
+    runs.forEach(({ curve, hull, layers, group, material }, i) => {
       const age = (now - start) / 1000 - 0.5 - i * 1.85;
-      group.visible = age >= 0 && age < 2.9;
-      if (age < 2.9) active = true;
+      group.visible = age >= 0 && age < 4.5;
+      if (age < 4.5) active = true;
       if (!group.visible) return;
       const t = Math.min(1, age / 1.8);
       hull.position.copy(curve.getPointAt(t));
       hull.lookAt(curve.getPointAt(Math.min(1, t + 0.015)));
       hull.visible = t < 1;
-      const fade = Math.max(0, age - 1.8) / 1.1;
+      const fade = Math.max(0, age - 1.8) / 2.7;
       const reflection =
         (1 - day) * Math.max(0, 1 - Math.abs(t - 0.51) * 4) * 0.85;
       if (reflection > reflected.intensity) {
@@ -77,9 +95,13 @@ export function raceReplays(gate: T.Group) {
         reflected.color.copy(material.color);
         reflected.intensity = reflection;
       }
-      tube.setDrawRange(0, Math.floor(t * 60) * 4 * 6);
-      material.opacity =
-        (1 - fade) * (0.75 - 0.22 * day) * (0.94 + 0.06 * Math.sin(age * 7));
+      for (const { tube, ink, strength } of layers) {
+        tube.setDrawRange(0, Math.floor(t * 160) * 6 * 6);
+        ink.opacity =
+          strength *
+          (1 - T.MathUtils.smoothstep(fade, 0, 1)) *
+          (1 - 0.16 * day);
+      }
     });
     return active;
   }

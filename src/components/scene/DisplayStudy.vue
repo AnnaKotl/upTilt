@@ -10,6 +10,12 @@ const locale = usePageLanguage(input.locale);
 const modal = ref<InstanceType<typeof StudyNote>>(),
   chapter = ref<HTMLElement>();
 const phase = ref(0);
+const flightSeconds = ref(0);
+const furthest = ref(0);
+const time = computed(() =>
+  Math.min(420, flightSeconds.value + furthest.value * 380),
+);
+const voltage = computed(() => Math.max(3.38, 4.35 - time.value * 0.0039));
 let timer = 0,
   frame = 0,
   elapsed = 0,
@@ -22,6 +28,7 @@ function advance() {
   const now = performance.now();
   elapsed += previous ? Math.min(500, now - previous) : 0;
   previous = now;
+  flightSeconds.value = (elapsed / 1000) * 5;
   phase.value =
     elapsed < 1300
       ? 1
@@ -32,7 +39,7 @@ function advance() {
           : elapsed < 5500
             ? 4
             : 5;
-  if (phase.value < 5) timer = window.setTimeout(advance, 200);
+  if (time.value < 420) timer = window.setTimeout(advance, 200);
 }
 function measure() {
   frame = 0;
@@ -43,27 +50,30 @@ function measure() {
   if (inside !== visible) {
     visible = inside;
     previous = 0;
-    if (!inside) {
-      elapsed = 0;
-      phase.value = 0;
-    }
     advance();
   }
   const p = Math.max(0, Math.min(1, -box.top / Math.max(1, box.height - h)));
-  const exit = Math.min(1, Math.max(0, (p - 0.63) / 0.28));
+  if (inside && !reduced()) furthest.value = Math.max(furthest.value, p);
+  const strength = Math.min(1, Math.max(0, (p - 0.24) / 0.7));
+  const exit = strength * strength * (3 - 2 * strength);
   const approach = Math.min(1, Math.max(0, box.top / h));
   const style = surface.value.style;
   const imageIn = Math.max(0, Math.min(1, (0.65 - approach) / 0.49));
-  const dissolve = Math.max(0, Math.min(1, (p - 0.91) / 0.09));
+  const dissolve = Math.max(0, Math.min(1, (p - 0.975) / 0.025));
   style.setProperty(
     '--signal-image',
-    String(reduced() ? 1 : imageIn * (1 - exit)),
+    String(reduced() ? 1 : imageIn * (1 - exit ** 2)),
   );
   style.setProperty('--signal-visible', String(reduced() ? 1 : 1 - dissolve));
-  style.setProperty('--drift', (reduced() ? 0 : (p - 0.45) * 90) + 'px');
+  style.setProperty('--drift', (reduced() ? 0 : (p - 0.45) * 142) + 'px');
   style.setProperty('--tilt', (reduced() ? 0 : (p - 0.45) * 3.8) + 'deg');
-  style.setProperty('--dropout', String(reduced() ? 0 : exit));
-  style.setProperty('--hud-opacity', String(reduced() ? 1 : 1 - exit));
+  style.setProperty(
+    '--bands',
+    String(reduced() ? 0 : Math.sin(exit * Math.PI) * 0.42),
+  );
+  style.setProperty('--zoom', String(reduced() ? 1 : 1.04 + 0.19 * p));
+  style.setProperty('--dropout', String(reduced() ? 0 : exit ** 2));
+  style.setProperty('--hud-opacity', String(reduced() ? 1 : 1 - exit ** 3));
 }
 function look(event: PointerEvent) {
   if (!surface.value || reduced() || event.pointerType !== 'mouse') return;
@@ -81,7 +91,7 @@ function visibility() {
   advance();
 }
 function reset() {
-  elapsed = previous = phase.value = 0;
+  elapsed = previous = phase.value = flightSeconds.value = furthest.value = 0;
   advance();
   measure();
 }
@@ -106,7 +116,7 @@ const base = import.meta.env.BASE_URL + 'media/study/';
 const fields = [
   {
     id: 'time',
-    value: '01:24',
+    value: '00:00',
     uk: 'Таймер',
     en: 'Timer',
     text: {
@@ -116,7 +126,7 @@ const fields = [
   },
   {
     id: 'voltage',
-    value: '3.8 V',
+    value: '4.35 V',
     uk: 'Напруга',
     en: 'Battery voltage',
     text: {
@@ -136,7 +146,7 @@ const fields = [
   },
   {
     id: 'charge',
-    value: '48 mAh',
+    value: '0 mAh',
     uk: 'Витрачений заряд',
     en: 'Charge used',
     text: {
@@ -150,8 +160,8 @@ const fields = [
     uk: 'Якість зв’язку',
     en: 'Link quality',
     text: {
-      uk: 'У цьому прикладі приймач отримав усі очікувані пакети керування.',
-      en: 'In this example, the receiver got every expected control packet.',
+      uk: 'Частка очікуваних пакетів керування, які отримав приймач, у відсотках.',
+      en: 'The percentage of expected control packets received.',
     },
   },
   {
@@ -170,8 +180,8 @@ const fields = [
     en: 'Altitude',
     value: '12 m',
     text: {
-      uk: 'Висота відносно початкової позначки. На цьому кадрі коптер на дванадцять метрів вище за неї.',
-      en: 'Height relative to the starting reference. The quad is twelve metres above it in this frame.',
+      uk: 'Висота відносно початкової позначки.',
+      en: 'Height relative to the starting reference.',
     },
   },
   {
@@ -194,21 +204,52 @@ const fields = [
       en: 'Latitude comes first, followed by longitude. These are sample coordinates.',
     },
   },
+  {
+    id: 'speed',
+    uk: 'Наземна швидкість',
+    en: 'Ground speed',
+    value: '18 km/h',
+    text: {
+      uk: 'Швидкість відносно землі за даними GPS. Набір полів залежить від датчиків і профілю OSD.',
+      en: 'GPS speed over the ground. The available fields depend on the sensors and OSD profile.',
+    },
+  },
 ] as const;
 function reading(field: (typeof fields)[number]) {
-  if (phase.value < 2) return field.value;
-  if (field.id === 'time') return '01:' + String(24 + phase.value);
-  if (field.id === 'rpm')
-    return (
-      ['9 200', '9 200', '10 100', '9 700', '9 350', '8 900'][phase.value] +
-      ' RPM'
-    );
-  if (field.id === 'current')
-    return phase.value === 5 ? '1.8 A' : phase.value === 2 ? '2.4 A' : '2.2 A';
-  if (field.id === 'charge') return 48 + phase.value + ' mAh';
-  if (field.id === 'voltage')
-    return phase.value === 5 ? '3.4 V' : phase.value === 4 ? '3.6 V' : '3.8 V';
-  return field.value;
+  if (!time.value) return field.value;
+  const t = time.value;
+  const wave = Math.sin(t / 8);
+  switch (field.id) {
+    case 'time':
+      return [Math.floor(t / 60), Math.floor(t) % 60]
+        .map((n) => String(n).padStart(2, '0'))
+        .join(':');
+    case 'voltage':
+      return voltage.value.toFixed(2) + ' V';
+    case 'current':
+      return (3.4 + 1.3 * wave).toFixed(1) + ' A';
+    case 'charge':
+      return (
+        Math.round((3.4 * t + 10.4 * (1 - Math.cos(t / 8))) / 3.6) + ' mAh'
+      );
+    case 'rpm':
+      return Math.round((10200 + 1350 * wave) / 10) * 10 + ' RPM';
+    case 'link':
+      return 'LQ ' + Math.round(98 + 2 * Math.cos(t / 9));
+    case 'altitude':
+      return Math.round(12 + 3 * Math.sin(t / 17)) + ' m';
+    case 'speed':
+      return Math.round(18 + 4 * wave) + ' km/h';
+    case 'compass':
+      return (Math.round((360 + 18 * Math.sin(t / 16)) % 360) % 360) + '°';
+    case 'position':
+      return (
+        (48 + 0.0006 * Math.sin(t / 22)).toFixed(4) +
+        '° N · ' +
+        (16 + 0.0003 * Math.cos(t / 22)).toFixed(4) +
+        '° E'
+      );
+  }
 }
 function inspect(i: number) {
   choose(i);
@@ -254,7 +295,7 @@ const shown = computed(() => fields[hover.value ?? selected.value]);
       ></div>
       <div class="osd-hud">
         <div class="osd-status">
-          {{ phase === 1 ? 'ARMED' : phase === 5 ? 'LOW BATTERY' : '' }}
+          {{ voltage <= 3.48 ? 'LOW BATTERY' : phase === 1 ? 'ARMED' : '' }}
         </div>
         <button
           v-for="(field, i) in fields"
@@ -279,7 +320,8 @@ const shown = computed(() => fields[hover.value ?? selected.value]);
         >
           <template v-if="field.id === 'compass'"
             ><span class="compass-tape" aria-hidden="true"
-              ><i>NW</i><i>N</i><i>NE</i></span
+              ><i>NW</i><i>{{ reading(field) }}</i
+              ><i>NE</i></span
             ></template
           >
           <template v-else

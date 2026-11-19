@@ -41,6 +41,7 @@ const cueRotation: Record<string, number> = {
   left: -90,
 };
 const phases = [
+  { id: 1, term: 'ARMED', x: 0, y: 0, arrow: '' },
   { id: 3, term: 'Pitch', x: 0, y: 1, arrow: 'up' },
   { id: 3, term: 'Roll', x: 1, y: 0, arrow: 'right' },
   { id: 3, term: 'Pitch', x: 0, y: -1, arrow: 'down' },
@@ -56,6 +57,9 @@ const phases = [
     y: i - 1,
     arrow: '',
   })),
+  ...controls
+    .slice(4)
+    .map((_, index) => ({ id: index + 5, term: 'SW', x: 0, y: 0, arrow: '' })),
   { id: 2, term: 'Throttle', x: 0, y: -1, arrow: 'down' },
   { id: 1, term: 'DISARMED', x: 0, y: 0, arrow: '' },
 ];
@@ -112,6 +116,41 @@ function alignPosterControls() {
 
 let timer = 0;
 let visible = false;
+let hoverTimer = 0;
+let skipped = false;
+let touchY = 0;
+const inputEvents = new AbortController();
+function holdForward(distance: number) {
+  if (
+    distance <= 0 ||
+    complete.value ||
+    skipped ||
+    next >= Math.ceil(phases.length / 3) ||
+    !surface.value?.closest('[data-live]') ||
+    document.querySelector('dialog[open]') ||
+    matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
+    return false;
+  const top = surface.value
+    .closest('.radio-chapter')!
+    .getBoundingClientRect().top;
+  const remaining = top + innerHeight * 0.12;
+  if (remaining > distance || top < -innerHeight * 0.9) return false;
+  if (remaining > 0)
+    window.scrollBy({ top: Math.ceil(remaining), behavior: 'instant' });
+  settle();
+  return true;
+}
+function delayedPreview(i: number, event: PointerEvent) {
+  cancelPreview();
+  place(event);
+  if (event.pointerType === 'mouse')
+    hoverTimer = window.setTimeout(() => preview(i), 230);
+}
+function cancelPreview() {
+  clearTimeout(hoverTimer);
+  hover.value = null;
+}
 let next = 0,
   manualArmed = false,
   manualLift = false,
@@ -126,6 +165,7 @@ function pose(i: number, term = '', x = 0, y = 0, arrow = '') {
   const story = surface.value?.closest<HTMLElement>('[data-story]');
   if (!story) return;
   story.dataset.radioTerm = term;
+  story.dataset.radioCue = arrow;
   story.dataset.radioLanded = String(term === 'DISARMED');
   story.dataset.radioIdle = String(
     complete.value && manualArmed && !manualLift,
@@ -147,11 +187,12 @@ function run() {
         pose(0, 'DISARMED');
       } else run();
     },
-    next === 0 ? 1050 : 790,
+    next === 0 ? 1400 : 1480,
   );
 }
 function reset() {
   next = 0;
+  skipped = false;
   manualArmed = false;
   manualLift = false;
   lastControl = -1;
@@ -177,9 +218,10 @@ function settle() {
     run();
   }
 }
-function preview(i: number, event: MouseEvent | FocusEvent) {
+function preview(i: number, event?: MouseEvent | FocusEvent) {
+  clearTimeout(hoverTimer);
   hover.value = i;
-  place(event);
+  if (event) place(event);
   if (!complete.value) return;
   clearTimeout(timer);
   if (lastControl !== i) {
@@ -203,6 +245,59 @@ function preview(i: number, event: MouseEvent | FocusEvent) {
   );
 }
 onMounted(() => {
+  const signal = inputEvents.signal;
+  window.addEventListener(
+    'wheel',
+    (event) => {
+      const unit =
+        event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
+      if (!event.ctrlKey && holdForward(event.deltaY * unit))
+        event.preventDefault();
+    },
+    { passive: false, signal },
+  );
+  window.addEventListener(
+    'touchstart',
+    (e) => {
+      touchY = e.touches[0].clientY;
+    },
+    { passive: true, signal },
+  );
+  window.addEventListener(
+    'touchmove',
+    (e) => {
+      const y = e.touches[0].clientY;
+      if (e.touches.length === 1 && holdForward(touchY - y)) e.preventDefault();
+      touchY = y;
+    },
+    { passive: false, signal },
+  );
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.key === 'Escape' && visible) skipped = true;
+      if (
+        e.defaultPrevented ||
+        e.shiftKey ||
+        e.altKey ||
+        e.metaKey ||
+        e.ctrlKey ||
+        (e.target instanceof HTMLElement &&
+          e.target.closest(
+            'input,textarea,select,button,a,[contenteditable="true"]',
+          ))
+      )
+        return;
+      const distance =
+        e.key === 'ArrowDown'
+          ? 48
+          : ['PageDown', ' '].includes(e.key)
+            ? innerHeight
+            : 0;
+      if (holdForward(distance)) e.preventDefault();
+    },
+    { signal },
+  );
   sizeObserver = new ResizeObserver(alignPosterControls);
   sizeObserver.observe(surface.value!);
   sizeObserver.observe(poster.value!);
@@ -216,6 +311,8 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   clearTimeout(timer);
+  cancelPreview();
+  inputEvents.abort();
   window.removeEventListener('scroll', settle);
   window.removeEventListener('tour-restart', reset);
   window.removeEventListener('scene-reset', reset);
@@ -244,11 +341,8 @@ onBeforeUnmount(() => {
         /> </span
       ><slot />
     </div>
-    <span class="radio-screen" aria-hidden="true">{{ screen }}</span><span
-      class="radio-cue"
-      aria-hidden="true"
-    >
-      <svg
+    <span class="radio-screen" aria-hidden="true"
+      ><svg
         v-if="cue"
         viewBox="0 0 48 48"
         fill="none"
@@ -269,7 +363,7 @@ onBeforeUnmount(() => {
         >
           <path d="M34 36a15 15 0 1 1 5-11m-9-9 9 9 8-9" />
         </g></svg
-      ><template v-else-if="screen === 'DISARMED'">{{ screen }}</template></span
+      >{{ screen }}</span
     >
     <StudyNote
       ref="modal"
@@ -289,11 +383,11 @@ onBeforeUnmount(() => {
         }"
         :aria-label="control[locale]"
         :aria-describedby="hover === i ? 'control-note' : undefined"
-        @pointerenter="preview(i, $event)"
+        @pointerenter="delayedPreview(i, $event)"
         @pointermove="place"
-        @pointerleave="hover = null"
+        @pointerleave="cancelPreview"
         @focus="preview(i, $event)"
-        @blur="hover = null"
+        @blur="cancelPreview"
         @click="open(i, $event)"
       />
     </div>

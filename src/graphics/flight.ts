@@ -140,13 +140,16 @@ const path = [
   [0.26, 0.738, 0.46, 0.89, -0.13, 0.49, -0.12, 3.3],
   [0.48, 0.76, 0.58, 0.49, 0.57, 0.63, 0.22, 2.7],
   [0.78, 0.58, 0.435, 0.22, 0.25, -1.18, 0.27, 0],
-  [0.98, 0.31, 0.54, 0.61, 0.32, 0.36, 0.08, -2.8],
-  [1.32, 0.31, 0.54, 0.61, 0.32, 0.36, 0.08, -2.8],
+  [0.98, 0.205, 0.535, 0.44, 0.32, 0.36, 0.08, -2.8],
+  [1.32, 0.205, 0.535, 0.44, 0.32, 0.36, 0.08, -2.8],
   [1.57, 0.5, 0.46, 0.68, 1.03, 0, 0, 0],
   [1.8, 0.5, 0.46, 0.68, 1.03, 0, 0, 0],
   [2, 0.5, 0.5, 0.58, 0.58, -0.15, 0, 0],
   [2.31, 0.5, 0.5, 0.58, 0.58, -0.15, 0, 0],
-  [2.84, 0.37, 0.485, 0.7, 0.55, -0.31, -0.06, 0],
+  [2.4, 0.5, 0.5, 0.58, 0.58, -0.15, 0, 0],
+  [2.72, 0.5, 0.46, 0.68, 1.03, 0, 0, 0],
+  [2.76, 0.5, 0.46, 0.68, 1.03, 0, 0, 0],
+  [2.88, 0.645, 0.39, 0.59, 0.38, 0.55, -0.12, 0],
   [3, 0.77, 0.41, 0.53, 0.23, 0.24, 0, 0],
   [4, 0.77, 0.41, 0.53, 0.23, 0.24, 0, 0],
 ];
@@ -187,14 +190,42 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   let lastReadout: string | undefined;
   function updateReadout() {
     const term = story.dataset.radioTerm ?? '';
-    if (term === lastReadout) return;
-    lastReadout = term;
-    lcdContext.clearRect(0, 0, lcd.width, lcd.height);
+    const cue = story.dataset.radioCue ?? '';
+    if (term + cue === lastReadout) return;
+    lastReadout = term + cue;
+    lcdContext.fillStyle = '#d1e5eb';
+    lcdContext.fillRect(0, 0, lcd.width, lcd.height);
     lcdContext.font = 'bold 45px monospace';
-    lcdContext.fillStyle = '#c5efdd';
+    lcdContext.fillStyle = '#263b46';
     lcdContext.textAlign = 'center';
     lcdContext.textBaseline = 'middle';
-    lcdContext.fillText(term.toUpperCase(), 256, 128);
+    lcdContext.fillText(term.toUpperCase(), 256, cue ? 178 : 128);
+    if (cue) {
+      lcdContext.save();
+      lcdContext.translate(256, 86);
+      lcdContext.strokeStyle = lcdContext.fillStyle;
+      lcdContext.lineWidth = 7;
+      lcdContext.lineCap = lcdContext.lineJoin = 'round';
+      lcdContext.beginPath();
+      if (cue === 'cw' || cue === 'ccw') {
+        lcdContext.scale(cue === 'cw' ? 1 : -1, 1);
+        lcdContext.arc(0, 0, 30, Math.PI * 0.36, Math.PI * 2);
+        lcdContext.moveTo(15, -12);
+        lcdContext.lineTo(30, 1);
+        lcdContext.lineTo(42, -14);
+      } else {
+        lcdContext.rotate(
+          (({ right: 1, down: 2, left: -1 }[cue] ?? 0) * Math.PI) / 2,
+        );
+        lcdContext.moveTo(0, 32);
+        lcdContext.lineTo(0, -32);
+        lcdContext.moveTo(-18, -14);
+        lcdContext.lineTo(0, -32);
+        lcdContext.lineTo(18, -14);
+      }
+      lcdContext.stroke();
+      lcdContext.restore();
+    }
     lcdTexture.needsUpdate = true;
   }
   const ghosts = raceReplays(gate.root);
@@ -235,15 +266,20 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   bounce.position.set(0, -0.05, 0.61);
   quad.parts['light-strip'].add(bounce);
   const spill = sprite(scene, '#bff7dd');
-  const underglow = sprite(quad.parts['light-strip'], '#bff7dd');
-  underglow.position.set(0, 0.09, 0.6);
   const beam = beamTexture();
-  underglow.material.map = beam;
-  underglow.center.set(0.5, 0.98);
-  underglow.scale.set(1.36, 1.72, 1);
-  underglow.material.blending = T.AdditiveBlending;
-  underglow.material.depthTest = false;
-  underglow.renderOrder = 2;
+  const underglow = new T.Mesh(
+    new T.PlaneGeometry(1.14, 2.05).translate(0, -1.025, 0),
+    new T.MeshBasicMaterial({
+      map: beam,
+      transparent: true,
+      depthWrite: false,
+      side: T.DoubleSide,
+      blending: T.AdditiveBlending,
+    }),
+  );
+  underglow.rotation.x = -1.32;
+  underglow.position.set(0, 0.065, 0.625);
+  quad.parts['light-strip'].add(underglow);
   const controlNodes = radioControls.map(
     (c) => (c.kind === 'switch' ? radio.switches : radio.sticks)[c.slot],
   );
@@ -302,7 +338,12 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       const bounds = new T.Box3();
       node.updateWorldMatrix(true, true);
       (representative ? first : node).traverse((child) => {
-        if (!(child instanceof T.Mesh) || child.material === exposure) return;
+        if (
+          !(child instanceof T.Mesh) ||
+          child.material === exposure ||
+          child === underglow
+        )
+          return;
         child.geometry.computeBoundingBox();
         bounds.union(
           child.geometry.boundingBox!.clone().applyMatrix4(child.matrixWorld),
@@ -321,7 +362,11 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       });
       const edges: T.LineSegments[] = [];
       node.traverse((child) => {
-        if (child instanceof T.Mesh && child.material !== exposure) {
+        if (
+          child instanceof T.Mesh &&
+          child.material !== exposure &&
+          child !== underglow
+        ) {
           const wire = new T.LineSegments(
             new T.EdgesGeometry(child.geometry, 42),
             ink,
@@ -341,6 +386,58 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
         emphasis: 0,
       };
     });
+  // Project just the selected part onto the mat, using its actual silhouette.
+  const contact = new T.Group();
+  const partLight = new T.PointLight(0xfff6eb, 0, 2);
+  scene.add(partLight);
+  scene.add(contact);
+  const shade = new T.MeshBasicMaterial({
+    color: 0x030506,
+    transparent: true,
+    opacity: 0.25,
+    depthWrite: false,
+  });
+  const flatten = new T.Matrix4();
+  let shadowOwner = '';
+  function updateContact() {
+    const unit = units.find((u) => u.part.id === focus);
+    if (focus !== shadowOwner) {
+      contact.clear();
+      unit?.node.traverse((child) => {
+        if (
+          !(child instanceof T.Mesh) ||
+          child.material === exposure ||
+          child === underglow
+        )
+          return;
+        for (
+          let p: T.Object3D | null = child;
+          p && p !== unit.node;
+          p = p.parent
+        )
+          if (!p.visible) return;
+        const shape = new T.Mesh(child.geometry, shade);
+        shape.userData.source = child;
+        shape.matrixAutoUpdate = false;
+        contact.add(shape);
+      });
+      shadowOwner = focus;
+    }
+    partLight.intensity = unit ? 1.45 * unit.emphasis : 0;
+    if (!unit) return;
+    partLight.position.set(
+      (unit.slot.x - 0.5) * w - 0.24,
+      (0.5 - unit.slot.y) * 10 + 0.46,
+      1.5,
+    );
+    flatten
+      .makeScale(1, 1, 0.001)
+      .setPosition(0.025, -0.08 - unit.emphasis * 0.09, -2.2);
+    for (const shape of contact.children) {
+      shape.matrix.multiplyMatrices(flatten, shape.userData.source.matrixWorld);
+      shape.matrixWorldNeedsUpdate = true;
+    }
+  }
   const abort = new AbortController(),
     signal = abort.signal;
   const chapters = ['hero', 'motion', 'anatomy', 'radio', 'display'].map((id) =>
@@ -421,21 +518,26 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     unit.emphasis = mix(unit.emphasis, emphasis, dt);
     const size = mix(
       1,
-      ((part.scale * (openFrame ? 0.89 : 1) * Math.min(1, w / 16)) /
+      ((0.91 * part.scale * (openFrame ? 0.89 : 1) * Math.min(1, w / 16)) /
         quad.root.scale.x) *
-        (1 + 0.085 * unit.emphasis),
+        (1 + 0.024 * unit.emphasis),
       spread,
     );
     node.scale.setScalar(size);
+    const lift = unit.emphasis * spread;
+    node.rotation.set(-0.055 * lift, 0.085 * lift, -0.025 * lift);
     target
-      .set(destX, destY, 0.2)
+      .set(destX, destY + lift * 0.095, 0.2 + 0.14 * lift)
       .sub(quad.root.position)
       .applyQuaternion(inv)
       .divideScalar(quad.root.scale.x);
     node.position
       .copy(target)
       .multiplyScalar(spread)
-      .addScaledVector(centre, -size * spread);
+      .addScaledVector(
+        target.copy(centre).applyQuaternion(node.quaternion),
+        -size * spread,
+      );
   }
   function draw(now: number) {
     raf = 0;
@@ -458,9 +560,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const follow = 1 - Math.exp(-delta * 13);
     elapsed = story.dataset.awaiting
       ? 0
-      : story.dataset.bookPaused
-        ? 0
-        : Math.max(0, (now - introStart) / 1000);
+      : Math.max(0, (now - introStart) / 1000);
     scrollMotion = mix(
       scrollMotion,
       Math.min(1, Math.abs(goal - p) * 9),
@@ -477,14 +577,14 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
 
     const departRadio = ease(3.5, 3.83, p);
     const [x, y, k, rx, ry, rz, z] = sample(path, p);
-    const spread = ease(1.8, 1.995, p) * (1 - ease(2.5, 2.84, p));
+    const spread = ease(1.8, 1.995, p) * (1 - ease(2.4, 2.74, p));
     const boardReady = String(spread >= 1);
     if (spread < 1) focus = '';
     if (story.dataset.boardReady !== boardReady)
       story.dataset.boardReady = boardReady;
     story.style.setProperty(
       '--mat-opacity',
-      String(ease(1.69, 1.95, p) * (1 - ease(2.54, 2.85, p))),
+      String(ease(1.69, 1.95, p) * (1 - ease(2.45, 2.75, p))),
     );
     story.style.setProperty(
       '--intro-opacity',
@@ -506,7 +606,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       oldDiagram = diagram;
     }
     story.style.setProperty('--radio-exit', String(1 - departRadio));
-    const inRadio = ease(2.77, 2.99, p);
+    const inRadio = ease(2.82, 2.99, p);
     const ax = Number(story.dataset.radioX ?? 0),
       ay = Number(story.dataset.radioY ?? 0);
     const targetLift =
@@ -536,18 +636,19 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
         ? Math.sin(elapsed * 1.5) * 0.035 * (1 - ease(5.5, 7, elapsed))
         : 0);
     quad.root.position.set(
-      (x - 0.5 + departRadio * 0.62) * w + hoverX * 0.14 * hero,
+      (x - 0.5 + departRadio * 0.62) * w + hoverX * 0.4 * hero * take,
       (0.5 - y) * 10 -
         2.32 * (1 - take) * hero +
-        bob +
+        bob -
+        hoverY * 0.21 * hero * take +
         (0.92 * lift * exitLanding - 0.42) * inRadio,
       z,
     );
     quad.root.rotation.order = 'ZXY';
     quad.root.rotation.set(
-      rx + hoverY * 0.1 * hero + radioPitch * 0.27 * inRadio,
-      ry + hoverX * 0.13 * hero + radioYaw * 0.35 * inRadio,
-      rz - hoverX * 0.095 * hero + bank * 0.33 * inRadio,
+      rx + hoverY * 0.18 * hero + radioPitch * 0.27 * inRadio,
+      ry + hoverX * 0.28 * hero + radioYaw * 0.35 * inRadio,
+      rz - hoverX * 0.15 * hero + bank * 0.33 * inRadio,
       'ZXY',
     );
     quad.root.scale.setScalar(
@@ -589,10 +690,13 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       repeat.scale.setScalar(1 - ease(0, 0.65, spread));
       repeat.visible = spread < 0.64;
     }
+    contact.visible = spread === 1;
+    if (contact.visible) updateContact();
+    else partLight.intensity = 0;
     const departure =
       Math.max(1 - hero, ease(1.38, 2.05, elapsed)) * (1 - ease(1.46, 1.69, p));
     const arrival =
-      ease(2.84, 2.95, p) * (1 - inRadio + inRadio * lift * exitLanding);
+      ease(2.745, 2.85, p) * (1 - inRadio + inRadio * lift * exitLanding);
     const speed = Math.max(departure, arrival);
     const spinning = speed > 0.005;
     exposure.opacity = speed * (0.88 + 0.12 * scrollMotion);
@@ -661,9 +765,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       (1 - hero + hero * ease(0.72, 1.08, elapsed));
     bounce.intensity = ledPower * 0.55;
     spill.position.copy(shadow.position);
-    lamps[0].getWorldPosition(target);
-    spill.position.x = target.x - quad.root.scale.x * 0.1;
-    spill.position.y -= 0.04 * quad.root.scale.x;
+    underglow.localToWorld(target.set(0, -1.75, 0));
+    spill.position.x = target.x;
+    spill.position.y = Math.min(spill.position.y, target.y);
     spill.position.z += 0.04;
     spill.scale.set(
       quad.root.scale.x * (1.35 + 1.12 * take),
@@ -731,7 +835,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     if (
       replaying ||
       spinning ||
-      (!story.dataset.bookPaused && elapsed < 3.72 && p < 0.45) ||
+      (elapsed < 3.72 && p < 0.45) ||
       p !== goal ||
       day !== dayGoal ||
       Math.abs(hoverX - tx) + Math.abs(hoverY - ty) > 0.002 ||
@@ -839,6 +943,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     [shadow, gateShade, spill, underglow, ...lamps, ...gimbalLights].forEach(
       (s) => s.material.dispose(),
     );
+    shade.dispose();
     texture.dispose();
     footprint.dispose();
     beam.dispose();

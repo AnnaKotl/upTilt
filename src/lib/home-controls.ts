@@ -15,7 +15,7 @@ const shell = [
   '[data-top] .hint',
   '[data-author] .hint',
   '.gate-copy a',
-  '.gate-copy h2',
+  '.gate-copy h2 span',
   '.gate-fallback [aria-label]',
   '#kit h2',
   '.kit-list a',
@@ -97,7 +97,7 @@ export function initPresentation() {
     'kit',
     'before-flight',
   ].map((id) => document.getElementById(id)!);
-  const dwell = [5300, 12300, 3200, 15000, 8500, 1700, 0];
+  const dwell = [5300, 12300, 3200, 29300, 8500, 1700, 0];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const stopPosition = (node: HTMLElement) => {
     const live =

@@ -671,7 +671,7 @@ export function makeRadio() {
     black = mat('#15171b', 0.38),
     silver = mat('#bac1c6', 0.33, 0.63),
     satin = mat('#858b93', 0.4, 0.41),
-    screen = mat('#1c2630', 0.19, 0.3),
+    screen = mat('#bfd7e1', 0.24, 0.12),
     blue = mat('#657f9f', 0.38);
   // Front silhouette, from the raised centre shoulder to the rounded lower corners.
   const shape = new T.Shape();
@@ -768,7 +768,9 @@ export function makeRadio() {
         yy = i === 0 ? 1.2 : i === 1 ? 1.1 : 1.08,
         zz = i === 2 ? -0.21 : 0.2;
       disc(root, black, xx, yy, zz + 0.077, 0.109, 0.105);
-      disc(root, satin, xx, yy + 0.027, zz + 0.135, 0.053, 0.029);
+      disc(root, rim, xx, yy + 0.017, zz + 0.13, 0.085, 0.022);
+      disc(root, silver, xx, yy + 0.024, zz + 0.146, 0.065, 0.018);
+      sphere(root, satin, [xx, yy + 0.03, zz + 0.15], [0.051, 0.045, 0.042]);
       const toggle = new T.Group();
       root.add(toggle);
       toggle.position.set(xx, yy + 0.03, zz + 0.13);
@@ -778,7 +780,7 @@ export function makeRadio() {
         i === 0 ? grip : silver,
         [0.072, 0.11, 0.049],
         [s * 0.136, 0.255, 0.078],
-        0.011,
+        0.023,
       ).rotation.z = -s * 0.43;
       batch(toggle);
       switches.push(toggle);

@@ -89,12 +89,6 @@ const themed = ['frame', 'canopy', 'camera', 'antenna'];
 function highlight(index: number | null) {
   if (index !== null && !settled.value) return;
   hover.value = index;
-  const board = document.querySelector<HTMLElement>('.parts-board');
-  if (board && index !== null) {
-    const point = matPosition(parts[index], model.value === 'seven');
-    board.style.setProperty('--focus-x', point.x * 100 + '%');
-    board.style.setProperty('--focus-y', point.y * 100 + '%');
-  }
   document.querySelector('[data-story]')?.dispatchEvent(
     new CustomEvent('part-focus', {
       detail: index === null ? '' : parts[index].id,
@@ -159,7 +153,7 @@ async function open(event: Event, index: number) {
           v-show="model === 'seven' || !separateBoards.has(part.id)"
           :style="{
             '--label-offset': 'var(--label-' + part.id + ',7svh)',
-            '--part-width': part.width * 100 + '%',
+            '--part-width': part.width * 91 + '%',
             '--x': matPosition(part, model === 'seven').x * 100 + '%',
             '--y': matPosition(part, model === 'seven').y * 100 + '%',
           }"

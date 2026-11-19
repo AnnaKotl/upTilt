@@ -167,7 +167,9 @@ test('switching languages keeps the selected part and section', async ({
     page.getByRole('button', { name: 'FPV camera', exact: true }),
   ).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#anatomy')).toBeInViewport();
-  await page.getByRole('button', { name: 'Battery voltage · 3.8 V' }).click();
+  await page
+    .getByRole('button', { name: /^Battery voltage · \d\.\d{2} V$/ })
+    .click();
   await expect(page.getByRole('dialog')).toContainText('volts');
 });
 
