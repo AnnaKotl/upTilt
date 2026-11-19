@@ -10,44 +10,55 @@ const locale = usePageLanguage(input.locale);
 const modal = ref<InstanceType<typeof StudyNote>>(),
   chapter = ref<HTMLElement>();
 const phase = ref(0);
-const flightSeconds = ref(0);
-const furthest = ref(0);
-const scrollLoad = ref(0);
-const time = computed(
-  () => flightSeconds.value + furthest.value * 380 + scrollLoad.value,
-);
+const time = ref(0),
+  throttle = ref(0),
+  spentVoltage = ref(0),
+  usedCharge = ref(0);
+const exhausted = computed(() => spentVoltage.value >= 2);
 const voltage = computed(() =>
-  Math.max(
-    2.35,
-    4.35 - time.value * 0.0039 - Math.max(0, furthest.value - 0.68) * 1.62,
-  ),
+  exhausted.value
+    ? 2.35
+    : Math.max(2.36, 4.35 - spentVoltage.value - 0.085 * throttle.value),
 );
+const jammed = ref(false);
 let sampledProgress = 0,
-  sampledAt = 0;
-let timer = 0,
+  sampledAt = 0,
+  timer = 0,
   frame = 0,
-  elapsed = 0,
   previous = 0,
   visible = false;
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 function advance() {
   clearTimeout(timer);
-  if (!visible || document.hidden || reduced()) return;
+  if (!visible || document.hidden || reduced() || exhausted.value) return;
   const now = performance.now();
-  elapsed += previous ? now - previous : 0;
+  const seconds = previous ? (now - previous) / 1000 : 0;
   previous = now;
-  flightSeconds.value = (elapsed / 1000) * 5;
+  // Integrate the decaying scroll impulse over real time, including slow animation frames.
+  const decay = Math.exp(-seconds / 0.85);
+  const effort = throttle.value * 0.85 * (1 - decay);
+  throttle.value *= decay;
+  time.value += seconds;
+  spentVoltage.value = Math.min(
+    2,
+    spentVoltage.value + 0.009 * seconds + 0.009 * effort,
+  );
+  usedCharge.value += (2.1 * seconds + 5.8 * effort) / 3.6;
   phase.value =
-    elapsed < 1300
+    time.value < 1.3
       ? 1
-      : elapsed < 2600
+      : time.value < 2.6
         ? 2
-        : elapsed < 3450
+        : time.value < 3.45
           ? 3
-          : elapsed < 5500
+          : time.value < 5.5
             ? 4
             : 5;
-  if (voltage.value > 2.35) timer = window.setTimeout(advance, 200);
+  if (exhausted.value && chapter.value) {
+    const rect = chapter.value.getBoundingClientRect();
+    chapter.value.style.minHeight =
+      Math.min(rect.height, Math.max(0, -rect.top) + innerHeight * 1.06) + 'px';
+  } else timer = window.setTimeout(advance, 150);
 }
 function measure() {
   frame = 0;
@@ -62,34 +73,41 @@ function measure() {
   }
   const p = Math.max(0, Math.min(1, -box.top / Math.max(1, box.height - h)));
   const now = performance.now();
-  if (inside && !reduced()) {
-    if (sampledAt) {
-      const distance = Math.abs(p - sampledProgress);
-      const velocity = (distance * 1000) / Math.max(16, now - sampledAt);
-      scrollLoad.value += distance * Math.min(16, velocity * 8);
-    }
-    furthest.value = Math.max(furthest.value, p);
+  if (
+    inside &&
+    sampledAt &&
+    !reduced() &&
+    !exhausted.value &&
+    p !== sampledProgress
+  ) {
+    const seconds = Math.max(0.016, Math.min(0.15, (now - sampledAt) / 1000));
+    const screens =
+      Math.abs(p - sampledProgress) * Math.max(0, box.height / h - 1);
+    const target = Math.min(1, screens / seconds / 2.2);
+    advance();
+    throttle.value +=
+      (target - throttle.value) * (1 - Math.exp(-seconds / 0.08));
   }
   sampledAt = inside ? now : 0;
   sampledProgress = p;
-  const strength = Math.min(1, Math.max(0, (p - 0.24) / 0.7));
-  const exit = strength * strength * (3 - 2 * strength);
+  const strength = Math.min(1, Math.max(0, (p - 0.24) / 0.71));
+  jammed.value = !reduced() && p >= 0.949;
+  const exit = jammed.value ? 1 : strength * strength * (3 - 2 * strength);
   const approach = Math.min(1, Math.max(0, box.top / h));
   const style = surface.value.style;
   const imageIn = Math.max(0, Math.min(1, (0.65 - approach) / 0.49));
-  const dissolve = Math.max(0, Math.min(1, (p - 0.975) / 0.025));
   style.setProperty(
     '--signal-image',
     String(reduced() ? 1 : imageIn * (1 - exit ** 2)),
   );
-  style.setProperty('--signal-visible', String(reduced() ? 1 : 1 - dissolve));
-  style.setProperty('--drift', (reduced() ? 0 : (p - 0.45) * 142) + 'px');
-  style.setProperty('--tilt', (reduced() ? 0 : (p - 0.45) * 3.8) + 'deg');
+
+  style.setProperty('--drift', (reduced() ? 0 : (p - 0.45) * 23) + 'svh');
+  style.setProperty('--tilt', (reduced() ? 0 : (p - 0.45) * 8) + 'deg');
   style.setProperty(
     '--bands',
     String(reduced() ? 0 : Math.sin(exit * Math.PI) * 0.42),
   );
-  style.setProperty('--zoom', String(reduced() ? 1 : 1.04 + 0.19 * p));
+  style.setProperty('--zoom', String(reduced() ? 1 : 1.12 + 0.45 * p));
   style.setProperty('--dropout', String(reduced() ? 0 : exit ** 2));
   style.setProperty('--hud-opacity', String(reduced() ? 1 : 1 - exit ** 3));
 }
@@ -98,8 +116,16 @@ function look(event: PointerEvent) {
   const rect = surface.value.getBoundingClientRect();
   surface.value.style.setProperty(
     '--look',
-    ((event.clientX - rect.left) / rect.width - 0.5) * 32 + 'px',
+    ((event.clientX - rect.left) / rect.width - 0.5) * 9 + 'vw',
   );
+  surface.value.style.setProperty(
+    '--look-y',
+    ((event.clientY - rect.top) / rect.height - 0.5) * 7 + 'svh',
+  );
+}
+function centreView() {
+  surface.value?.style.removeProperty('--look');
+  surface.value?.style.removeProperty('--look-y');
 }
 function scroll() {
   if (!frame) frame = requestAnimationFrame(measure);
@@ -109,10 +135,17 @@ function visibility() {
   advance();
 }
 function reset() {
-  sampledAt = sampledProgress = scrollLoad.value = 0;
-  elapsed = previous = phase.value = flightSeconds.value = furthest.value = 0;
+  sampledAt = sampledProgress = previous = phase.value = 0;
+  throttle.value = spentVoltage.value = usedCharge.value = time.value = 0;
+  chapter.value?.style.removeProperty('min-height');
+  centreView();
   advance();
   measure();
+}
+function replay() {
+  chapter.value?.scrollIntoView({ block: 'start', behavior: 'instant' });
+  reset();
+  surface.value?.focus({ preventScroll: true });
 }
 onMounted(() => {
   measure();
@@ -130,7 +163,6 @@ onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', visibility);
 });
 const { surface, noteAt, place } = usePointerNote();
-const credits = import.meta.env.BASE_URL + 'media/credits.txt';
 const base = import.meta.env.BASE_URL + 'media/study/';
 const fields = [
   {
@@ -227,7 +259,7 @@ const fields = [
     id: 'speed',
     uk: 'Наземна швидкість',
     en: 'Ground speed',
-    value: '18 km/h',
+    value: '14 km/h',
     text: {
       uk: 'Швидкість відносно землі за даними GPS. Набір полів залежить від датчиків і профілю OSD.',
       en: 'GPS speed over the ground. The available fields depend on the sensors and OSD profile.',
@@ -246,11 +278,9 @@ function reading(field: (typeof fields)[number]) {
     case 'voltage':
       return voltage.value.toFixed(2) + ' V';
     case 'current':
-      return (3.4 + 1.3 * wave).toFixed(1) + ' A';
+      return (2.1 + 5.8 * throttle.value + 0.22 * wave).toFixed(1) + ' A';
     case 'charge':
-      return (
-        Math.round((3.4 * t + 10.4 * (1 - Math.cos(t / 8))) / 3.6) + ' mAh'
-      );
+      return Math.round(usedCharge.value) + ' mAh';
     case 'rpm':
       return Math.round((10200 + 1350 * wave) / 10) * 10 + ' RPM';
     case 'link':
@@ -258,7 +288,7 @@ function reading(field: (typeof fields)[number]) {
     case 'altitude':
       return Math.round(12 + 3 * Math.sin(t / 17)) + ' m';
     case 'speed':
-      return Math.round(18 + 4 * wave) + ' km/h';
+      return Math.round(14 + 37 * throttle.value + 0.8 * wave) + ' km/h';
     case 'compass':
       return (Math.round((360 + 18 * Math.sin(t / 16)) % 360) % 360) + '°';
     case 'position':
@@ -288,10 +318,12 @@ const shown = computed(() => fields[hover.value ?? selected.value]);
       "
       @keydown.esc="hover = null"
       :data-phase="phase"
-      :data-exhausted="voltage <= 2.35"
+      :data-exhausted="exhausted"
+      :data-lost="jammed || exhausted"
+      tabindex="-1"
       class="goggle-view"
       @pointermove="look"
-      @pointerleave="surface?.style.removeProperty('--look')"
+      @pointerleave="centreView"
     >
       <div class="view-land" aria-hidden="true">
         <img
@@ -305,15 +337,20 @@ const shown = computed(() => fields[hover.value ?? selected.value]);
       </div>
       <div class="view-shade"></div>
       <div class="season-weather" aria-hidden="true"></div>
-      <a class="photo-credit" :href="credits" lang="en"
-        >Halobenzene · CC BY-SA</a
-      >
       <div
         class="video-noise"
         :style="{ backgroundImage: `url(${base}video-grain.png)` }"
         aria-hidden="true"
       ></div>
-      <div class="osd-hud">
+      <button
+        v-if="jammed || exhausted"
+        type="button"
+        class="flight-again"
+        @click="replay"
+      >
+        {{ locale === 'uk' ? 'Почати політ знову' : 'Fly again' }}
+      </button>
+      <div class="osd-hud" :inert="jammed || exhausted">
         <div class="osd-status">
           {{ voltage <= 3.48 ? 'LOW BATTERY' : phase === 1 ? 'ARMED' : '' }}
         </div>

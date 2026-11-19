@@ -171,6 +171,9 @@ function pose(i: number, term = '', x = 0, y = 0, arrow = '') {
   cue.value = arrow;
   const story = surface.value?.closest<HTMLElement>('[data-story]');
   if (!story) return;
+  if (term === 'ARMED') story.dataset.radioArmed = 'true';
+  if (!term || !powered.value || term === 'DISARMED')
+    story.dataset.radioArmed = 'false';
   story.dataset.radioTerm = term;
   story.dataset.radioCue = arrow;
   story.dataset.radioLanded = String(!powered.value || term === 'DISARMED');

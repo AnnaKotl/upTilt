@@ -298,25 +298,46 @@ test('the goggle picture recovers when scrolling back and retains the spent char
       progress,
     );
   };
-  await scrollToFrame(0.63);
+  const meter = async (selector: string) =>
+    Number((await view.locator(selector).textContent())?.match(/[\d.]+/)?.[0]);
+  await expect(view.locator('.hud-speed')).toBeEnabled();
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  await expect(async () => {
+    await scrollToFrame(0.12);
+    await expect(view).toHaveAttribute('data-phase', /[1-5]/, { timeout: 800 });
+  }).toPass({ timeout: 8000 });
+  await expect(view).toHaveAttribute('data-lost', 'false');
+  await page.clock.runFor(400);
+  const initialVoltage = await meter('.hud-voltage');
+  const cruising = await meter('.hud-speed');
+  await scrollToFrame(0.55);
+  await expect.poll(() => meter('.hud-speed')).toBeGreaterThan(cruising + 3);
+  const accelerating = await meter('.hud-voltage');
+  expect(initialVoltage - accelerating).toBeLessThan(0.15);
+  await page.clock.fastForward(110_000);
   await expect(view.locator('.osd-status')).toHaveText('LOW BATTERY');
   await expect(view.locator('.hud-voltage')).toHaveText(/3\.\d{2} V/);
-  const firstReading = await view.locator('.hud-time').textContent();
-  await expect
-    .poll(() => view.locator('.hud-time').textContent())
-    .not.toBe(firstReading);
-  const used = parseInt(await view.locator('.hud-charge').innerText());
-  await scrollToFrame(0.95);
-  await expect(view.locator('.video-noise')).toHaveCSS('opacity', '1');
+  const spent = await meter('.hud-charge'),
+    beforeLoss = await meter('.hud-voltage');
+  await scrollToFrame(0.96);
+  await expect(view.locator('.video-noise')).toHaveCSS(
+    'animation-name',
+    'none',
+  );
+  const again = page.getByRole('button', { name: 'Fly again' });
+  await expect(again).toBeVisible();
   await scrollToFrame(0.18);
   await expect(view.locator('.video-noise')).toHaveCSS('opacity', '0');
-  expect(
-    parseInt(await view.locator('.hud-charge').innerText()),
-  ).toBeGreaterThanOrEqual(used);
-  await page.clock.fastForward(120_000);
+  expect(await meter('.hud-voltage')).toBeLessThanOrEqual(beforeLoss + 0.1);
+  expect(await meter('.hud-charge')).toBeGreaterThanOrEqual(spent);
+  await scrollToFrame(0.97);
+  await again.click();
+  await expect(view).toHaveAttribute('data-lost', 'false');
+  expect(await meter('.hud-voltage')).toBeGreaterThan(4.3);
+  await page.clock.fastForward(240_000);
   await expect(view).toHaveAttribute('data-exhausted', 'true');
   await expect(view.locator('.hud-voltage')).toHaveText(/2\.35 V/);
-  await scrollToFrame(0.05);
-  await expect(view.locator('.video-noise')).toHaveCSS('opacity', '1');
   await expect(view.locator('.osd-hud')).toBeHidden();
+  await again.click();
+  await expect(view).toHaveAttribute('data-exhausted', 'false');
 });

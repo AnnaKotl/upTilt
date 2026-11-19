@@ -193,10 +193,10 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const cue = story.dataset.radioCue ?? '';
     const powered = story.dataset.radioPower !== 'off';
     const level = Number(story.dataset.radioLevel ?? 6);
-    radio.power.emissive.copy(haloMaterial.color);
+    radio.power.emissive.copy(accentLight);
     radio.power.emissiveIntensity = powered ? 0.78 : 0;
     radio.indicators.forEach((indicator, i) => {
-      indicator.emissive.copy(haloMaterial.color);
+      indicator.emissive.copy(accentLight);
       indicator.emissiveIntensity = i < level ? 0.7 : 0;
     });
     const key = powered + term + cue;
@@ -242,7 +242,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     }
     lcdTexture.needsUpdate = true;
   }
-  const ghosts = raceReplays(gate.root);
+  const ghosts = raceReplays(scene, gate.root);
   const texture = fadeTexture(),
     smear = rotorExposure();
   const exposure = new T.MeshBasicMaterial({
@@ -296,39 +296,11 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const gimbalLights = controlNodes.map((node, i) => {
     const lamp = sprite(node, '#90d7eb');
     if (radioControls[i].kind === 'stick') lamp.position.set(0, 0.05, 0.29);
-    else lamp.position.set(Math.sign(node.position.x) * 0.12, 0.24, 0.08);
+    else lamp.position.copy(radio.switchTips[radioControls[i].slot]);
     lamp.scale.setScalar(0.42);
     return lamp;
   });
-  const haloMaterial = new T.MeshBasicMaterial({
-    transparent: true,
-    opacity: 0,
-    depthWrite: false,
-    blending: T.AdditiveBlending,
-  });
-  const halo = new T.Group();
-  // A narrow luminous insert sits on the inner, front-facing lip of the hoop.
-  const insertMaterial = new T.MeshBasicMaterial({
-    transparent: true,
-    depthWrite: false,
-  });
-  const insert = new T.Group();
-  for (let quadrant = 0; quadrant < 4; quadrant++) {
-    const arc = Math.PI / 6 - 0.055;
-    const light = new T.Mesh(
-      new T.TorusGeometry(1.72, 0.029, 8, 20, arc),
-      insertMaterial,
-    );
-    const glow = new T.Mesh(
-      new T.TorusGeometry(1.72, 0.137, 10, 20, arc),
-      haloMaterial,
-    );
-    light.rotation.z = glow.rotation.z = (quadrant * Math.PI) / 2 + 0.04;
-    light.position.z = 0.103;
-    insert.add(light);
-    halo.add(glow);
-  }
-  gate.root.add(halo, insert);
+  const accentLight = new T.Color();
   const solids = new Set<T.MeshStandardMaterial>();
   quad.root.traverse((n) => {
     if (
@@ -670,7 +642,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       positionPart(unit, spread, follow);
       unit.ink.color
         .set(day > 0.5 ? '#357483' : '#b3dce4')
-        .lerp(haloMaterial.color, unit.emphasis);
+        .lerp(accentLight, unit.emphasis);
       unit.ink.opacity = clamp(drawing + 0.28 * unit.emphasis, 0, 0.84);
       for (const wire of unit.edges) wire.visible = unit.ink.opacity > 0.035;
     }
@@ -701,7 +673,13 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const departure =
       Math.max(1 - hero, ease(1.38, 2.05, elapsed)) * (1 - ease(1.46, 1.69, p));
     const arrival =
-      ease(2.745, 2.85, p) * (1 - inRadio + inRadio * lift * exitLanding);
+      ease(2.745, 2.85, p) *
+      (1 -
+        inRadio +
+        inRadio *
+          Number(story.dataset.radioArmed === 'true') *
+          (0.24 + 0.76 * lift) *
+          exitLanding);
     const speed = Math.max(departure, arrival);
     const spinning = speed > 0.005;
     exposure.opacity = speed * (0.88 + 0.12 * scrollMotion);
@@ -717,7 +695,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
           (1 - spread);
     });
     const ledPower =
-      (1 - day) * (1 - spread) * (0.9 + 0.06 * Math.sin(now * 0.0025));
+      (1 - day) *
+      Math.max(departure * (1 - ease(1.52, 1.59, p)), arrival) *
+      (0.9 + 0.06 * Math.sin(now * 0.0025));
     for (const lamp of lamps) lamp.material.opacity = ledPower;
     quad.led.emissiveIntensity = ledPower * 2.1;
     underglow.material.opacity = ledPower * 0.9;
@@ -732,9 +712,6 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     gate.root.rotation.set(0.045, 0.76, 0.018);
     gate.root.scale.setScalar(Math.min(w / 16, 1.15));
     const replaying = ghosts.update(p, now, day);
-    insert.visible = halo.visible = day < 0.98;
-    insertMaterial.opacity = (1 - day) * (0.8 + 0.1 * Math.sin(now * 0.0019));
-    haloMaterial.opacity = (1 - day) * (0.27 + 0.045 * Math.sin(now * 0.0019));
     gate.accent.emissiveIntensity =
       (1 - day) * (0.56 + 0.12 * Math.sin(now * 0.0019));
     const caption = (ease(0.98, 1.045, p) * (1 - ease(1.23, 1.315, p))).toFixed(
@@ -774,7 +751,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       -0.84,
       0,
     );
-    radio.root.rotation.set(-0.21 * inRadio, 0.25 * inRadio, 0.34 * inRadio);
+    radio.root.rotation.set(0.22 * inRadio, 0.1 * inRadio, 0.28 * inRadio);
     radio.root.scale.setScalar(Math.min(w * 0.116, 1.85));
     radio.sticks[0].rotation.x = mix(
       radio.sticks[0].rotation.x,
@@ -895,8 +872,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       lamp.material.color.copy(neon);
     underglow.material.color.copy(neon);
 
-    haloMaterial.color.copy(neon);
-    insertMaterial.color.copy(neon);
+    accentLight.copy(neon);
     quad.led.emissive.copy(neon);
     gate.accent.color.set(accent);
     gate.accent.emissive.copy(neon);

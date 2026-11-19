@@ -1,8 +1,8 @@
 import * as T from 'three';
 // Each ghost follows its own curve in screen-aligned space, crossing the open centre at z=0.
-export function raceReplays(gate: T.Group) {
+export function raceReplays(scene: T.Scene, gate: T.Group) {
   const swarm = new T.Group();
-  gate.add(swarm);
+  scene.add(swarm);
   const runs = ['#ff6875', '#ab87ff', '#42e8ac', '#ff64bc', '#ffd349'].map(
     (color, i) => {
       const d = i - 2;
@@ -60,29 +60,42 @@ export function raceReplays(gate: T.Group) {
   );
   const forward = new T.Vector3(0, 0, 1);
   const reflected = new T.PointLight(0xffffff, 0, 3.8);
-  gate.add(reflected);
-  let crossed = false,
-    start = -1;
+  swarm.add(reflected);
+  let previous = 0,
+    start = -1,
+    lastLaunch = Infinity,
+    ready = true;
   function reset() {
-    crossed = false;
+    previous = 0;
+    ready = true;
     start = -1;
     swarm.visible = false;
     reflected.intensity = 0;
   }
   function update(progress: number, now: number, day: number) {
-    if (progress < 1.04 || progress > 1.32) reset();
-    if (!crossed && progress >= 1.045 && progress <= 1.32) {
-      crossed = true;
+    const inGate = progress >= 1.04 && progress <= 1.32;
+    if (progress < 0.88) ready = true;
+    if (ready && start < 0 && previous < 1.045 && progress >= 1.045 && inGate) {
+      ready = false;
       start = now;
+      lastLaunch = Infinity;
+      swarm.position.copy(gate.position);
+      swarm.scale.set(gate.scale.x, gate.scale.y, 1);
     }
-    swarm.visible = start >= 0 && progress <= 1.32;
+    previous = progress;
+    if (start < 0) return false;
+    const elapsed = (now - start) / 1000;
+    if (!inGate) lastLaunch = Math.min(lastLaunch, elapsed);
+    swarm.visible = true;
     reflected.intensity = 0;
-    if (!swarm.visible) return false;
-    swarm.quaternion.copy(gate.quaternion).invert();
-    swarm.scale.z = 1 / gate.scale.z;
     let active = false;
     runs.forEach(({ curve, hull, layers, group, material }, i) => {
-      const age = (now - start) / 1000 - 0.5 - i * 1.85;
+      const launch = 0.5 + i * 1.85;
+      if (launch > lastLaunch) {
+        group.visible = false;
+        return;
+      }
+      const age = elapsed - launch;
       group.visible = age >= 0 && age < 4.5;
       if (age < 4.5) active = true;
       if (!group.visible) return;
@@ -94,9 +107,7 @@ export function raceReplays(gate: T.Group) {
       const reflection =
         (1 - day) * Math.max(0, 1 - Math.abs(t - 0.51) * 4) * 0.85;
       if (reflection > reflected.intensity) {
-        reflected.position
-          .copy(hull.position)
-          .applyQuaternion(swarm.quaternion);
+        reflected.position.copy(hull.position);
         reflected.color.copy(material.color);
         reflected.intensity = reflection;
       }
@@ -108,6 +119,10 @@ export function raceReplays(gate: T.Group) {
           (1 - 0.16 * day);
       }
     });
+    if (!active) {
+      start = -1;
+      swarm.visible = false;
+    }
     return active;
   }
   return { reset, update };

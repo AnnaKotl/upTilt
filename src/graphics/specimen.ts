@@ -751,7 +751,8 @@ export function makeRadio() {
     return o;
   };
   const sticks: T.Group[] = [],
-    switches: T.Group[] = [];
+    switches: T.Group[] = [],
+    switchTips: T.Vector3[] = [];
   for (const s of [-1, 1]) {
     const x = s * 0.89,
       y = 0.36;
@@ -793,27 +794,47 @@ export function makeRadio() {
       disc(stick, rim, 0, 0.048, 0.281 + i * 0.023, 0.076 - i * 0.006, 0.009);
     batch(stick);
     sticks.push(stick);
-    for (let i = 0; i < 3; i++) {
-      const xx = s * (i === 0 ? 0.86 : i === 1 ? 1.115 : 1.36),
-        yy = i === 0 ? 1.2 : i === 1 ? 1.075 : 0.91,
-        zz = 0.219;
-      disc(root, black, xx, yy, zz + 0.077, 0.109, 0.105);
-      disc(root, rim, xx, yy + 0.017, zz + 0.13, 0.085, 0.022);
-      disc(root, silver, xx, yy + 0.024, zz + 0.146, 0.065, 0.018);
-      sphere(root, satin, [xx, yy + 0.03, zz + 0.15], [0.051, 0.045, 0.042]);
+    // The face carries two toggles. The two behind them seat into the sloping shoulder.
+    for (let i = 0; i < 4; i++) {
+      const shoulder = i >= 2;
+      const xx = s * [0.86, 1.115, 1.235, 1.365][i];
+      const yy = [1.2, 1.075, 1.245, 1.15][i];
+      const zz = [0.315, 0.315, -0.075, -0.28][i];
+      const mount = new T.Group();
+      mount.position.set(xx, yy, zz);
+      if (shoulder) {
+        mount.rotation.order = 'ZXY';
+        mount.rotation.set(-Math.PI / 2, 0, -s * 0.4, 'ZXY');
+      }
+      root.add(mount);
+      disc(mount, black, 0, 0, 0, 0.099, 0.07);
+      disc(mount, silver, 0, 0, 0.039, 0.065, 0.024);
+      batch(mount);
       const toggle = new T.Group();
       root.add(toggle);
-      toggle.position.set(xx, yy + 0.03, zz + 0.13);
-      rod(toggle, silver, [0, 0, 0], [s * 0.12, 0.23, 0.07], 0.033, 0.027);
-      box(
+      const pivot = new T.Vector3(0, 0, 0.05).applyQuaternion(mount.quaternion);
+      toggle.position.copy(mount.position).add(pivot);
+      const tip = new T.Vector3(
+        s * (shoulder ? 0.105 : 0.07),
+        shoulder ? (i === 2 ? 0.35 : 0.23) : 0.16,
+        shoulder ? 0.025 : 0.22,
+      );
+      sphere(toggle, satin, [0, 0, 0], [0.046, 0.046, 0.046]);
+      rod(toggle, silver, [0, 0, 0], tip.toArray(), 0.025, 0.018);
+      const handle = box(
         toggle,
         i === 0 ? grip : silver,
-        [0.072, 0.11, 0.049],
-        [s * 0.136, 0.255, 0.078],
-        0.023,
-      ).rotation.z = -s * 0.43;
+        [0.053, 0.081, 0.037],
+        tip.toArray(),
+        0.012,
+      );
+      handle.quaternion.setFromUnitVectors(
+        new T.Vector3(0, 1, 0),
+        tip.clone().normalize(),
+      );
       batch(toggle);
       switches.push(toggle);
+      switchTips.push(tip);
     }
     disc(root, black, s * 0.38, 1.278, 0.329, 0.102, 0.108);
     disc(root, rim, s * 0.38, 1.278, 0.395, 0.082, 0.032);
@@ -904,7 +925,7 @@ export function makeRadio() {
   const labels = new T.Mesh(new T.PlaneGeometry(3.2, 3.6), labelMaterial);
   labels.position.set(0, -0.25, 0.411);
   root.add(labels);
-  return { root, sticks, switches, power, indicators, screen };
+  return { root, sticks, switches, switchTips, power, indicators, screen };
 }
 export function disposeScene(scene: T.Object3D) {
   const materials = new Set<T.Material>();

@@ -97,7 +97,7 @@ export function initPresentation() {
     'kit',
     'before-flight',
   ].map((id) => document.getElementById(id)!);
-  const dwell = [5300, 12300, 3200, 29300, 8500, 1700, 0];
+  const dwell = [5300, 12300, 3200, 32300, 8500, 1700, 0];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const stopPosition = (node: HTMLElement) => {
     const live =

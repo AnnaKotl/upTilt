@@ -51,7 +51,7 @@ export function capture(id: string, day: boolean) {
         picked?.kind === 'switch' && picked.slot === slot ? 0.55 : -0.45;
     });
     obj = radio.root.clone();
-    if (!front) obj.rotation.set(-0.21, 0.25, 0.34);
+    if (!front) obj.rotation.set(0.22, 0.1, 0.28);
   } else if (id === 'gate') {
     obj = gate.root.clone();
     obj.rotation.y = 0.68;
@@ -110,7 +110,7 @@ export function capture(id: string, day: boolean) {
       const point =
         entry.kind === 'stick'
           ? new T.Vector3(0, 0.05, 0.29)
-          : new T.Vector3(Math.sign(node.position.x) * 0.12, 0.24, 0.08);
+          : radio.switchTips[entry.slot].clone();
       node.updateMatrix();
       point
         .applyMatrix4(node.matrix)

@@ -68,6 +68,8 @@ try {
     'seven-receiver',
     'seven-video',
     'radio-8',
+    'radio-9',
+    'radio-10',
     'kit-seven',
     'kit-whoop',
     'kit-battery',
