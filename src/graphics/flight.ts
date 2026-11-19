@@ -191,10 +191,24 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   function updateReadout() {
     const term = story.dataset.radioTerm ?? '';
     const cue = story.dataset.radioCue ?? '';
-    if (term + cue === lastReadout) return;
-    lastReadout = term + cue;
-    lcdContext.fillStyle = '#d1e5eb';
+    const powered = story.dataset.radioPower !== 'off';
+    const level = Number(story.dataset.radioLevel ?? 6);
+    radio.power.emissive.copy(haloMaterial.color);
+    radio.power.emissiveIntensity = powered ? 0.78 : 0;
+    radio.indicators.forEach((indicator, i) => {
+      indicator.emissive.copy(haloMaterial.color);
+      indicator.emissiveIntensity = i < level ? 0.7 : 0;
+    });
+    const key = powered + term + cue;
+    if (key === lastReadout) return;
+    lastReadout = key;
+    radio.screen.color.set(powered ? '#bfd7e1' : '#10161b');
+    lcdContext.fillStyle = powered ? '#d1e5eb' : '#10161b';
     lcdContext.fillRect(0, 0, lcd.width, lcd.height);
+    if (!powered) {
+      lcdTexture.needsUpdate = true;
+      return;
+    }
     lcdContext.font = 'bold 45px monospace';
     lcdContext.fillStyle = '#263b46';
     lcdContext.textAlign = 'center';
@@ -259,16 +273,12 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const footprint = groundTexture();
   shadow.material.map = footprint;
   const lamps = [sprite(quad.parts['light-strip'], '#bff7dd')];
-  lamps[0].position.set(0, 0.11, 0.604);
-  lamps[0].scale.set(0.55, 0.17, 1);
+  lamps[0].position.set(0, -0.317, 0.883);
+  lamps[0].scale.set(0.27, 0.065, 1);
   lamps[0].material.blending = T.AdditiveBlending;
-  const bounce = new T.PointLight(0xffffff, 0.4, 1.1);
-  bounce.position.set(0, -0.05, 0.61);
-  quad.parts['light-strip'].add(bounce);
-  const spill = sprite(scene, '#bff7dd');
   const beam = beamTexture();
   const underglow = new T.Mesh(
-    new T.PlaneGeometry(1.14, 2.05).translate(0, -1.025, 0),
+    new T.PlaneGeometry(1.18, 2.05).translate(0, -1.025, 0),
     new T.MeshBasicMaterial({
       map: beam,
       transparent: true,
@@ -277,8 +287,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       blending: T.AdditiveBlending,
     }),
   );
-  underglow.rotation.x = -1.32;
-  underglow.position.set(0, 0.065, 0.625);
+  underglow.rotation.x = -1.31;
+  underglow.position.set(0, -0.319, 0.887);
   quad.parts['light-strip'].add(underglow);
   const controlNodes = radioControls.map(
     (c) => (c.kind === 'switch' ? radio.switches : radio.sticks)[c.slot],
@@ -520,14 +530,14 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       1,
       ((0.91 * part.scale * (openFrame ? 0.89 : 1) * Math.min(1, w / 16)) /
         quad.root.scale.x) *
-        (1 + 0.024 * unit.emphasis),
+        (1 + 0.11 * unit.emphasis),
       spread,
     );
     node.scale.setScalar(size);
     const lift = unit.emphasis * spread;
     node.rotation.set(-0.055 * lift, 0.085 * lift, -0.025 * lift);
     target
-      .set(destX, destY + lift * 0.095, 0.2 + 0.14 * lift)
+      .set(destX, destY + lift * 0.19, 0.2 + 0.31 * lift)
       .sub(quad.root.position)
       .applyQuaternion(inv)
       .divideScalar(quad.root.scale.x);
@@ -570,8 +580,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     if (Math.abs(goal - p) < 0.0005) p = goal;
     day = mix(day, dayGoal, follow * 0.62);
     if (Math.abs(day - dayGoal) < 0.002) day = dayGoal;
-    hoverX = mix(hoverX, tx, follow * 0.67);
-    hoverY = mix(hoverY, ty, follow * 0.67);
+    hoverX = mix(hoverX, tx, follow * 0.88);
+    hoverY = mix(hoverY, ty, follow * 0.88);
     const take = ease(1.82, 3.56, elapsed),
       hero = 1 - ease(0.03, 0.46, p);
 
@@ -636,19 +646,19 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
         ? Math.sin(elapsed * 1.5) * 0.035 * (1 - ease(5.5, 7, elapsed))
         : 0);
     quad.root.position.set(
-      (x - 0.5 + departRadio * 0.62) * w + hoverX * 0.4 * hero * take,
+      (x - 0.5 + departRadio * 0.62) * w + hoverX * 0.64 * hero * take,
       (0.5 - y) * 10 -
         2.32 * (1 - take) * hero +
         bob -
-        hoverY * 0.21 * hero * take +
+        hoverY * 0.33 * hero * take +
         (0.92 * lift * exitLanding - 0.42) * inRadio,
       z,
     );
     quad.root.rotation.order = 'ZXY';
     quad.root.rotation.set(
-      rx + hoverY * 0.18 * hero + radioPitch * 0.27 * inRadio,
-      ry + hoverX * 0.28 * hero + radioYaw * 0.35 * inRadio,
-      rz - hoverX * 0.15 * hero + bank * 0.33 * inRadio,
+      rx + hoverY * 0.255 * hero + radioPitch * 0.27 * inRadio,
+      ry + hoverX * 0.44 * hero + radioYaw * 0.35 * inRadio,
+      rz - hoverX * 0.205 * hero + bank * 0.33 * inRadio,
       'ZXY',
     );
     quad.root.scale.setScalar(
@@ -658,15 +668,10 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     inv.copy(quad.root.quaternion).invert();
     for (const unit of units) {
       positionPart(unit, spread, follow);
-      const pinned = focus === unit.part.id;
-      unit.ink.color.set(
-        pinned ? haloMaterial.color : day > 0.5 ? '#357483' : '#b3dce4',
-      );
-      unit.ink.opacity = clamp(
-        drawing * (focus && !pinned ? 0.3 : 1) + (pinned ? 0.46 : 0),
-        0,
-        0.84,
-      );
+      unit.ink.color
+        .set(day > 0.5 ? '#357483' : '#b3dce4')
+        .lerp(haloMaterial.color, unit.emphasis);
+      unit.ink.opacity = clamp(drawing + 0.28 * unit.emphasis, 0, 0.84);
       for (const wire of unit.edges) wire.visible = unit.ink.opacity > 0.035;
     }
     if (spread === 1) {
@@ -763,18 +768,6 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       (0.46 + day * 0.22 - 0.22 * take) *
       (1 - spread) *
       (1 - hero + hero * ease(0.72, 1.08, elapsed));
-    bounce.intensity = ledPower * 0.55;
-    spill.position.copy(shadow.position);
-    underglow.localToWorld(target.set(0, -1.75, 0));
-    spill.position.x = target.x;
-    spill.position.y = Math.min(spill.position.y, target.y);
-    spill.position.z += 0.04;
-    spill.scale.set(
-      quad.root.scale.x * (1.35 + 1.12 * take),
-      quad.root.scale.x * (0.52 + 0.48 * take),
-      1,
-    );
-    spill.material.opacity = ledPower * (0.23 - 0.14 * take);
     radio.root.visible = p > 2.59;
     radio.root.position.set(
       (-0.24 - (1 - inRadio) * 0.49 - departRadio * 0.65) * w,
@@ -814,9 +807,12 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       radio.root.updateWorldMatrix(true, false);
       camera.updateMatrixWorld();
       updateReadout();
+      radio.root.localToWorld(target.set(0, 0.37, 0.411)).project(camera);
+      const pin = chapters[3].firstElementChild as HTMLElement;
+      pin.style.setProperty('--power-x', (target.x + 1) * 50 + '%');
+      pin.style.setProperty('--power-y', (1 - target.y) * 50 + '%');
       for (const [index, control] of gimbalLights.entries()) {
         control.getWorldPosition(target).project(camera);
-        const pin = chapters[3].firstElementChild as HTMLElement;
         pin.style.setProperty(
           '--control-' + index + '-x',
           ((target.x + 1) * 50).toFixed(2) + '%',
@@ -898,8 +894,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     for (const lamp of [...lamps, ...gimbalLights])
       lamp.material.color.copy(neon);
     underglow.material.color.copy(neon);
-    spill.material.color.copy(neon);
-    bounce.color.copy(neon);
+
     haloMaterial.color.copy(neon);
     insertMaterial.color.copy(neon);
     quad.led.emissive.copy(neon);
@@ -931,6 +926,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     disposed = true;
     delete story.dataset.live;
     const pin = chapters[3].firstElementChild as HTMLElement;
+    pin.style.removeProperty('--power-x');
+    pin.style.removeProperty('--power-y');
     for (const i of radioControls.keys())
       for (const axis of ['x', 'y'])
         pin.style.removeProperty('--control-' + i + '-' + axis);
@@ -940,8 +937,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     mo.disconnect();
     ro.disconnect();
     disposeScene(scene);
-    [shadow, gateShade, spill, underglow, ...lamps, ...gimbalLights].forEach(
-      (s) => s.material.dispose(),
+    [shadow, gateShade, underglow, ...lamps, ...gimbalLights].forEach((s) =>
+      s.material.dispose(),
     );
     shade.dispose();
     texture.dispose();

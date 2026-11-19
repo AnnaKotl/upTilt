@@ -12,10 +12,18 @@ const modal = ref<InstanceType<typeof StudyNote>>(),
 const phase = ref(0);
 const flightSeconds = ref(0);
 const furthest = ref(0);
-const time = computed(() =>
-  Math.min(420, flightSeconds.value + furthest.value * 380),
+const scrollLoad = ref(0);
+const time = computed(
+  () => flightSeconds.value + furthest.value * 380 + scrollLoad.value,
 );
-const voltage = computed(() => Math.max(3.38, 4.35 - time.value * 0.0039));
+const voltage = computed(() =>
+  Math.max(
+    2.35,
+    4.35 - time.value * 0.0039 - Math.max(0, furthest.value - 0.68) * 1.62,
+  ),
+);
+let sampledProgress = 0,
+  sampledAt = 0;
 let timer = 0,
   frame = 0,
   elapsed = 0,
@@ -26,7 +34,7 @@ function advance() {
   clearTimeout(timer);
   if (!visible || document.hidden || reduced()) return;
   const now = performance.now();
-  elapsed += previous ? Math.min(500, now - previous) : 0;
+  elapsed += previous ? now - previous : 0;
   previous = now;
   flightSeconds.value = (elapsed / 1000) * 5;
   phase.value =
@@ -39,7 +47,7 @@ function advance() {
           : elapsed < 5500
             ? 4
             : 5;
-  if (time.value < 420) timer = window.setTimeout(advance, 200);
+  if (voltage.value > 2.35) timer = window.setTimeout(advance, 200);
 }
 function measure() {
   frame = 0;
@@ -53,7 +61,17 @@ function measure() {
     advance();
   }
   const p = Math.max(0, Math.min(1, -box.top / Math.max(1, box.height - h)));
-  if (inside && !reduced()) furthest.value = Math.max(furthest.value, p);
+  const now = performance.now();
+  if (inside && !reduced()) {
+    if (sampledAt) {
+      const distance = Math.abs(p - sampledProgress);
+      const velocity = (distance * 1000) / Math.max(16, now - sampledAt);
+      scrollLoad.value += distance * Math.min(16, velocity * 8);
+    }
+    furthest.value = Math.max(furthest.value, p);
+  }
+  sampledAt = inside ? now : 0;
+  sampledProgress = p;
   const strength = Math.min(1, Math.max(0, (p - 0.24) / 0.7));
   const exit = strength * strength * (3 - 2 * strength);
   const approach = Math.min(1, Math.max(0, box.top / h));
@@ -91,6 +109,7 @@ function visibility() {
   advance();
 }
 function reset() {
+  sampledAt = sampledProgress = scrollLoad.value = 0;
   elapsed = previous = phase.value = flightSeconds.value = furthest.value = 0;
   advance();
   measure();
@@ -269,6 +288,7 @@ const shown = computed(() => fields[hover.value ?? selected.value]);
       "
       @keydown.esc="hover = null"
       :data-phase="phase"
+      :data-exhausted="voltage <= 2.35"
       class="goggle-view"
       @pointermove="look"
       @pointerleave="surface?.style.removeProperty('--look')"

@@ -56,6 +56,7 @@ try {
     'battery-holder',
     'gate',
     'radio',
+    'radio-off',
     'radio-1',
     'radio-2',
     'radio-3',

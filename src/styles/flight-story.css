@@ -377,10 +377,11 @@
   margin: auto;
 }
 .board-part.dim {
-  opacity: 0.55;
+  opacity: 0.96;
 }
 .board-part:is(:hover, :focus-visible) .part-render {
-  transform: perspective(450px) translateY(-4px) rotateX(5deg) rotateY(-4deg);
+  transform: perspective(450px) translateY(-6px) scale(1.09) rotateX(5deg)
+    rotateY(-4deg);
   filter: drop-shadow(1px 5px 3px #0008) drop-shadow(0 0 2px #ddd6);
 }
 .part-label {
@@ -1433,7 +1434,7 @@
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(
-    176deg,
+    0deg,
     transparent 0 64px,
     #c6d6de77 67px,
     transparent 72px 130px
@@ -1446,7 +1447,7 @@
   pointer-events: none;
   opacity: var(--bands, 0);
   background: repeating-linear-gradient(
-    178deg,
+    0deg,
     transparent 0 72px,
     #c7ccd9 75px,
     transparent 84px 161px
@@ -1588,7 +1589,21 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  stroke-width: 1.25;
+  stroke-width: 0.78;
+  filter: drop-shadow(0 0 2px #b8d8ee66);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .boot-glint {
+    animation: boot-sheen 1.5s ease-in-out infinite alternate;
+  }
+  .boot-glint + .boot-glint {
+    animation-delay: -0.64s;
+  }
+}
+@keyframes boot-sheen {
+  to {
+    stop-color: color-mix(in srgb, currentColor 50%, #afcee5);
+  }
 }
 .boot-mark {
   width: clamp(1.8rem, 3.5vw, 3.4rem);
@@ -1705,7 +1720,7 @@
   }
   .hero-type .book-nav {
     position: absolute;
-    top: 39%;
+    top: 48%;
     left: 0;
     width: 100%;
     margin: 0;
@@ -1826,7 +1841,9 @@
   align-items: center;
   gap: 0.35em;
   font: 500 0.73rem/1.4 var(--font-mono);
-  min-height: 44px;
+  min-height: 30px;
+  margin-block: 0;
+  padding-block: 0.2rem;
 }
 .anchored-dialog form button svg {
   width: 1em;
@@ -1842,15 +1859,15 @@
 .gate-copy a svg {
   opacity: 1;
   transform: none;
-  width: 0.85em;
-  height: 0.85em;
-  justify-self: center;
+  width: clamp(0.94rem, 1.45vw, 1.65rem);
+  height: auto;
+  flex: none;
 }
 @media (min-width: 841px) and (min-height: 510px) {
   .gate-copy {
     top: 77svh;
     margin-left: auto;
-    margin-right: 5vw;
+    margin-right: max(9vw, 5.5rem);
     transform: none;
   }
 }
@@ -2080,4 +2097,56 @@
   .hero-type abbr {
     height: 1.56em;
   }
+}
+
+[data-theme='light'][data-season='autumn'] :is(.book-nav, .parts-board) {
+  --accent: #f4ab76;
+}
+[data-theme='light'][data-season='autumn'] .core-port span {
+  color: var(--ink);
+}
+.goggle-view[data-exhausted='true'] .video-noise {
+  opacity: 1;
+}
+.goggle-view[data-exhausted='true'] :is(.view-land, .osd-hud, .season-weather) {
+  visibility: hidden;
+}
+.anchored-dialog[open] > div {
+  padding-block-end: 0.5rem;
+}
+
+.radio-controls .radio-power {
+  width: clamp(44px, 6vw, 88px);
+  height: clamp(44px, 5vw, 72px);
+}
+.radio-study[data-powered='false'] .radio-controls .radio-power {
+  width: clamp(60px, 11vw, 155px);
+  height: clamp(54px, 8vw, 112px);
+}
+.radio-study[data-powered='true'] .radio-power {
+  background: radial-gradient(
+    ellipse,
+    color-mix(in srgb, var(--accent) 32%, transparent),
+    transparent 42%
+  );
+}
+.poster-indicator {
+  position: absolute;
+  width: clamp(2px, 0.35vw, 5px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  translate: -50% -50%;
+  background: var(--accent);
+  box-shadow: 0 0 3px var(--accent);
+}
+[data-live] .poster-indicator,
+[data-live] .radio-controls .radio-power:not(:focus-visible) {
+  background: transparent;
+  box-shadow: none;
+}
+[data-live] .poster-indicator {
+  display: none;
+}
+.radio-controls button:disabled {
+  pointer-events: none;
 }

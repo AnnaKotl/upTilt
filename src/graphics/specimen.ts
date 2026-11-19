@@ -269,7 +269,7 @@ export function makeWhoop(openFrame = false) {
     lead = part('power-lead'),
     holder = part('battery-holder');
   let index = 0;
-  const span = openFrame ? 1.42 : 1.02;
+  const span = openFrame ? 1.42 : 1.037;
   for (const x of [-span, span])
     for (const z of [-span, span]) {
       if (!openFrame) {
@@ -281,7 +281,7 @@ export function makeWhoop(openFrame = false) {
             chassis,
             frame,
             [x, -0.19, z],
-            [x + 0.975 * Math.cos(a), -0.16, z + 0.975 * Math.sin(a)],
+            [x + 0.945 * Math.cos(a), -0.16, z + 0.945 * Math.sin(a)],
             0.043,
             0.028,
           );
@@ -320,6 +320,17 @@ export function makeWhoop(openFrame = false) {
           [0.16 * Math.cos(a), -0.07, 0.16 * Math.sin(a)],
           0.008,
         ).rotation.y = -a;
+      }
+      // Two small position lights remain fixed on the motor housing as the prop turns.
+      for (const side of [-1, 1]) {
+        const angle = side * 0.17;
+        box(
+          motor,
+          led,
+          [0.044, 0.017, 0.01],
+          [0.184 * Math.sin(angle), 0.038, 0.184 * Math.cos(angle)],
+          0.004,
+        ).rotation.y = angle;
       }
       cyl(motor, steel, 0.106, 0.165, 0.07, [0, 0.16, 0]);
       batch(motor);
@@ -460,7 +471,21 @@ export function makeWhoop(openFrame = false) {
       rod(camera, cap, [s * 0.2, 0.34, 0.3], [s * 0.345, 0.34, 0.25], 0.059);
     }
     sphere(canopy, shell, [0, 0.64, -0.053], [0.3, 0.097, 0.37]);
-    box(canopy, trim, [0.082, 0.022, 0.44], [0, 0.727, -0.045]);
+    // The accent follows the curved top of the moulded canopy.
+    const stripe = new T.PlaneGeometry(0.081, 0.44, 2, 16);
+    const vertices = stripe.attributes.position;
+    for (let i = 0; i < vertices.count; i++) {
+      const x = vertices.getX(i),
+        z = vertices.getY(i);
+      vertices.setXYZ(
+        i,
+        x,
+        0.642 + 0.097 * Math.sqrt(1 - (x / 0.3) ** 2 - (z / 0.37) ** 2),
+        -0.053 - z,
+      );
+    }
+    stripe.computeVertexNormals();
+    mesh(canopy, stripe, trim);
   }
   box(camera, carbon, [0.5, 0.39, 0.33], [0, 0.34, 0.31], 0.075);
   const glass = (m: Material, r: number, h: number, z: number) => {
@@ -495,17 +520,21 @@ export function makeWhoop(openFrame = false) {
   evening.name = 'evening-bezel';
   // The emitter sits on the lower lip of the camera cradle. Its diodes face forward and down.
   for (const side of [-1, 1])
-    rod(
+    tube(
       chassis,
       frame,
-      [side * 0.18, -0.17, 0.29],
-      [side * 0.14, 0.088, 0.54],
-      0.04,
+      [
+        [side * 0.31, -0.18, 0.3],
+        [side * 0.3, -0.23, 0.65],
+        [side * 0.24, -0.27, 0.72],
+        [side * 0.14, -0.29, 0.77],
+      ],
+      0.026,
     );
-  box(chassis, frame, [0.36, 0.05, 0.17], [0, 0.088, 0.53], 0.022);
-  box(strip, cap, [0.26, 0.06, 0.078], [0, 0.112, 0.55], 0.012);
+  box(chassis, frame, [0.36, 0.05, 0.17], [0, -0.29, 0.77], 0.022);
+  box(strip, cap, [0.26, 0.06, 0.078], [0, -0.317, 0.822], 0.012);
   for (const x of [-0.09, -0.03, 0.03, 0.09])
-    box(strip, led, [0.05, 0.024, 0.024], [x, 0.11, 0.592], 0.007);
+    box(strip, led, [0.05, 0.024, 0.024], [x, -0.317, 0.866], 0.007);
   if (openFrame)
     for (const s of [-1, 1])
       cyl(mounts, cap, 0.075, 0.08, 0.065, [s * 0.29, -0.12, 0.64]);
@@ -672,7 +701,8 @@ export function makeRadio() {
     silver = mat('#bac1c6', 0.33, 0.63),
     satin = mat('#858b93', 0.4, 0.41),
     screen = mat('#bfd7e1', 0.24, 0.12),
-    blue = mat('#657f9f', 0.38);
+    power = mat('#52565e', 0.36, 0.32),
+    indicators = Array.from({ length: 6 }, () => mat('#858b93', 0.4, 0.41));
   // Front silhouette, from the raised centre shoulder to the rounded lower corners.
   const shape = new T.Shape();
   shape.moveTo(-0.43, 1.4);
@@ -764,9 +794,9 @@ export function makeRadio() {
     batch(stick);
     sticks.push(stick);
     for (let i = 0; i < 3; i++) {
-      const xx = s * (i === 0 ? 0.86 : i === 1 ? 1.12 : 1.32),
-        yy = i === 0 ? 1.2 : i === 1 ? 1.1 : 1.08,
-        zz = i === 2 ? -0.21 : 0.2;
+      const xx = s * (i === 0 ? 0.86 : i === 1 ? 1.115 : 1.36),
+        yy = i === 0 ? 1.2 : i === 1 ? 1.075 : 0.91,
+        zz = 0.219;
       disc(root, black, xx, yy, zz + 0.077, 0.109, 0.105);
       disc(root, rim, xx, yy + 0.017, zz + 0.13, 0.085, 0.022);
       disc(root, silver, xx, yy + 0.024, zz + 0.146, 0.065, 0.018);
@@ -821,16 +851,8 @@ export function makeRadio() {
   for (let i = 0; i < 11; i++)
     cyl(root, rim, 0.08, 0.08, 0.012, [1.18, -1.175 + i * 0.037, 0.39], 18);
   for (let i = 0; i < 6; i++)
-    disc(
-      root,
-      i === 0 ? blue : satin,
-      (i - 2.5) * 0.155,
-      -0.22,
-      0.335,
-      0.037,
-      0.018,
-    );
-  box(root, rim, [0.67, 0.32, 0.072], [0, 0.37, 0.32], 0.13);
+    disc(root, indicators[i], (i - 2.5) * 0.155, -0.22, 0.335, 0.037, 0.018);
+  box(root, power, [0.67, 0.32, 0.072], [0, 0.37, 0.32], 0.13);
   box(root, grip, [0.595, 0.265, 0.053], [0, 0.37, 0.37], 0.1);
   disc(root, silver, 0, -0.005, 0.365, 0.083, 0.075);
   for (let i = 0; i < 7; i++)
@@ -882,7 +904,7 @@ export function makeRadio() {
   const labels = new T.Mesh(new T.PlaneGeometry(3.2, 3.6), labelMaterial);
   labels.position.set(0, -0.25, 0.411);
   root.add(labels);
-  return { root, sticks, switches };
+  return { root, sticks, switches, power, indicators, screen };
 }
 export function disposeScene(scene: T.Object3D) {
   const materials = new Set<T.Material>();

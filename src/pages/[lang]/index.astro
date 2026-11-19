@@ -35,8 +35,23 @@ const kit = [
         viewBox="-500 -300 1000 600"
         preserveAspectRatio="none"
         fill="none"
-        stroke="currentColor"
+        stroke="url(#boot-silver)"
       >
+        <defs>
+          <linearGradient
+            id="boot-silver"
+            gradientUnits="userSpaceOnUse"
+            x1="0"
+            x2="490"
+            y1="0"
+            y2="0"
+          >
+            <stop offset="0" stop-color="currentColor" />
+            <stop class="boot-glint" offset="0.36" stop-color="currentColor" />
+            <stop class="boot-glint" offset="0.71" stop-color="currentColor" />
+            <stop offset="1" stop-color="currentColor" />
+          </linearGradient>
+        </defs>
         {[1, -1].map((side) => (
           <g transform={`scale(${side} 1)`}>
             {[
@@ -134,9 +149,10 @@ const kit = [
       <div class="gate-copy">
         <a href={pageUrl(locale, 'knowledge/fundamentals')}>
           <h2>
-            <span>{uk ? 'Фізика' : 'Flight'}</span> <Icon name="forward" />
+            <span>{uk ? 'Фізика' : 'Flight'}</span>
             <span>{uk ? 'польоту' : 'physics'}</span>
           </h2>
+          <Icon name="forward" />
         </a>
       </div>
     </section>

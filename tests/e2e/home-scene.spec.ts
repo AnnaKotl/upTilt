@@ -5,7 +5,7 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
   browserName,
 }) => {
   test.skip(browserName !== 'chromium', 'The GPU path is covered in Chromium.');
-  test.setTimeout(60000);
+  test.setTimeout(90000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -22,7 +22,15 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
   await page.mouse.move(3, 890);
   await page.waitForTimeout(800);
   await page.screenshot({ path: test.info().outputPath('white.png') });
-  for (const id of ['motion', 'anatomy', 'radio', 'display']) {
+  const sequence = await scene.evaluateHandle((story) => {
+    const terms: string[] = [];
+    story.addEventListener('radio-pose', () => {
+      const term = story.getAttribute('data-radio-term');
+      if (term && term !== terms.at(-1)) terms.push(term);
+    });
+    return terms;
+  });
+  for (const id of ['motion', 'anatomy']) {
     await page.locator('#' + id).evaluate((e) =>
       window.scrollTo({
         top: e.getBoundingClientRect().top + scrollY,
@@ -42,15 +50,31 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
   await page.mouse.wheel(0, 420);
   await page.waitForTimeout(150);
   expect(await page.evaluate(() => scrollY)).toBe(parked);
-  await expect(scene).toHaveAttribute('data-radio-term', 'ARMED');
+  await expect.poll(() => sequence.jsonValue()).toContain('ARMED');
   await expect(page.locator('.radio-study')).toHaveAttribute(
     'data-complete',
     'true',
     {
-      timeout: 32500,
+      timeout: 42000,
     },
   );
+  const terms = await sequence.jsonValue();
+  expect(terms.slice(0, 3)).toEqual(['ARMED', 'Pitch', 'Roll']);
+  expect(terms.at(-1)).toBe('DISARMED');
+  await sequence.dispose();
+  await page.screenshot({ path: test.info().outputPath('radio.png') });
+  const radio = page.locator('.radio-study');
+  await page.locator('#radio').evaluate((el) =>
+    scrollBy({
+      top: el.getBoundingClientRect().top + innerHeight * 0.75,
+      behavior: 'instant',
+    }),
+  );
+  await expect(radio).toHaveAttribute('data-powered', 'false');
   const stick = page.getByRole('button', { name: 'Правий стік' });
+  await expect(stick).toBeDisabled();
+  await page.getByRole('button', { name: 'Живлення пульта' }).hover();
+  await expect(stick).toBeEnabled();
   await stick.hover();
   await expect(page.getByRole('tooltip')).toContainText('Правий стік');
   await expect(page.locator('.radio-study')).toHaveAttribute('data-pose', '3');
@@ -258,6 +282,7 @@ test('both settled layouts keep the names and the opened corner card inside the 
 test('the goggle picture recovers when scrolling back and retains the spent charge', async ({
   page,
 }) => {
+  await page.clock.install();
   await page.goto('en/');
   const view = page.locator('.goggle-view');
   const scrollToFrame = async (progress: number) => {
@@ -276,6 +301,10 @@ test('the goggle picture recovers when scrolling back and retains the spent char
   await scrollToFrame(0.63);
   await expect(view.locator('.osd-status')).toHaveText('LOW BATTERY');
   await expect(view.locator('.hud-voltage')).toHaveText(/3\.\d{2} V/);
+  const firstReading = await view.locator('.hud-time').textContent();
+  await expect
+    .poll(() => view.locator('.hud-time').textContent())
+    .not.toBe(firstReading);
   const used = parseInt(await view.locator('.hud-charge').innerText());
   await scrollToFrame(0.95);
   await expect(view.locator('.video-noise')).toHaveCSS('opacity', '1');
@@ -284,4 +313,10 @@ test('the goggle picture recovers when scrolling back and retains the spent char
   expect(
     parseInt(await view.locator('.hud-charge').innerText()),
   ).toBeGreaterThanOrEqual(used);
+  await page.clock.fastForward(120_000);
+  await expect(view).toHaveAttribute('data-exhausted', 'true');
+  await expect(view.locator('.hud-voltage')).toHaveText(/2\.35 V/);
+  await scrollToFrame(0.05);
+  await expect(view.locator('.video-noise')).toHaveCSS('opacity', '1');
+  await expect(view.locator('.osd-hud')).toBeHidden();
 });

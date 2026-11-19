@@ -42,6 +42,7 @@ export function capture(id: string, day: boolean) {
     obj = makeViewingKit();
   } else if (id.startsWith('radio')) {
     const pose = Number(id.split('-')[1] ?? 0);
+    radio.screen.color.set(id === 'radio-off' ? '#10161b' : '#bfd7e1');
     radio.sticks[0].rotation.x = pose === 2 ? -0.8 : 0;
     radio.sticks[1].rotation.y = pose === 3 ? -0.54 : 0;
     radio.switches.forEach((toggle, slot) => {
@@ -122,13 +123,20 @@ export function capture(id: string, day: boolean) {
     }
   }
   if (id === 'radio' && !front) {
-    const lcd = new T.Vector3(0, -0.95, 0.368)
-      .applyMatrix4(obj.matrixWorld)
-      .project(camera);
-    posterControls.push({
-      x: (((lcd.x + 1) * width) / 2 - l) / w,
-      y: (((1 - lcd.y) * height) / 2 - t) / h,
-    });
+    const marks = [
+      new T.Vector3(0, -0.95, 0.368),
+      new T.Vector3(0, 0.37, 0.411),
+      ...radio.indicators.map(
+        (_, i) => new T.Vector3((i - 2.5) * 0.155, -0.22, 0.35),
+      ),
+    ];
+    for (const point of marks) {
+      point.applyMatrix4(obj.matrixWorld).project(camera);
+      posterControls.push({
+        x: (((point.x + 1) * width) / 2 - l) / w,
+        y: (((1 - point.y) * height) / 2 - t) / h,
+      });
+    }
   }
   out.width = Math.round(ratio * w);
   out.height = Math.round(ratio * h);

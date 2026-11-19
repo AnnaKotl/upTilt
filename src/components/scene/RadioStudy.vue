@@ -12,6 +12,11 @@ const modal = ref<InstanceType<typeof StudyNote>>(),
   chosen = ref(0),
   screen = ref(''),
   cue = ref('');
+const powered = ref(true),
+  level = ref(6);
+let powerTimer = 0;
+let previousTop: number | undefined;
+let arrived = false;
 const notes = [
   [
     'Перемикач фіксується в обраному положенні. Тут він перемикає стан моделі.',
@@ -64,6 +69,7 @@ const phases = [
   { id: 1, term: 'DISARMED', x: 0, y: 0, arrow: '' },
 ];
 function open(i: number, event: MouseEvent) {
+  if (!powered.value) return;
   preview(i, event);
   chosen.value = i;
   modal.value?.show();
@@ -102,7 +108,7 @@ function alignPosterControls() {
       posterControls[controls.length].y * h +
       'px',
   );
-  posterControls.slice(0, controls.length).forEach(({ x, y }, i) => {
+  posterControls.forEach(({ x, y }, i) => {
     scene.style.setProperty(
       '--poster-' + i + '-x',
       box.left - bounds.left + (box.width - w) / 2 + x * w + 'px',
@@ -123,6 +129,7 @@ const inputEvents = new AbortController();
 function holdForward(distance: number) {
   if (
     distance <= 0 ||
+    !powered.value ||
     complete.value ||
     skipped ||
     next >= Math.ceil(phases.length / 3) ||
@@ -166,7 +173,7 @@ function pose(i: number, term = '', x = 0, y = 0, arrow = '') {
   if (!story) return;
   story.dataset.radioTerm = term;
   story.dataset.radioCue = arrow;
-  story.dataset.radioLanded = String(term === 'DISARMED');
+  story.dataset.radioLanded = String(!powered.value || term === 'DISARMED');
   story.dataset.radioIdle = String(
     complete.value && manualArmed && !manualLift,
   );
@@ -177,7 +184,7 @@ function pose(i: number, term = '', x = 0, y = 0, arrow = '') {
 }
 function run() {
   clearTimeout(timer);
-  if (!visible || document.hidden || complete.value) return;
+  if (!visible || document.hidden || complete.value || !powered.value) return;
   timer = window.setTimeout(
     () => {
       const phase = phases[next++];
@@ -191,6 +198,12 @@ function run() {
   );
 }
 function reset() {
+  clearTimeout(powerTimer);
+  powered.value = true;
+  level.value = 6;
+  publishPower();
+  previousTop = undefined;
+  arrived = false;
   next = 0;
   skipped = false;
   manualArmed = false;
@@ -201,9 +214,53 @@ function reset() {
   pose(0);
   run();
 }
+function publishPower() {
+  const story = surface.value?.closest<HTMLElement>('[data-story]');
+  if (!story) return;
+  story.dataset.radioPower = powered.value ? 'on' : 'off';
+  story.dataset.radioLevel = String(level.value);
+  story.dispatchEvent(new CustomEvent('radio-pose', { detail: active.value }));
+}
+function setPower(on: boolean) {
+  if (powered.value === on) return;
+  clearTimeout(powerTimer);
+  clearTimeout(timer);
+  cancelPreview();
+  powered.value = on;
+  manualArmed = manualLift = false;
+  lastControl = -1;
+  if (!on) complete.value = true;
+  pose(0, on ? 'DISARMED' : '');
+  const target = on ? 6 : 0;
+  function step() {
+    publishPower();
+    if (level.value === target) return;
+    powerTimer = window.setTimeout(() => {
+      level.value += Math.sign(target - level.value);
+      step();
+    }, 115);
+  }
+  step();
+}
 function settle() {
   const box = surface.value?.getBoundingClientRect();
   const chapter = surface.value?.closest('.radio-chapter');
+  if (chapter) {
+    const rect = chapter.getBoundingClientRect();
+    const threshold = -Math.max(
+      innerHeight * 0.39,
+      (rect.height - innerHeight) * 0.42,
+    );
+    if (
+      previousTop !== undefined &&
+      previousTop > threshold &&
+      rect.top <= threshold &&
+      arrived
+    )
+      setPower(false);
+    if (rect.top <= threshold || rect.top > innerHeight * 0.5) arrived = false;
+    previousTop = rect.top;
+  }
   const arrival =
     !document.querySelector('[data-story][data-live]') ||
     (chapter && chapter.getBoundingClientRect().top <= -innerHeight * 0.12);
@@ -213,12 +270,14 @@ function settle() {
     box.top <= innerHeight * 0.012 &&
     box.bottom >= innerHeight * 0.65,
   );
+  if (inside) arrived = true;
   if (visible !== inside) {
     visible = inside;
     run();
   }
 }
 function preview(i: number, event?: MouseEvent | FocusEvent) {
+  if (!powered.value) return;
   clearTimeout(hoverTimer);
   hover.value = i;
   if (event) place(event);
@@ -310,6 +369,7 @@ onMounted(() => {
   document.addEventListener('visibilitychange', run);
 });
 onBeforeUnmount(() => {
+  clearTimeout(powerTimer);
   clearTimeout(timer);
   cancelPreview();
   inputEvents.abort();
@@ -326,6 +386,7 @@ onBeforeUnmount(() => {
     class="radio-study"
     :data-pose="active"
     :data-complete="complete"
+    :data-powered="powered"
     @keydown.esc="hover = null"
   >
     <div class="radio-pair">
@@ -335,7 +396,10 @@ onBeforeUnmount(() => {
           @load="alignPosterControls"
           loading="lazy"
           :src="
-            base + 'radio' + (active > 0 ? '-' + active : '') + '-dark.webp'
+            base +
+            'radio' +
+            (!powered ? '-off' : active > 0 ? '-' + active : '') +
+            '-dark.webp'
           "
           alt=""
         /> </span
@@ -373,8 +437,34 @@ onBeforeUnmount(() => {
     />
     <div class="radio-controls">
       <button
+        type="button"
+        class="radio-power"
+        :aria-label="locale === 'uk' ? 'Живлення пульта' : 'Radio power'"
+        :aria-pressed="powered"
+        :style="{
+          '--hot-x':
+            'var(--power-x,var(--poster-' + (controls.length + 1) + '-x))',
+          '--hot-y':
+            'var(--power-y,var(--poster-' + (controls.length + 1) + '-y))',
+        }"
+        @pointerenter="setPower(true)"
+        @focus="setPower(true)"
+        @click="setPower(true)"
+      />
+      <i
+        v-for="n in level"
+        :key="'lamp' + n"
+        aria-hidden="true"
+        class="poster-indicator"
+        :style="{
+          left: 'var(--poster-' + (controls.length + 1 + n) + '-x)',
+          top: 'var(--poster-' + (controls.length + 1 + n) + '-y)',
+        }"
+      />
+      <button
         v-for="(control, i) in controls"
         :key="control.en"
+        :disabled="!powered"
         :class="control.kind"
         type="button"
         :style="{

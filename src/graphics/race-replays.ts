@@ -1,5 +1,5 @@
 import * as T from 'three';
-// Each ghost follows its own curve in gate-local space, crossing the open centre at z=0.
+// Each ghost follows its own curve in screen-aligned space, crossing the open centre at z=0.
 export function raceReplays(gate: T.Group) {
   const swarm = new T.Group();
   gate.add(swarm);
@@ -8,13 +8,13 @@ export function raceReplays(gate: T.Group) {
       const d = i - 2;
       // The two cubics share a tangent at the hoop centre.
       const v = (x: number, y: number, z: number) => new T.Vector3(x, y, z);
-      const tangent = v(3.4, 0.4 + d * 0.36, 1.85);
+      const tangent = v(3.4, 0.85 + d * 0.16, 2.85);
       const centre = v(0, 0, 0);
       const curve = new T.CurvePath<T.Vector3>();
       curve.add(
         new T.CubicBezierCurve3(
-          v(29, 3.1 + d * 0.6, 4.6),
-          v(11, 4.4 + d * 0.8, 3.2),
+          v(23, 13 + d * 1.7, 4.6),
+          v(10, 7.2 + d * 1.55, 3.85),
           tangent,
           centre,
         ),
@@ -23,8 +23,8 @@ export function raceReplays(gate: T.Group) {
         new T.CubicBezierCurve3(
           centre,
           tangent.clone().negate(),
-          v(-11, -2.4 + d * 0.88, -3.6),
-          v(-30, 0.8 + d * 0.95, -5.2),
+          v(-10, -0.35 + d * 0.6, -9.8),
+          v(-23, -1.1 + d * 0.72, -13),
         ),
       );
       const group = new T.Group();
@@ -58,6 +58,7 @@ export function raceReplays(gate: T.Group) {
       return { curve, hull, layers, group, material };
     },
   );
+  const forward = new T.Vector3(0, 0, 1);
   const reflected = new T.PointLight(0xffffff, 0, 3.8);
   gate.add(reflected);
   let crossed = false,
@@ -77,6 +78,8 @@ export function raceReplays(gate: T.Group) {
     swarm.visible = start >= 0 && progress <= 1.32;
     reflected.intensity = 0;
     if (!swarm.visible) return false;
+    swarm.quaternion.copy(gate.quaternion).invert();
+    swarm.scale.z = 1 / gate.scale.z;
     let active = false;
     runs.forEach(({ curve, hull, layers, group, material }, i) => {
       const age = (now - start) / 1000 - 0.5 - i * 1.85;
@@ -85,13 +88,15 @@ export function raceReplays(gate: T.Group) {
       if (!group.visible) return;
       const t = Math.min(1, age / 1.8);
       hull.position.copy(curve.getPointAt(t));
-      hull.lookAt(curve.getPointAt(Math.min(1, t + 0.015)));
+      hull.quaternion.setFromUnitVectors(forward, curve.getTangentAt(t));
       hull.visible = t < 1;
       const fade = Math.max(0, age - 1.8) / 2.7;
       const reflection =
         (1 - day) * Math.max(0, 1 - Math.abs(t - 0.51) * 4) * 0.85;
       if (reflection > reflected.intensity) {
-        reflected.position.copy(hull.position);
+        reflected.position
+          .copy(hull.position)
+          .applyQuaternion(swarm.quaternion);
         reflected.color.copy(material.color);
         reflected.intensity = reflection;
       }
