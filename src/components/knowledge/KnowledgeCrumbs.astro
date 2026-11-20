@@ -1,0 +1,34 @@
+---
+import { pageUrl, t, type Locale } from '../../lib/i18n';
+import Icon from '../ui/Icon.vue';
+interface Props {
+  locale: Locale;
+  trail: { title: string; path: string }[];
+}
+const { locale, trail } = Astro.props;
+const crumbs = [{ title: t(locale).knowledge, path: 'knowledge' }, ...trail];
+const parent = crumbs.at(-2)!;
+---
+
+<nav
+  class="crumbs"
+  aria-label={locale === 'uk' ? 'Навігаційний шлях' : 'Breadcrumbs'}
+>
+  <a
+    class="plain-back"
+    href={pageUrl(locale, parent.path)}
+    aria-label={t(locale).back}
+  >
+    <Icon name="back" />
+  </a>
+  {crumbs.map(({ title, path }, i) => (
+    <>
+      {i > 0 && <span aria-hidden="true">/</span>}
+      {i === crumbs.length - 1 ? (
+        <span aria-current="page">{title}</span>
+      ) : (
+        <a href={pageUrl(locale, path)}>{title}</a>
+      )}
+    </>
+  ))}
+</nav>

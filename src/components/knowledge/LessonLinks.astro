@@ -1,0 +1,21 @@
+---
+import { pageUrl, type Locale } from '../../lib/i18n';
+import Icon from '../ui/Icon.vue';
+interface Props {
+  locale: Locale;
+  path: string;
+  items: readonly { id: string; title: readonly [string, string] }[];
+}
+const { locale, path, items } = Astro.props;
+---
+
+<ul class="lesson-list">
+  {items.map(({ id, title }) => (
+    <li>
+      <a href={pageUrl(locale, path + '/' + id)}>
+        {title[locale === 'uk' ? 0 : 1]}
+        <Icon name="forward" />
+      </a>
+    </li>
+  ))}
+</ul>

@@ -1,34 +1,19 @@
 <script setup lang="ts">
 import { usePageLanguage } from '../../lib/page-language';
-import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { onBeforeUnmount, ref } from 'vue';
 import Icon from '../ui/Icon.vue';
 import { topics } from '../../data/topics';
 import { pageUrl, t, type Locale } from '../../lib/i18n';
 const input = defineProps<{ locale: Locale }>();
 const locale = usePageLanguage(input.locale);
 const expanded = ref(false);
-const trigger = ref<HTMLButtonElement>();
+const trigger = ref<HTMLAnchorElement>();
 const menu = ref<HTMLElement>();
-const pinned = ref(false);
-const ready = ref(false);
-onMounted(() => {
-  ready.value = true;
-});
 let hoverTimer = 0;
 onBeforeUnmount(() => clearTimeout(hoverTimer));
 function close() {
   clearTimeout(hoverTimer);
   expanded.value = false;
-  pinned.value = false;
-}
-function toggle() {
-  clearTimeout(hoverTimer);
-  if (pinned.value) {
-    close();
-    return;
-  }
-  expanded.value = true;
-  pinned.value = true;
 }
 function escape() {
   trigger.value?.focus();
@@ -42,12 +27,15 @@ function hover(event: PointerEvent) {
   if (event.pointerType === 'mouse')
     hoverTimer = window.setTimeout(() => (expanded.value = true), 115);
 }
+function focusBook() {
+  if (trigger.value?.matches(':focus-visible')) expanded.value = true;
+}
 function cancelHover() {
   clearTimeout(hoverTimer);
 }
 function pointerLeave() {
   clearTimeout(hoverTimer);
-  if (!pinned.value && !menu.value?.contains(document.activeElement))
+  if (!menu.value?.contains(document.activeElement))
     hoverTimer = window.setTimeout(close, 460);
 }
 const height = Math.max(208, topics.length * 23);
@@ -94,20 +82,18 @@ function trace(i: number) {
       :style="{ '--tree-height': height + 'px' }"
       :data-open="expanded"
     >
-      <button
+      <a
         ref="trigger"
-        :disabled="!ready"
-        type="button"
+        :href="pageUrl(locale, 'knowledge')"
         class="book-trigger"
         aria-controls="book-branches"
         :aria-expanded="expanded"
         :aria-label="t(locale).knowledge"
         @pointerenter="hover"
-        @focus="expanded = true"
-        @click="toggle"
+        @focus="focusBook"
       >
         <span class="book-chip"><Icon name="book" /></span>
-      </button>
+      </a>
       <Transition name="branch-fade"
         ><div
           id="book-branches"

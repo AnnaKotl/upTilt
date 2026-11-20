@@ -1,8 +1,12 @@
 ---
 import SiteLayout from '../../../layouts/SiteLayout.astro';
-import Icon from '../../../components/ui/Icon.vue';
+import KnowledgeCrumbs from '../../../components/knowledge/KnowledgeCrumbs.astro';
+import LessonLinks from '../../../components/knowledge/LessonLinks.astro';
+import RadioDiagram from '../../../components/knowledge/RadioDiagram.astro';
+import { lessons, topicIntroductions } from '../../../data/lessons';
+import { simulators } from '../../../data/simulators';
 import { topics } from '../../../data/topics';
-import { locales, t, pageUrl, type Locale } from '../../../lib/i18n';
+import { locales, type Locale } from '../../../lib/i18n';
 export function getStaticPaths() {
   return locales.flatMap((lang) =>
     topics.map((topic) => ({
@@ -13,30 +17,55 @@ export function getStaticPaths() {
 }
 const locale = Astro.params.lang as Locale;
 const { topic } = Astro.props;
+const path = 'knowledge/' + topic.id;
+const uk = locale === 'uk';
 ---
 
-<SiteLayout
-  locale={locale}
-  title={topic.title[locale]}
-  path={'knowledge/' + topic.id}
->
+<SiteLayout locale={locale} title={topic.title[locale]} path={path}>
   <article class="reading-page">
-    <nav
-      class="crumbs"
-      aria-label={locale === 'uk' ? 'Навігаційний шлях' : 'Breadcrumbs'}
-    >
-      <a href={pageUrl(locale, 'knowledge')} aria-label={t(locale).back}>
-        <Icon name="back" />
-      </a>
-      <a href={pageUrl(locale, 'knowledge')}>{t(locale).knowledge}</a>
-      <span aria-hidden="true">/</span>
-      <span aria-current="page">{topic.title[locale]}</span>
-    </nav>
+    <KnowledgeCrumbs
+      locale={locale}
+      trail={[{ title: topic.title[locale], path }]}
+    />
     <h1>{topic.title[locale]}</h1>
+    <div class="reading-note">
+      <p>{topicIntroductions[topic.id][uk ? 0 : 1]}</p>
+    </div>
+    {topic.id === 'radio' && <RadioDiagram locale={locale} />}
     <section class="reading-note">
-      <Icon name={topic.icon} />
       <h2>{topic.question[locale]}</h2>
       <p>{topic.note[locale]}</p>
     </section>
+    <section class="reading-note">
+      <h2>{uk ? 'Теми' : 'Topics'}</h2>
+      <LessonLinks locale={locale} path={path} items={lessons[topic.id]} />
+    </section>
+    {topic.id === 'simulators' && (
+      <section class="reading-note">
+        <h2>{uk ? 'Симулятори для практики' : 'Simulators for practice'}</h2>
+        <ul class="simulator-list">
+          {simulators.map(({ name, description, links }) => (
+            <li>
+              <h3>{name}</h3>
+              <p>{description[locale]}</p>
+              <div class="simulator-links">
+                {Object.entries(links).map(([label, url]) => (
+                  <a
+                    href={url}
+                    aria-label={
+                      name +
+                      ' · ' +
+                      (label === 'website' ? (uk ? 'Сайт' : 'Website') : label)
+                    }
+                  >
+                    {label === 'website' ? (uk ? 'Сайт' : 'Website') : label}
+                  </a>
+                ))}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
   </article>
 </SiteLayout>

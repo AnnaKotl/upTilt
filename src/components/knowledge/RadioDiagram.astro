@@ -1,0 +1,24 @@
+---
+import type { Locale } from '../../lib/i18n';
+const { locale } = Astro.props as { locale: Locale };
+const uk = locale === 'uk';
+---
+
+<figure class="radio-diagram">
+  <svg viewBox="0 0 680 200" fill="none" aria-hidden="true">
+    <path class="radio-ground" d="M0 165H150l55-13 95 13h380v36H0Z" />
+    <g stroke="currentColor" stroke-width="2">
+      <path d="M90 151V72m-10 79h20M590 151V72m-10 79h20M90 72l-15-16m15 16 15-16m485 16-15-16m15 16 15-16" />
+      <path d="M328 165v-38h24v38m-24-38h24" />
+      <circle cx="90" cy="74" r="4" />
+      <circle cx="590" cy="74" r="4" />
+    </g>
+    <path class="radio-signal" d="M95 74H585" />
+    <path class="radio-echo" d="M95 78 340 127 585 78" />
+    <circle cx="340" cy="127" r="3" fill="var(--accent)" />
+  </svg>
+  <figcaption>
+    <span>{uk ? 'Прямий сигнал' : 'Direct signal'}</span>
+    <span>{uk ? 'Відбитий сигнал' : 'Reflected signal'}</span>
+  </figcaption>
+</figure>

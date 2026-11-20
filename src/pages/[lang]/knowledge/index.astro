@@ -11,10 +11,12 @@ const locale = Astro.params.lang as Locale;
 
 <SiteLayout locale={locale} title={t(locale).knowledge} path="knowledge">
   <section class="reading-page">
-    <a class="plain-back" href={pageUrl(locale)} aria-label={t(locale).home}>
-      <Icon name="back" />
-    </a>
-    <h1>{t(locale).knowledge}</h1>
+    <div class="knowledge-heading">
+      <a class="plain-back" href={pageUrl(locale)} aria-label={t(locale).home}>
+        <Icon name="back" />
+      </a>
+      <h1>{t(locale).knowledge}</h1>
+    </div>
     <KnowledgeCore locale={locale} />
   </section>
 </SiteLayout>

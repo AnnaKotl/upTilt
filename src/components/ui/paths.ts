@@ -9,7 +9,11 @@ export const paths = {
   radio:
     'M12 11v9m-4 0h8 M8 7a6 6 0 0 0 0 9m8-9a6 6 0 0 1 0 9M5 4a10 10 0 0 0 0 15M19 4a10 10 0 0 1 0 15',
   game: 'M7 7h10c3 0 4 4 5 9 .7 4-2 5-5 1l-1-1H8l-1 1c-3 4-6 3-5-1 1-5 2-9 5-9zM6 11v5m-2.5-2.5h5M16 11h.5m2 3h.5',
-  circuit: 'M3 4h7v6l4 4h7M3 19h5l5-5M15 4h6v5',
+  circuit:
+    'm19 2 3 3-7 7-3-3 7-7Zm-7 7-3 4 2 2 4-3m-5 2-4 4m-4 1h6m-6 3h15l3-3h2m-9 0h3',
+  close: 'm6 6 12 12M18 6 6 18',
+  transmitter:
+    'M12 7V3m-3 0h6M4 7h16l2 12H2L4 7Zm4 4v5m-2-2.5h4m6-2.5v5m-2-2.5h4',
   classify: 'M9 3h6v5H9z M12 8v4M5 16v-4h14v4M2 16h6v5H2zM16 16h6v5h-6z',
   up: 'M12 20V4m-7 7 7-7 7 7',
   forward: 'M4 12h16m-7-7 7 7-7 7',

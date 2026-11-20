@@ -21,7 +21,8 @@ const shell = [
   '.kit-list a',
   '.kit-list a > span:last-child',
   '#before-flight h2',
-  '#before-flight p',
+  '.preflight-map',
+  '.preflight-book .hint',
   '#before-flight a',
   '#before-flight li a span',
   'meta[name="description"]',
@@ -86,18 +87,11 @@ export function initHomeLanguage() {
 }
 export function initPresentation() {
   const button = document.querySelector<HTMLButtonElement>('[data-tour]')!;
-  const author = document.querySelector<HTMLElement>('[data-author]')!;
-  const last = document.getElementById('before-flight')!;
-  const stops = [
-    'hero',
-    'motion',
-    'anatomy',
-    'radio',
-    'display',
-    'kit',
-    'before-flight',
-  ].map((id) => document.getElementById(id)!);
-  const dwell = [5300, 12300, 3200, 32300, 8500, 1700, 0];
+  const last = document.querySelector<HTMLElement>('[data-tour-end]')!;
+  const stops = ['hero', 'motion', 'anatomy', 'radio', 'display'].map((id) =>
+    document.getElementById(id)!,
+  );
+  const dwell = [5300, 12300, 3200, 32300, 8500];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const stopPosition = (node: HTMLElement) => {
     const live =
@@ -110,45 +104,54 @@ export function initPresentation() {
           : 0;
     return node.getBoundingClientRect().top + scrollY + offset;
   };
+  const positionAt = (index: number) =>
+    index === stops.length
+      ? document.documentElement.scrollHeight - innerHeight
+      : stopPosition(stops[index]);
   let atEnd = false,
     playing = false,
     frame = 0;
   function paint() {
     const uk = document.documentElement.lang === 'uk';
     button.hidden = !atEnd && !playing;
-    author.hidden = !atEnd;
     button.setAttribute('aria-pressed', String(playing));
     const title = playing
       ? uk
         ? 'Зупинити демонстрацію'
         : 'Stop the tour'
       : uk
-        ? 'Візуальна демонстрація'
-        : 'Play the guided tour';
+        ? 'Повторити демонстрацію'
+        : 'Replay the tour';
     button.setAttribute('aria-label', title);
     button.querySelector('.hint')!.textContent = title;
   }
   const end = new IntersectionObserver(
     ([entry]) => {
-      atEnd = entry.isIntersecting;
+      atEnd = entry.intersectionRatio === 1;
       paint();
     },
-    { threshold: 0.23 },
+    { threshold: 1 },
   );
   end.observe(last);
   paint();
-  const reveal = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries)
-        if (entry.isIntersecting) {
-          (entry.target as HTMLElement).dataset.revealed = 'true';
+  const items = document.querySelectorAll<HTMLElement>('[data-prep-reveal]');
+  if (items.length && !reduced.matches) {
+    const reveal = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          entry.target.removeAttribute('data-prep-wait');
           reveal.unobserve(entry.target);
         }
-    },
-    { threshold: 0.16 },
-  );
-  reveal.observe(last);
-  reveal.observe(stops[5]);
+      },
+      { rootMargin: '0px 0px -5% 0px', threshold: 0.1 },
+    );
+    for (const item of items) {
+      if (item.getBoundingClientRect().top > innerHeight)
+        item.setAttribute('data-prep-wait', '');
+      reveal.observe(item);
+    }
+  }
   function stop() {
     if (!playing) return;
     playing = false;
@@ -175,15 +178,13 @@ export function initPresentation() {
         const t = Math.min(1, moving / (reduced.matches ? 1 : 2900));
         const ease = t * t * (3 - 2 * t);
         window.scrollTo({
-          top:
-            stopPosition(stops[index]) * (1 - ease) +
-            stopPosition(stops[index + 1]) * ease,
+          top: positionAt(index) * (1 - ease) + positionAt(index + 1) * ease,
           behavior: 'instant',
         });
         if (t === 1) {
           index++;
           time = 0;
-          if (index === stops.length - 1) {
+          if (index === stops.length) {
             stop();
             return;
           }

@@ -35,12 +35,16 @@ test('mobile keeps content usable without a WebGL canvas', async ({ page }) => {
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page.getByRole('button', { name: 'База знань' }).click();
+  await page
+    .locator('.book-nav')
+    .getByRole('link', { name: 'База знань' })
+    .click();
+  await expect(page).toHaveURL(/\/uk\/knowledge\/$/);
   await page.screenshot({
     animations: 'disabled',
     path: test.info().outputPath('mobile.png'),
   });
-  await page.getByRole('link', { name: 'Будова дрона', exact: true }).click();
+  await page.getByRole('link', { name: /^Будова дрона/ }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
     'Будова дрона',
   );
@@ -127,7 +131,9 @@ test('book, section bookmarks and search serve different routes', async ({
   page,
 }) => {
   await page.goto('en/');
-  const book = page.getByRole('button', { name: 'Knowledge base' });
+  const book = page
+    .locator('.book-nav')
+    .getByRole('link', { name: 'Knowledge base' });
   await expect(page.locator('[data-library]')).toBeHidden();
   await expect(book).toBeEnabled();
   await book.focus();
@@ -145,11 +151,45 @@ test('book, section bookmarks and search serve different routes', async ({
   await expect(page.getByRole('dialog')).toContainText('onboard view');
   await page.keyboard.press('Escape');
   await page.locator('[data-library]').click();
-  await page.getByRole('searchbox').fill('flight');
+  const search = page.getByRole('button', { name: 'Find a topic' });
+  await search.click();
+  const query = page.getByRole('searchbox');
+  await query.fill('flight physics');
+  await expect(page.locator('.topic-row:visible')).toHaveCount(8);
+  await page.getByRole('heading', { name: 'Knowledge base' }).click();
+  await expect(query).toBeHidden();
+  await search.click();
+  await expect(query).toHaveValue('flight physics');
+  await query.press('Enter');
   await expect(page.locator('.topic-row:visible')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Clear search' }).click();
+  await expect(query).toHaveValue('');
+  await expect(page.locator('.topic-row:visible')).toHaveCount(1);
+  await query.press('Enter');
+  await expect(page.locator('.topic-row:visible')).toHaveCount(8);
+  await query.press('Escape');
   await page.getByRole('link', { name: /Flight physics/ }).click();
   await expect(
     page.getByRole('heading', { name: 'What does a force arrow show?' }),
+  ).toBeVisible();
+});
+
+test('radio lessons keep their breadcrumb path when switching languages', async ({
+  page,
+}) => {
+  await page.goto('uk/knowledge/');
+  await page.getByRole('link', { name: /Радіозв’язок/ }).click();
+  await page.getByRole('link', { name: 'Радіохвилі', exact: true }).click();
+  await page.getByRole('link', { name: 'Довжина хвилі', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Довжина хвилі' }),
+  ).toBeVisible();
+  await page.locator('[data-language]').click();
+  await expect(page.getByRole('heading', { name: 'Wavelength' })).toBeVisible();
+  const trail = page.getByRole('navigation', { name: 'Breadcrumbs' });
+  await trail.getByRole('link', { name: 'Radio waves' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Radio waves' }),
   ).toBeVisible();
 });
 
@@ -205,9 +245,10 @@ test('reduced motion keeps the introduction static and navigation available', as
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('en/');
   await expect(page.locator('.scatter')).toBeHidden();
-  const book = page.getByRole('button', { name: 'Knowledge base' });
+  const book = page
+    .locator('.book-nav')
+    .getByRole('link', { name: 'Knowledge base' });
   await book.click();
-  await expect(
-    page.getByRole('link', { name: 'Radio links', exact: true }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(/\/en\/knowledge\/$/);
+  await expect(page.getByRole('link', { name: /^Radio links/ })).toBeVisible();
 });

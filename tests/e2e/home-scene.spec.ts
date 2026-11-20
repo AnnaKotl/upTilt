@@ -149,7 +149,7 @@ test('the title, aircraft menu and language switch preserve the live scene', asy
     timeout: 8500,
   });
   const canvas = await story.locator('canvas').elementHandle();
-  const book = page.locator('.book-chip'),
+  const book = page.locator('.hero-type .book-chip'),
     before = await book.boundingBox();
   await expect(page.locator('.fpv-tail').first()).toHaveCSS(
     'clip-path',
@@ -175,27 +175,65 @@ test('the title, aircraft menu and language switch preserve the live scene', asy
   await page.goBack();
   await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
 });
-test('the final bookmark starts an optional tour and Escape releases scrolling', async ({
+test('the author follows the knowledge bookmark and the tour starts only at the finale', async ({
   page,
 }) => {
   await page.goto('en/');
   const tour = page.locator('[data-tour]'),
-    author = page.locator('[data-author]');
+    author = page.locator('[data-author]'),
+    library = page.locator('[data-library]');
   await expect(author).toBeHidden();
-  await page.locator('#before-flight').scrollIntoViewIfNeeded();
+  await expect(library).toBeHidden();
+  await page.locator('#radio').evaluate((el) => el.scrollIntoView());
+  await expect(library).toBeVisible();
   await expect(author).toHaveAttribute(
     'href',
     'https://github.com/AnnaKotl/upTilt',
   );
   await expect(author).toBeVisible();
+  await expect(tour).toBeHidden();
+  await expect(page.locator('#kit, #before-flight')).toHaveCount(0);
+  await page.locator('#display').evaluate((el) => el.scrollIntoView());
+  await expect(tour).toBeHidden();
+  await page.evaluate(() =>
+    scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: 'instant',
+    }),
+  );
+  await expect(tour).toBeVisible();
   await tour.click();
   await expect(tour).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#hero')).toBeInViewport();
   await expect(author).toBeHidden();
   await page.keyboard.press('Escape');
   await expect(tour).toHaveAttribute('aria-pressed', 'false');
-  await page.locator('#before-flight').scrollIntoViewIfNeeded();
-  await expect(tour).toBeVisible();
+  await expect(tour).toBeHidden();
+});
+
+test('the full tour finishes at the end of the FPV chapter and can be replayed', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.clock.install();
+  await page.goto('uk/');
+  const tour = page.getByRole('button', { name: 'Повторити демонстрацію' });
+  await page.evaluate(() =>
+    scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: 'instant',
+    }),
+  );
+  await tour.click();
+  await expect(page.locator('#hero')).toBeInViewport();
+  await page.clock.runFor(64_000);
+  await expect(page.locator('.goggle-view')).toBeInViewport();
+  await expect(tour).toHaveAttribute('aria-pressed', 'false');
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollHeight - innerHeight - scrollY,
+    ),
+  ).toBeLessThanOrEqual(1);
 });
 
 test('the moving board is locked and opens a card at the settled battery', async ({
@@ -347,10 +385,15 @@ test('the goggle picture recovers when scrolling back and retains the spent char
   expect(await meter('.hud-charge')).toBeLessThan(2);
   await page.clock.fastForward(32_000);
   await expect(view).toHaveAttribute('data-lost', 'true');
-  await page
-    .locator('#before-flight')
-    .evaluate((el) => el.scrollIntoView({ behavior: 'instant' }));
-  const nextSection = await page.evaluate(() => scrollY);
+  await page.evaluate(() =>
+    scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: 'instant',
+    }),
+  );
+  await expect(page.locator('[data-tour]')).toBeVisible();
+  const end = await page.evaluate(() => scrollY);
   await page.clock.runFor(1500);
-  expect(await page.evaluate(() => scrollY)).toBe(nextSection);
+  await expect(view).toHaveAttribute('data-lost', 'false');
+  expect(await page.evaluate(() => scrollY)).toBe(end);
 });

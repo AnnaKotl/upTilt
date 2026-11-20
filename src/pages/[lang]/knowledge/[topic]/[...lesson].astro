@@ -1,0 +1,71 @@
+---
+import SiteLayout from '../../../../layouts/SiteLayout.astro';
+import KnowledgeCrumbs from '../../../../components/knowledge/KnowledgeCrumbs.astro';
+import LessonLinks from '../../../../components/knowledge/LessonLinks.astro';
+import { lessons } from '../../../../data/lessons';
+import { topics } from '../../../../data/topics';
+import { locales, type Locale } from '../../../../lib/i18n';
+
+export function getStaticPaths() {
+  type Node = (typeof lessons)[keyof typeof lessons][number];
+  function branches(
+    nodes: readonly Node[],
+    parents: readonly Node[] = [],
+  ): Node[][] {
+    return nodes.flatMap((node) => {
+      const trail = [...parents, node];
+      return [trail, ...branches(node.children ?? [], trail)];
+    });
+  }
+  return locales.flatMap((lang) =>
+    topics.flatMap((topic) =>
+      branches(lessons[topic.id]).map((trail) => ({
+        params: {
+          lang,
+          topic: topic.id,
+          lesson: trail.map(({ id }) => id).join('/'),
+        },
+        props: { topic, trail },
+      })),
+    ),
+  );
+}
+
+const locale = Astro.params.lang as Locale;
+const { topic, trail } = Astro.props;
+const language = locale === 'uk' ? 0 : 1;
+const note = trail.at(-1)!;
+const root = 'knowledge/' + topic.id;
+const path = root + '/' + Astro.params.lesson;
+const crumbs = [
+  { title: topic.title[locale], path: root },
+  ...trail.map(({ title }, i) => ({
+    title: title[language],
+    path:
+      root +
+      '/' +
+      trail
+        .slice(0, i + 1)
+        .map(({ id }) => id)
+        .join('/'),
+  })),
+];
+---
+
+<SiteLayout locale={locale} title={note.title[language]} path={path}>
+  <article class="reading-page">
+    <KnowledgeCrumbs locale={locale} trail={crumbs} />
+    <h1>{note.title[language]}</h1>
+    <div class="reading-note">
+      {note.paragraphs.map((paragraph) => (
+        <p>{paragraph[language]}</p>
+      ))}
+    </div>
+    {note.children?.length && (
+      <section class="reading-note">
+        <h2>{locale === 'uk' ? 'Далі в цій темі' : 'Explore this topic'}</h2>
+        <LessonLinks locale={locale} path={path} items={note.children} />
+      </section>
+    )}
+  </article>
+</SiteLayout>

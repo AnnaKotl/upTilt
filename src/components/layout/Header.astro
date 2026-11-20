@@ -1,5 +1,6 @@
 ---
 import Icon from '../ui/Icon.vue';
+import KnowledgeSearch from '../knowledge/KnowledgeSearch.astro';
 import ThemeToggle from '../preferences/ThemeToggle.vue';
 import { pageUrl, t, type Locale } from '../../lib/i18n';
 interface Props {
@@ -90,13 +91,14 @@ const models = [
   <a
     class="edge-tab"
     data-library
-    hidden={!path}
+    hidden={!path || path === 'knowledge'}
     aria-label={text.knowledge}
     href={pageUrl(locale, 'knowledge')}
   >
     <Icon name="book" />
     <span class="hint">{text.knowledge}</span>
   </a>
+  {path === 'knowledge' && <KnowledgeSearch locale={locale} />}
   {!path && (
     <button
       type="button"
@@ -107,7 +109,7 @@ const models = [
     >
       <Icon name="replay" />
       <span class="hint">
-        {locale === 'uk' ? 'Візуальна демонстрація' : 'Play the guided tour'}
+        {locale === 'uk' ? 'Повторити демонстрацію' : 'Replay the tour'}
       </span>
     </button>
   )}
@@ -174,14 +176,18 @@ const models = [
   window.addEventListener('aircraft-change', updatePicker);
   const hero = document.querySelector('#hero');
   const library = document.querySelector<HTMLElement>('[data-library]');
+  const author = document.querySelector<HTMLElement>('[data-author]');
   const top = document.querySelector<HTMLElement>('[data-top]');
   function update() {
     if (!top) return;
     top.hidden =
       window.scrollY < (hero?.clientHeight ?? window.innerHeight) * 0.75;
-    if (hero && library)
-      library.hidden =
-        hero.getBoundingClientRect().bottom > window.innerHeight * 0.25;
+    if (hero && library) {
+      const pastHero =
+        hero.getBoundingClientRect().bottom <= innerHeight * 0.25;
+      library.hidden = !pastHero;
+      if (author) author.hidden = !pastHero;
+    }
   }
   top?.addEventListener('click', (event) => {
     event.preventDefault();

@@ -55,8 +55,8 @@ export const topics = [
       en: 'Radio links',
     },
     summary: {
-      uk: 'Радіохвилі, частота й антени.',
-      en: 'Radio waves, frequency and antennas.',
+      uk: 'Радіохвилі, частота, антени й основи електрики.',
+      en: 'Radio waves, frequency, antennas and basic electricity.',
     },
     question: {
       uk: 'Що таке частота?',
@@ -121,14 +121,14 @@ export const topics = [
   },
   {
     id: 'equipment',
-    icon: 'classify',
+    icon: 'transmitter',
     title: {
-      uk: 'Класифікація',
-      en: 'Aircraft and equipment types',
+      uk: 'Пульт і спорядження',
+      en: 'Radio and flight gear',
     },
     summary: {
-      uk: 'Типи літальних апаратів і спорядження.',
-      en: 'Aircraft designs and equipment families.',
+      uk: 'Стіки, перемикачі та індикатори пульта.',
+      en: 'Transmitter sticks, switches and indicators.',
     },
     question: {
       uk: 'Що означає «квадрокоптер»?',
@@ -139,8 +139,8 @@ export const topics = [
       en: 'A quadcopter has four lifting rotors. The name describes the aircraft’s design. FPV describes the view through an onboard camera.',
     },
     source: {
-      label: 'Lucasbosch · ImpulseRC Alien',
-      url: 'https://commons.wikimedia.org/wiki/File:ImpulseRC_Alien_5%E2%80%B3_FPV_quad_with_components_collage.jpg',
+      label: 'EdgeTX',
+      url: 'https://manual.edgetx.org/',
     },
   },
   {

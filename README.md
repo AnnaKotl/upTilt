@@ -36,7 +36,3 @@ Press Start 2P sets the short FPV heading, Play sets the section headings and Ma
 ## Publishing
 
 CI verifies changes. Deployment is a separate manual GitHub Actions workflow. In repository Settings → Pages, choose GitHub Actions before the first deployment. This setup does not publish anything on its own.
-
-The project base is `/upTilt/` (case-sensitive). All localized links and assets must retain it. Root links to Ukrainian and English entry points.
-
-Instructor materials, local planning, session logs and agent instructions are intentionally excluded from Git. No source documents or screenshots are shipped. Public educational content will use verified sources with recorded usage rights.

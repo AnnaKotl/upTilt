@@ -2,6 +2,8 @@
 import '../styles/global.css';
 import { seasonPreview } from '../lib/preferences';
 import Header from '../components/layout/Header.astro';
+import playCyrillic from '../assets/fonts/play-cyrl.woff2?url';
+import playLatin from '../assets/fonts/play-latin.woff2?url';
 import { pageUrl, t, locales, type Locale } from '../lib/i18n';
 interface Props {
   locale: Locale;
@@ -10,11 +12,13 @@ interface Props {
 }
 const { locale, title, path = '' } = Astro.props;
 const text = t(locale);
+const knowledge = path === 'knowledge' || path.startsWith('knowledge/');
 ---
 
 <!doctype html>
 <html
   data-study={path === 'design' || undefined}
+  data-knowledge={knowledge || undefined}
   lang={locale}
   data-theme="dark"
   data-season="autumn"
@@ -24,6 +28,24 @@ const text = t(locale);
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="description" content={text.intro} />
     <title>{title} · upTilt</title>
+    {knowledge && (
+      <>
+        <link
+          rel="preload"
+          href={locale === 'uk' ? playCyrillic : playLatin}
+          as="font"
+          type="font/woff2"
+          crossorigin
+        />
+        <style is:inline>
+          @media (prefers-reduced-motion: no-preference) {
+            @view-transition {
+              navigation: auto;
+            }
+          }
+        </style>
+      </>
+    )}
     <link
       rel="icon"
       type="image/svg+xml"

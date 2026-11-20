@@ -1,0 +1,99 @@
+---
+import Icon from '../ui/Icon.vue';
+import type { Locale } from '../../lib/i18n';
+const { locale } = Astro.props as { locale: Locale };
+const uk = locale === 'uk';
+const label = uk ? 'Знайти тему' : 'Find a topic';
+---
+
+<div class="library-search" data-library-search>
+  <button
+    type="button"
+    class="edge-tab"
+    data-search-toggle
+    aria-label={label}
+    aria-expanded="false"
+    aria-controls="knowledge-search"
+  >
+    <Icon name="search" />
+    <span class="hint">{label}</span>
+  </button>
+  <form hidden id="knowledge-search" role="search">
+    <input
+      type="search"
+      aria-label={label}
+      placeholder={label}
+      autocomplete="off"
+    />
+    <button
+      type="button"
+      data-search-clear
+      hidden
+      aria-label={uk ? 'Очистити пошук' : 'Clear search'}
+    >
+      <Icon name="close" />
+    </button>
+    <button type="submit" aria-label={uk ? 'Шукати' : 'Search'}>
+      <Icon name="forward" />
+    </button>
+  </form>
+</div>
+
+<script>
+  const search = document.querySelector<HTMLElement>('[data-library-search]');
+  if (search) {
+    const toggle = search.querySelector<HTMLButtonElement>(
+      '[data-search-toggle]',
+    )!;
+    const form = search.querySelector('form')!;
+    const input = form.querySelector('input')!;
+    const clear = form.querySelector<HTMLButtonElement>('[data-search-clear]')!;
+    const rows = [
+      ...document.querySelectorAll<HTMLElement>('[data-topic-row]'),
+    ];
+    const empty = document.querySelector<HTMLElement>('[data-empty]');
+    const normalize = (text: string) =>
+      text.toLocaleLowerCase().replace(/[’ʼ']/g, '').trim();
+    const terms = rows.map((row) => normalize(row.textContent ?? ''));
+    function setOpen(open: boolean) {
+      form.hidden = !open;
+      toggle.setAttribute('aria-expanded', String(open));
+      if (open) input.focus();
+    }
+    toggle.addEventListener('click', () =>
+      setOpen(form.hasAttribute('hidden')),
+    );
+    // Keep the drawer open while a pointer activates one of its buttons.
+    search.addEventListener('mousedown', (event) => {
+      if (!form.hidden && (event.target as Element).closest('button'))
+        event.preventDefault();
+    });
+    search.addEventListener('focusout', (event) => {
+      if (!search.contains(event.relatedTarget as Node | null)) setOpen(false);
+    });
+    document.addEventListener('pointerdown', (event) => {
+      if (!search.contains(event.target as Node)) setOpen(false);
+    });
+    search.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || form.hidden) return;
+      event.preventDefault();
+      toggle.focus();
+      setOpen(false);
+    });
+    input.addEventListener(
+      'input',
+      () => (clear.hidden = input.value.length === 0),
+    );
+    clear.addEventListener('click', () => {
+      input.value = '';
+      input.focus();
+      clear.hidden = true;
+    });
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const query = normalize(input.value);
+      rows.forEach((row, i) => (row.hidden = !terms[i].includes(query)));
+      if (empty) empty.hidden = rows.some((row) => !row.hidden);
+    });
+  }
+</script>
