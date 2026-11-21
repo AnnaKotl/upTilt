@@ -19,10 +19,16 @@ export const laps = [
 export const ringDiameter = (width: number) =>
   2 * gateRadius * Math.min(width / 16, 1.15);
 export type Point = readonly [number, number, number];
+// Vertical control offsets in diameters, one on either side of the aperture.
+export type LapBend = readonly [number, number];
+export function bendWeight(fraction: number) {
+  return Math.sin(2 * Math.PI * fraction) ** 2;
+}
 export function lapPoint(
   index: number,
   fraction: number,
   width: number,
+  edit?: LapBend,
 ): Point {
   const { drift, pace } = laps[index];
   const d = ringDiameter(width);
@@ -39,17 +45,18 @@ export function lapPoint(
     k * ((0.62 * width) / d) + drift * bend * 0.08,
     k * (5.15 / d) +
       drift * (0.22 + 0.55 * Math.sin(2 * Math.PI * u)) * bend +
-      highEntry,
+      highEntry +
+      (edit?.[fraction < 0.5 ? 0 : 1] ?? 0) * bendWeight(fraction),
     k * 2.4 + drift * bend * 0.12,
   ];
 }
 
-export function sampleLap(index: number, width: number) {
+export function sampleLap(index: number, width: number, edit?: LapBend) {
   let length = 0;
   let previous = lapPoint(index, 0, width);
   return Array.from({ length: 121 }, (_, i) => {
     const fraction = i / 120;
-    const point = lapPoint(index, fraction, width);
+    const point = lapPoint(index, fraction, width, edit);
     length += Math.hypot(...point.map((value, axis) => value - previous[axis]));
     previous = point;
     return { point, fraction, length };

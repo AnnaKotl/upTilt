@@ -331,6 +331,7 @@ const kit = [
           timer = window.setTimeout(advance, 1820 - ms);
           return;
         }
+        storyEl.dataset.downwash = 'true';
         if (!leaves.hidden && !scattered) {
           leaves.classList.add('blown');
           scattered = true;
@@ -377,6 +378,7 @@ const kit = [
         started = performance.now();
         storyEl.dataset.takeoff = String(started);
         delete storyEl.dataset.airborne;
+        delete storyEl.dataset.downwash;
         if (scatterAgain) scattered = false;
         leaves.classList.remove('blown');
         storyEl.classList.remove('lifting');

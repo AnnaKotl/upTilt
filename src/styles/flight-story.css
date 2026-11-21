@@ -23,6 +23,7 @@
   height: 100%;
 }
 .stage-light {
+  opacity: calc(1 - var(--diagram-opacity, 0));
   background: radial-gradient(
     ellipse at 70% 42%,
     color-mix(in srgb, var(--muted) 13%, transparent),
@@ -1735,6 +1736,11 @@
   .gate-chapter {
     height: 485svh;
   }
+  [data-live] .gate-chapter {
+    --diagram-scroll-room: 145svh;
+    height: calc(485svh + var(--diagram-scroll-room));
+    padding-bottom: var(--diagram-scroll-room);
+  }
   .gate-fallback .study-poster:first-child {
     left: 45%;
   }
@@ -2142,7 +2148,7 @@
   transform: translate(-50%, -50%);
 }
 
-[data-theme='light'] .gate-sheet .lap-lines {
+[data-theme='light'] :is(.gate-sheet, .gate-foreground) .survey-lines {
   filter: brightness(0.64) saturate(1.4);
 }
 .flight-story:not([data-live]) .gate-chapter:has(.gate-study.is-ready) {

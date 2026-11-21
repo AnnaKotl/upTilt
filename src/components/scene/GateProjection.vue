@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
-import { gatePoint, gateYaw } from '../../data/flight-path';
+import {
+  gateApproach,
+  gateParked,
+  gatePoint,
+  gateYaw,
+} from '../../data/flight-path';
 import {
   laps,
+  bendWeight,
+  type LapBend,
   lapPoint,
   ringDiameter,
   sampleLap,
@@ -20,6 +27,15 @@ const live = ref(false);
 const studying = ref(false);
 const size = ref({ x: 1280, y: 800 });
 const selected = ref(0);
+const bends = ref<LapBend[]>(laps.map(() => [0, 0]));
+const story = () => surface.value?.closest<HTMLElement>('[data-story]');
+function commitBend(index: number) {
+  story()?.dispatchEvent(
+    new CustomEvent('gate-reshape', {
+      detail: { index, bend: [...bends.value[index]] },
+    }),
+  );
+}
 const step = ref(75);
 const progress = ref(-1);
 const elapsed = ref(0);
@@ -38,7 +54,7 @@ const quantities = computed(() =>
 const drawing = computed(() =>
   !live.value
     ? 1
-    : ramp(progress.value, 0.977, 0.98) *
+    : ramp(progress.value, gateParked - 0.003, gateParked) *
       (1 - ramp(progress.value, 1.32, 1.48)),
 );
 const grid = computed(() =>
@@ -51,7 +67,12 @@ onMounted(() => {
   const story = surface.value!.closest<HTMLElement>('[data-story]')!;
   stage.value = story.querySelector<HTMLElement>('.scene-stage')!;
   const update = () => {
+    const enteringLive = !live.value && !!story.dataset.live;
     live.value = !!story.dataset.live;
+    if (enteringLive)
+      bends.value.forEach((bend, index) => {
+        if (bend.some(Boolean)) commitBend(index);
+      });
     const [p, seconds, index] = (story.dataset.gateSample || '-1,0,0')
       .split(',')
       .map(Number);
@@ -106,7 +127,7 @@ function project([x, y]: Point) {
 }
 const tracks = computed(() =>
   laps.map((_, i) =>
-    sampleLap(i, width.value).map((station) => ({
+    sampleLap(i, width.value, bends.value[i]).map((station) => ({
       ...station,
       ...project(station.point),
     })),
@@ -121,6 +142,7 @@ const ticks = computed(() =>
           selected.value,
           ((i + 1) * 0.25) / laps[selected.value].duration,
           width.value,
+          bends.value[selected.value],
         ),
       ),
   ),
@@ -133,7 +155,8 @@ const paths = computed(() =>
 );
 const primaryPath = computed(() =>
   Array.from({ length: 121 }, (_, i) => {
-    const [x, y] = gatePoint((0.98 * i) / 120, width.value);
+    const progress = gateApproach + ((gateParked - gateApproach) * i) / 120;
+    const [x, y] = gatePoint(progress, width.value);
     return (
       ((0.5 + x / width.value) * size.value.x).toFixed(1) +
       ',' +
@@ -146,8 +169,8 @@ const velocity = computed(() => {
     t = active.value.fraction;
   const lo = Math.max(0, t - 0.001),
     hi = Math.min(1, t + 0.001);
-  const a = lapPoint(i, lo, width.value),
-    b = lapPoint(i, hi, width.value);
+  const a = lapPoint(i, lo, width.value, bends.value[i]),
+    b = lapPoint(i, hi, width.value, bends.value[i]);
   const dt = (hi - lo) * laps[i].duration;
   const [x, y, z] = a.map((value, axis) => (b[axis] - value) / dt);
   return { x, y, speed: Math.hypot(x, y, z) };
@@ -155,7 +178,7 @@ const velocity = computed(() => {
 // All three components and the path length use the same centreline diameter.
 const displacement = computed(() => {
   const from = primary.value
-    ? gatePoint(0, width.value)
+    ? gatePoint(gateApproach, width.value)
     : tracks.value[selected.value][0].point;
   const to = primary.value
     ? gatePoint(progress.value, width.value)
@@ -165,10 +188,13 @@ const displacement = computed(() => {
 });
 const distance = computed(() => Math.hypot(...displacement.value));
 const arrow = computed(() => {
-  const { x, y } = velocity.value;
+  const track = tracks.value[selected.value];
+  // Follow the plotted stations over the next interval, including tight bends.
+  const end = Math.min(120, step.value + 5);
+  const points = track.slice(Math.max(0, end - 5), end + 1);
   return {
-    x: active.value.x + 0.1 * x * scale.value,
-    y: active.value.y - 0.1 * y * scale.value,
+    points: points.map(({ x, y }) => `${x},${y}`).join(' '),
+    tip: track[end],
   };
 });
 const numberFormat = computed(
@@ -182,27 +208,92 @@ const fmt = (value: number) => numberFormat.value.format(value);
 const time = computed(
   () => active.value.fraction * laps[selected.value].duration,
 );
+const drag = ref<{
+  id: number;
+  lap: number;
+  side: 0 | 1;
+  startY: number;
+  startBend: number;
+  weight: number;
+}>();
+function updateBend(lap: number, side: 0 | 1, value: number) {
+  const bend: [number, number] = [...bends.value[lap]];
+  bend[side] = Math.max(-0.64, Math.min(0.64, value));
+  bends.value[lap] = bend;
+}
 function probe(event: PointerEvent) {
   if (!studying.value || !(event.currentTarget instanceof SVGElement)) return;
   const rect = event.currentTarget.getBoundingClientRect();
   const x = ((event.clientX - rect.left) * size.value.x) / rect.width;
   const y = ((event.clientY - rect.top) * size.value.y) / rect.height;
-  let best = 24 * 24;
-  let lap = selected.value;
-  let station = step.value;
-  // Earlier entries win ties, so an intersection keeps the selected pass.
-  for (const i of [lap, ...laps.keys()]) {
-    tracks.value[i].forEach((p, j) => {
-      const distance = (p.x - x) ** 2 + (p.y - y) ** 2;
+  if (drag.value) {
+    const d = drag.value;
+    if (event.pointerId === d.id)
+      updateBend(
+        d.lap,
+        d.side,
+        d.startBend +
+          ((d.startY - event.clientY) * size.value.y) /
+            (rect.height * scale.value * d.weight),
+      );
+    return;
+  }
+  let best = 24;
+  let lap = selected.value,
+    station = step.value;
+  for (const [i, track] of tracks.value.entries()) {
+    for (let j = 1; j < track.length; j++) {
+      const a = track[j - 1],
+        b = track[j],
+        dx = b.x - a.x,
+        dy = b.y - a.y;
+      const u = Math.max(
+        0,
+        Math.min(
+          1,
+          ((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy || 1),
+        ),
+      );
+      const distance =
+        Math.hypot(a.x + u * dx - x, a.y + u * dy - y) -
+        (i === selected.value ? 2.5 : 0);
       if (distance < best) {
         best = distance;
         lap = i;
-        station = j;
+        station = u < 0.5 ? j - 1 : j;
       }
-    });
+    }
   }
   selected.value = lap;
   step.value = station;
+}
+function startDrag(event: PointerEvent) {
+  if (!event.isPrimary || event.button !== 0 || !studying.value || drag.value)
+    return;
+  probe(event);
+  const side = step.value < 60 ? 0 : 1;
+  const weight = bendWeight(step.value / 120);
+  if (weight < 0.045) return;
+  drag.value = {
+    id: event.pointerId,
+    lap: selected.value,
+    side,
+    startY: event.clientY,
+    startBend: bends.value[selected.value][side],
+    weight,
+  };
+  (event.currentTarget as SVGSVGElement).setPointerCapture(event.pointerId);
+}
+function endDrag(event: PointerEvent) {
+  if (!drag.value || event.pointerId !== drag.value.id) return;
+  if (bends.value[drag.value.lap][drag.value.side] !== drag.value.startBend)
+    commitBend(drag.value.lap);
+  drag.value = undefined;
+}
+function nudge(amount: number) {
+  const side = step.value < 60 ? 0 : 1;
+  updateBend(selected.value, side, bends.value[selected.value][side] + amount);
+  commitBend(selected.value);
 }
 </script>
 
@@ -223,7 +314,57 @@ function probe(event: PointerEvent) {
         :viewBox="`0 0 ${size.x} ${size.y}`"
         aria-hidden="true"
       >
+        <!-- The orthographic view looks at a yawed hoop. The incoming (right)
+             half lies in front of its rim, the outgoing half behind it. Share
+             the ink so dash phase, ticks and the scrub marker survive the split. -->
         <defs>
+          <clipPath id="gate-back">
+            <rect x="0" y="0" :width="origin.x" :height="size.y" />
+          </clipPath>
+          <clipPath id="gate-front">
+            <rect
+              :x="origin.x"
+              y="0"
+              :width="size.x - origin.x"
+              :height="size.y"
+            />
+          </clipPath>
+          <g id="gate-tracks">
+            <g class="lap-lines" fill="none">
+              <g :opacity="studying ? 1 : 0" class="survey-lines">
+                <polyline
+                  v-for="(points, i) in paths"
+                  :key="i"
+                  :points="points"
+                  :stroke="laps[i].color"
+                  :class="{ 'current-lap': i === selected }"
+                />
+              </g>
+              <polyline :points="primaryPath" class="primary-path" />
+            </g>
+            <g v-if="studying" :fill="laps[selected].color" opacity=".8">
+              <circle
+                v-for="(tick, i) in ticks"
+                :key="i"
+                :cx="tick.x"
+                :cy="tick.y"
+                r="2.7"
+              />
+            </g>
+            <g
+              v-if="studying"
+              :style="{ '--lap': laps[selected].color }"
+              class="station"
+            >
+              <polyline
+                fill="none"
+                :points="arrow.points"
+                marker-end="url(#velocity-tip)"
+              />
+              <circle :cx="active.x" :cy="active.y" r="5" />
+              <text :x="arrow.tip.x" :y="arrow.tip.y - 9">t</text>
+            </g>
+          </g>
           <pattern
             id="gate-minor"
             :x="origin.x"
@@ -296,27 +437,7 @@ function probe(event: PointerEvent) {
           />
           <ellipse :rx="(scale / 2) * Math.cos(gateYaw)" :ry="scale / 2" />
         </g>
-        <g class="lap-lines" fill="none">
-          <g :opacity="studying ? 1 : 0" class="survey-lines">
-            <polyline
-              v-for="(points, i) in paths"
-              :key="i"
-              :points="points"
-              :stroke="laps[i].color"
-              :class="{ 'current-lap': i === selected }"
-            />
-          </g>
-          <polyline :points="primaryPath" class="primary-path" />
-        </g>
-        <g v-if="studying" :fill="laps[selected].color" opacity=".8">
-          <circle
-            v-for="(tick, i) in ticks"
-            :key="i"
-            :cx="tick.x"
-            :cy="tick.y"
-            r="2.7"
-          />
-        </g>
+        <use href="#gate-tracks" clip-path="url(#gate-back)" />
         <g
           :transform="`translate(${origin.x + scale * 0.49},${origin.y})`"
           class="dimension graph-paper"
@@ -324,21 +445,19 @@ function probe(event: PointerEvent) {
           <path :d="`M0 ${-scale / 2}v${scale}m-4 0h8M-4 ${-scale / 2}h8`" />
           <text x="8" y="-7">D</text>
         </g>
-        <g
-          v-if="studying"
-          :style="{ '--lap': laps[selected].color }"
-          class="station"
-        >
-          <line
-            :x1="active.x"
-            :y1="active.y"
-            :x2="arrow.x"
-            :y2="arrow.y"
-            marker-end="url(#velocity-tip)"
-          />
-          <circle :cx="active.x" :cy="active.y" r="5" />
-          <text :x="arrow.x" :y="arrow.y - 9">v</text>
-        </g>
+        <path
+          v-if="!live"
+          class="ring-outline"
+          :d="`M ${origin.x} ${origin.y - scale / 2} a ${(scale / 2) * Math.cos(gateYaw)} ${scale / 2} 0 0 0 0 ${scale}`"
+        />
+      </svg>
+      <svg
+        class="gate-foreground"
+        :style="{ opacity: drawing }"
+        :viewBox="`0 0 ${size.x} ${size.y}`"
+        aria-hidden="true"
+      >
+        <use href="#gate-tracks" clip-path="url(#gate-front)" />
       </svg>
     </Teleport>
     <template v-if="quantities > 0">
@@ -348,7 +467,11 @@ function probe(event: PointerEvent) {
         :viewBox="`0 0 ${size.x} ${size.y}`"
         aria-hidden="true"
         @pointermove="probe"
-        @pointerdown="probe"
+        @pointerdown="startDrag"
+        @pointerup="endDrag"
+        @pointercancel="endDrag"
+        @lostpointercapture="endDrag"
+        :class="{ 'is-dragging': drag }"
       >
         <polyline v-for="(points, i) in paths" :key="i" :points="points" />
       </svg>
@@ -370,6 +493,19 @@ function probe(event: PointerEvent) {
           <strong>≈ {{ fmt(distance) }} D</strong>
         </div>
       </figcaption>
+      <div v-if="!primary" class="derived vertical-speed">
+        <small>{{ uk ? 'Вертикальна швидкість' : 'Vertical velocity' }}</small>
+        <span>vᵧ = dy/dt ≈ {{ fmt(velocity.y) }} D/{{ uk ? 'с' : 's' }}</span>
+      </div>
+      <div v-if="!primary" class="derived directness">
+        <small>{{
+          uk ? 'Переміщення / шлях' : 'Displacement / distance'
+        }}</small>
+        <span
+          >‖Δr‖ / s ≈
+          {{ active.length ? fmt(distance / active.length) : '—' }}</span
+        >
+      </div>
       <div class="lap-controls" :style="{ '--lap': laps[selected].color }">
         <div
           v-if="!primary"
@@ -425,6 +561,31 @@ function probe(event: PointerEvent) {
             uk ? 'с' : 's'
           }}</small
         >
+        <div class="bend-controls" v-if="studying">
+          <small>{{ uk ? 'Вигин' : 'Bend' }}</small>
+          <button
+            @click="nudge(-0.1)"
+            :aria-label="uk ? 'Опустити ділянку' : 'Lower this segment'"
+          >
+            −
+          </button>
+          <button
+            @click="nudge(0.1)"
+            :aria-label="uk ? 'Підняти ділянку' : 'Raise this segment'"
+          >
+            +
+          </button>
+          <button
+            v-if="bends[selected].some(Boolean)"
+            @click="
+              bends[selected] = [0, 0];
+              commitBend(selected);
+            "
+            :aria-label="uk ? 'Відновити траєкторію' : 'Reset this path'"
+          >
+            ↺
+          </button>
+        </div>
         <small v-if="studying"
           >v = ds/dt <span class="time-key">●</span>
           {{ uk ? 'кожні 0,25 с' : 'every 0.25 s' }}</small
@@ -527,6 +688,9 @@ function probe(event: PointerEvent) {
   stroke-width: 1;
   stroke-dasharray: 3 7;
   opacity: 0.48;
+  transition:
+    stroke-width 0.22s,
+    opacity 0.22s;
 }
 .lap-lines .current-lap {
   stroke-width: 1.8;
@@ -534,11 +698,22 @@ function probe(event: PointerEvent) {
   opacity: 0.94;
 }
 .lap-lines .primary-path {
-  stroke: var(--accent);
-  stroke-dasharray: 2 5;
-  opacity: 0.64;
+  color: var(--accent);
+  color: oklch(from var(--accent) l calc(c * 1.35) h);
+  stroke: currentColor;
+  stroke-width: 2.35;
+  stroke-linecap: round;
+  stroke-dasharray: 6 5;
+  filter: drop-shadow(
+    0 0 3px color-mix(in srgb, currentColor 55%, transparent)
+  );
+  opacity: 0.97;
 }
-.station line {
+:global([data-theme='light']) .lap-lines .primary-path {
+  color: var(--accent);
+  color: oklch(from var(--accent) min(0.61, calc(l + 0.095)) calc(c * 1.32) h);
+}
+.station polyline {
   stroke: var(--lap);
   stroke-width: 2;
 }
@@ -552,6 +727,7 @@ function probe(event: PointerEvent) {
   font-style: italic;
 }
 .gate-hit polyline {
+  touch-action: none;
   pointer-events: stroke;
   fill: none;
   stroke: transparent;
@@ -660,6 +836,83 @@ input::-moz-range-thumb {
   background: var(--surface);
 }
 
+.gate-foreground {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+  transition: opacity 0.55s;
+}
+.gate-hit.is-dragging,
+.gate-hit.is-dragging polyline {
+  cursor: grabbing;
+}
+.derived {
+  position: absolute;
+  display: grid;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.derived span {
+  color: var(--ink);
+}
+.vertical-speed {
+  left: 48%;
+  top: 9%;
+}
+.directness {
+  left: 42%;
+  bottom: 8%;
+}
+.bend-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+}
+.bend-controls button {
+  width: 1.8rem;
+  height: 1.8rem;
+  cursor: pointer;
+  color: var(--ink);
+}
+.bend-controls button:is(:hover, :focus-visible) {
+  color: var(--accent);
+}
+@media (max-width: 840px), (max-height: 560px) {
+  .derived {
+    position: static;
+    font-size: 0.68rem;
+  }
+  .gate-study {
+    display: grid;
+    grid-template-rows: auto auto 1fr auto auto;
+    row-gap: 0.6rem;
+    padding: clamp(1rem, 6vh, 4rem) 6% clamp(2.8rem, 6vh, 4rem)
+      clamp(3.9rem, 10vw, 8rem);
+    box-sizing: border-box;
+  }
+  figcaption,
+  .lap-controls {
+    position: static;
+  }
+  figcaption {
+    grid-row: 1;
+  }
+  .vertical-speed {
+    grid-row: 2;
+  }
+  .lap-controls {
+    grid-row: 4;
+    justify-self: end;
+    max-width: 100%;
+  }
+  .directness {
+    grid-row: 5;
+    justify-self: end;
+  }
+}
 @keyframes gate-ink-in {
   from {
     opacity: 0;

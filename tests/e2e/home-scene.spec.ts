@@ -244,6 +244,42 @@ test('the full tour finishes at the end of the FPV chapter and can be replayed',
   ).toBeLessThanOrEqual(1);
 });
 
+test('a full drawing stays in view before the parts mat appears', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'Checks the live WebGL transition.');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('uk/');
+  const scene = page.locator('[data-story]');
+  const mat = page.locator('.bench-mat');
+  await expect(scene).toHaveAttribute('data-live', 'true');
+  const seek = (fraction: number) =>
+    page.locator('#motion').evaluate((gate, progress) => {
+      const { top, height } = gate.getBoundingClientRect();
+      scrollTo({ top: scrollY + top + height * progress, behavior: 'instant' });
+    }, fraction);
+  await seek(0.72);
+  await expect(scene).toHaveCSS('--diagram-opacity', '1');
+  await expect(page.locator('.scene-stage .gate-sheet')).toBeHidden();
+  await expect(mat).toHaveCSS('opacity', '0');
+  await expect(scene).toHaveAttribute('data-board-ready', 'false');
+  const start = await page.evaluate(() => scrollY);
+  await page.mouse.move(800, 450);
+  await page.mouse.wheel(0, 300);
+  await expect
+    .poll(() => page.evaluate((before) => scrollY - before, start))
+    .toBe(138);
+  await expect(scene).toHaveCSS('--diagram-opacity', '1');
+  await seek(0.93);
+  await expect
+    .poll(async () =>
+      Number(await mat.evaluate((el) => getComputedStyle(el).opacity)),
+    )
+    .toBeGreaterThan(0.2);
+  await expect(scene).toHaveAttribute('data-board-ready', 'false');
+});
+
 test('the moving board is locked and opens a card at the settled battery', async ({
   page,
   browserName,

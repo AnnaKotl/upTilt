@@ -2,6 +2,34 @@ import { expect, it } from 'vitest';
 import { Group, Scene } from 'three';
 import { raceReplays } from '../../src/graphics/race-replays';
 import { lapPoint, laps, sampleLap } from '../../src/data/gate-replays';
+import {
+  gateApproach,
+  gateCrossing,
+  gateParked,
+  gatePoint,
+} from '../../src/data/flight-path';
+
+it('enters from above the right side, crosses the hoop and parks without reversing the visible trace', () => {
+  const width = 16;
+  let previous = gatePoint(gateApproach, width);
+  expect(previous[0]).toBeGreaterThan(width / 4);
+  expect(previous[1]).toBeGreaterThan(5);
+  const [gateX, gateY, gateZ] = gatePoint(gateCrossing, width);
+  expect(gateX).toBeCloseTo(0.08 * width);
+  expect(gateY).toBeCloseTo(0.65);
+  expect(gateZ).toBe(0);
+  for (let index = 1; index <= 120; index++) {
+    const position = gatePoint(
+      gateApproach + ((gateParked - gateApproach) * index) / 120,
+      width,
+    );
+    expect(position[0]).toBeLessThan(previous[0]);
+    expect(position[1]).toBeLessThan(previous[1]);
+    previous = position;
+  }
+  const parked = gatePoint(1.15, width);
+  previous.forEach((value, axis) => expect(value).toBeCloseTo(parked[axis]));
+});
 
 it('starts at the parked pose and reveals the drawing only after the passes and a pause', () => {
   const scene = new Scene(),
@@ -60,4 +88,15 @@ it('lets launched aircraft and their deposited light coast when scrolling away',
   expect(replay.moving).toBe(true);
   replay.update(1.36, 5200, 0, 610);
   expect(replay.moving).toBe(false);
+});
+
+it('lets each side bend independently while pinning the gate and both endpoints', () => {
+  for (const index of laps.keys()) {
+    const original = sampleLap(index, 16);
+    const raised = sampleLap(index, 16, [0.5, 0]);
+    for (const step of [0, 60, 90, 120])
+      expect(raised[step].point).toEqual(original[step].point);
+    expect(raised[30].point[1] - original[30].point[1]).toBeCloseTo(0.5);
+    expect(raised[120].length).not.toBeCloseTo(original[120].length, 4);
+  }
 });

@@ -100,47 +100,167 @@ function trace(i: number) {
       >
         <svg
           class="pcb-island"
-          viewBox="-108 -58 216 116"
+          viewBox="-158 -104 316 208"
           fill="none"
           aria-hidden="true"
         >
+          <g class="pcb-etching">
+            <path
+              d="M17 -23V-42L30-55H43L60-72V-85L76-101H84
+                 M23 -23V-34L39-50H61L78-67H91
+                 M23 -18H35L48-31H85L101-47H121
+                 M-20 23V34L-44 58H-62L-78 74H-95
+                 M-24 18H-40L-55 33H-73L-101 61H-120
+                 M-53 20H-70L-87 37H-121
+                 M128 -112H142L150-104H161
+                 M143 -77H151L161-67H176"
+            />
+            <circle cx="87" cy="-101" r="2.2" />
+            <circle cx="94" cy="-67" r="2" />
+            <circle cx="124" cy="-47" r="2.2" />
+            <circle cx="179" cy="-67" r="2.1" />
+            <circle cx="-98" cy="74" r="2.4" />
+            <circle cx="-123" cy="61" r="2.2" />
+            <g transform="translate(112 -119)">
+              <rect x="-8" y="-8" width="16" height="16" rx="1.3" />
+              <rect x="-4.3" y="-4.3" width="8.6" height="8.6" rx=".8" />
+              <path
+                d="M-5 -8v-3m5 3v-3m5 3v-3M-5 8v3m5-3v3m5-3v3M-8-4h-3m3 4h-3m3 4h-3m19-8h3m-3 4h3m-3 4h3"
+              />
+              <circle cx="-6" cy="-6" r=".6" fill="currentColor" />
+            </g>
+            <g transform="translate(176 -95)">
+              <rect x="-5" y="-5" width="10" height="10" rx=".9" />
+              <path d="M-5-3h-3m3 3h-3m3 3h-3m13-6h3m-3 3h3m-3 3h3" />
+              <circle r="1.7" />
+            </g>
+            <g transform="translate(130 -78)">
+              <path d="M0-7 10-2 0 3-10-2ZM-10 1 0 6 10 1m-20 3 10 5 10-5" />
+              <path d="M-4-2 0-4 4-2 0 0Z" />
+            </g>
+            <g transform="translate(-131 37)">
+              <rect x="-7" y="-5.5" width="14" height="11" rx="1" />
+              <path
+                d="M-7-3h-3m3 3h-3m3 3h-3m17-6h3m-3 3h3m-3 3h3M-3-2h6v4h-6z"
+              />
+            </g>
+          </g>
           <g
-            v-for="mirror in [1, -1]"
-            :key="mirror"
-            :transform="`scale(${mirror} ${mirror})`"
+            v-for="side in ['upper', 'compact-tail']"
+            :key="side"
+            :class="'pcb-' + side"
+            :transform="side === 'upper' ? 'rotate(20) scale(-1)' : undefined"
           >
             <path
               class="pcb-route"
-              d="M15 -13H36L44 -21H62 M15 -9H38L47 -17H57 M15 4H52L59 11H83 M6 -17V-29L14 -37H34 M19 14H38L52 28H70"
+              d="M24 -7H42L67 18H89L127 56H143
+                 M24 0H38L65 27H84L126 69H137
+                 M24 7H34L62 35H77L116 74
+                 M24 14H29L55 40H68L99 71H107
+                 M12 23V35L32 55V61L54 83H73
+                 M5 23V38L25 58V65L50 90H59"
             />
-            <g
-              v-for="x in [46, 54, 62]"
-              :key="x"
-              :transform="`translate(${x} -26)`"
-            >
+            <g class="pcb-via">
+              <circle cx="146" cy="56" r="2.7" />
+              <circle cx="119" cy="77" r="2.1" />
+              <circle cx="110" cy="71" r="2.5" />
+              <circle cx="76" cy="83" r="2.6" />
+            </g>
+            <g transform="translate(142 69)">
               <rect
-                x="-2.4"
-                y="-5.8"
-                width="4.8"
-                height="12"
+                x="-5"
+                y="-2.7"
+                width="10"
+                height="5.4"
                 rx=".8"
                 class="pcb-pad"
               />
+              <path d="M-2.5 -2.7h5v5.4h-5z" class="pcb-body" />
+            </g>
+            <g v-if="side === 'compact-tail'">
+              <g
+                v-for="x in [64, 71, 78]"
+                :key="x"
+                :transform="`translate(${x} 65)`"
+              >
+                <rect
+                  x="-2.2"
+                  y="-5"
+                  width="4.4"
+                  height="10"
+                  rx=".7"
+                  class="pcb-pad"
+                />
+                <rect
+                  x="-2.2"
+                  y="-2.7"
+                  width="4.4"
+                  height="5.4"
+                  rx=".5"
+                  class="pcb-body"
+                />
+              </g>
+              <path class="pcb-silk" d="M60 60v-3h22v3 M60 70v3h20" />
+            </g>
+          </g>
+          <g class="pcb-wide-tail">
+            <path
+              class="pcb-route"
+              d="M24 -7H43L61 11H105L127 33H159L174 18H210
+                 M24 0H39L62 23H96L121 48H151L169 30H188
+                 M24 7H35L62 34H85L112 61H144L164 81H203
+                 M24 14H29L57 42H74L98 66H112L132 86H166
+                 M12 23V38L34 60H49L71 82H100
+                 M5 23V40L31 66V71L54 94H83"
+            />
+            <path
+              class="pcb-route pcb-spur"
+              d="M151 48L166 63H174 M177 81L186 90H194"
+            />
+            <g class="pcb-via">
+              <circle cx="213" cy="18" r="2.7" />
+              <circle cx="206" cy="81" r="2.4" />
+              <circle cx="169" cy="86" r="2.3" />
+              <circle cx="103" cy="82" r="2.6" />
+              <circle cx="197" cy="90" r="2.1" class="pcb-spur" />
+            </g>
+            <g transform="translate(193 30)">
               <rect
-                x="-2.6"
-                y="-3.2"
-                width="5.2"
-                height="6.4"
-                rx=".6"
+                x="-5"
+                y="-2.7"
+                width="10"
+                height="5.4"
+                rx=".8"
+                class="pcb-pad"
+              />
+              <path d="M-2.5 -2.7h5v5.4h-5z" class="pcb-body" />
+            </g>
+            <g
+              v-for="x in [178, 186, 194]"
+              :key="x"
+              :transform="`translate(${x} 63)`"
+            >
+              <rect
+                x="-2.2"
+                y="-5"
+                width="4.4"
+                height="10"
+                rx=".7"
+                class="pcb-pad"
+              />
+              <rect
+                x="-2.2"
+                y="-2.7"
+                width="4.4"
+                height="5.4"
+                rx=".5"
                 class="pcb-body"
               />
             </g>
-            <rect x="71" y="21" width="12" height="8" rx="1" class="pcb-pad" />
-            <rect x="74" y="21" width="6" height="8" class="pcb-body" />
-            <circle cx="87" cy="11" r="2.8" class="pcb-via" />
-            <circle cx="36" cy="-37" r="1.8" class="pcb-via" />
-            <path class="pcb-silk" d="M42 -34h24v3 M69 20v-2h16v13h-4" />
+            <path class="pcb-silk" d="M173 59V55H199V59 M173 68V71H199V68" />
           </g>
+          <path class="pcb-route pcb-spur" d="M-11 23V39L-24 52H-37" />
+          <circle cx="-40" cy="52" r="2.4" class="pcb-via pcb-spur" />
         </svg>
         <span class="book-chip"><Icon name="book" /></span>
       </a>
@@ -201,13 +321,23 @@ function trace(i: number) {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: clamp(10rem, 20vw, 23rem);
+  width: clamp(16rem, 38vw, 44rem);
   height: auto;
   max-width: none;
+  overflow: visible;
   transform: translate(-50%, -50%);
   color: var(--muted);
-  opacity: 0.72;
+  opacity: 0.44;
   transition: opacity 0.35s;
+}
+.pcb-compact-tail {
+  display: none;
+}
+.pcb-etching {
+  color: color-mix(in srgb, var(--muted) 75%, var(--surface));
+  stroke: currentColor;
+  stroke-width: 0.43;
+  opacity: 0.48;
 }
 .pcb-route,
 .pcb-silk {
@@ -227,15 +357,25 @@ function trace(i: number) {
   stroke-width: 0.6;
 }
 .pcb-via {
-  stroke: var(--accent);
-  stroke-width: 0.85;
+  stroke: color-mix(in srgb, var(--accent) 60%, var(--muted));
+  stroke-width: 0.8;
+}
+.pcb-spur {
+  opacity: 0.45;
 }
 [data-open='true'] .pcb-island {
-  opacity: 0.18;
+  opacity: 0.13;
 }
 @media (max-width: 840px), (max-height: 509px) {
   .pcb-island {
-    width: 9rem;
+    width: clamp(8rem, 43vw, 14rem);
+  }
+  .pcb-etching,
+  .pcb-wide-tail {
+    display: none;
+  }
+  .pcb-compact-tail {
+    display: inline;
   }
 }
 </style>

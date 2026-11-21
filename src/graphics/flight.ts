@@ -1,3 +1,4 @@
+import type { LapBend } from '../data/gate-replays';
 import { sampleFlight, gateYaw } from '../data/flight-path';
 import { radioControls } from '../data/radio-controls';
 import { currentAircraft } from '../lib/aircraft';
@@ -17,6 +18,12 @@ const clamp = T.MathUtils.clamp,
   mix = T.MathUtils.lerp;
 const ease = (a: number, b: number, p: number) =>
   T.MathUtils.smoothstep(p, a, b);
+const diagramStart = 1.68;
+const diagramFull = 1.775;
+const matStart = 1.9;
+const matVisible = 1.975;
+const partsSettled = 1.99;
+
 function fadeTexture() {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 96;
@@ -82,27 +89,26 @@ function groundTexture() {
   }
   return new T.CanvasTexture(canvas);
 }
-// A brief exposure of three blades keeps a resting render legible as a spinning rotor.
 function rotorExposure() {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 128;
   const ctx = canvas.getContext('2d')!;
   ctx.translate(64, 64);
-  for (let j = 0; j < 3; j++) {
-    ctx.save();
-    ctx.rotate((j * Math.PI * 2) / 3);
-    for (let i = 0; i < 15; i++) {
-      ctx.rotate(0.036);
-      ctx.fillStyle = 'rgba(219,231,236,' + (0.007 + i * 0.0018) + ')';
-      ctx.beginPath();
-      ctx.moveTo(5, -2);
-      ctx.bezierCurveTo(22, -7, 47, -1, 58, 6);
-      ctx.quadraticCurveTo(65, 14, 53, 15);
-      ctx.quadraticCurveTo(31, 15, 5, 2);
-      ctx.fill();
-    }
-    ctx.restore();
+  // Integrated exposure around the full sweep avoids backwards/stationary
+  // blades when the display samples a fast rotor at nearly the same angle.
+  const sweep = ctx.createRadialGradient(0, 0, 4, 0, 0, 62);
+  for (const [stop, alpha] of [
+    [0, 0],
+    [0.16, 0.045],
+    [0.57, 0.145],
+    [0.87, 0.205],
+    [0.96, 0.16],
+    [1, 0],
+  ]) {
+    sweep.addColorStop(stop, `rgba(216,232,237,${alpha})`);
   }
+  ctx.fillStyle = sweep;
+  ctx.fillRect(-64, -64, 128, 128);
   return new T.CanvasTexture(canvas);
 }
 export function mountFlight(host: HTMLElement, story: HTMLElement) {
@@ -379,6 +385,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     document.getElementById(id)!,
   );
   let anchors: number[] = [],
+    diagramScrollStart = 0,
     w = 16,
     p = 0,
     goal = 0,
@@ -428,6 +435,11 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     camera.updateProjectionMatrix();
     renderer.setSize(wpx, h, false);
     anchors = chapters.map((el) => el.getBoundingClientRect().top + scrollY);
+    // The gate keeps its original scroll distance until the readouts fade.
+    // The extra space at the end of the chapter belongs to the diagram.
+    const extraRoom = parseFloat(getComputedStyle(chapters[1]).paddingBottom);
+    const gateSpan = anchors[2] - anchors[1] - extraRoom;
+    diagramScrollStart = anchors[1] + gateSpan * (diagramStart - 1);
     scroll();
   }
   let scrollTime = 0,
@@ -436,8 +448,21 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     scrollTime = performance.now();
     let i = 0;
     while (i < anchors.length - 2 && scrollY >= anchors[i + 1]) i++;
+    let start = anchors[i],
+      end = anchors[i + 1];
+    let from = i,
+      to = i + 1;
+    if (i === 1) {
+      if (scrollY < diagramScrollStart) {
+        end = diagramScrollStart;
+        to = diagramStart;
+      } else {
+        start = diagramScrollStart;
+        from = diagramStart;
+      }
+    }
     goal = clamp(
-      i + (scrollY - anchors[i]) / Math.max(1, anchors[i + 1] - anchors[i]),
+      mix(from, to, (scrollY - start) / Math.max(1, end - start)),
       0,
       4,
     );
@@ -518,22 +543,22 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
 
     const departRadio = ease(3.5, 3.83, p);
     const [x, y, k, rx, ry, rz, z] = sampleFlight(p);
-    const spread = ease(1.8, 1.995, p) * (1 - ease(2.4, 2.74, p));
+    const spread = ease(1.917, partsSettled, p) * (1 - ease(2.4, 2.74, p));
     const boardReady = String(spread >= 1);
     if (spread < 1) focus = '';
     if (story.dataset.boardReady !== boardReady)
       story.dataset.boardReady = boardReady;
     story.style.setProperty(
       '--mat-opacity',
-      String(ease(1.69, 1.95, p) * (1 - ease(2.45, 2.75, p))),
+      String(ease(matStart, matVisible, p) * (1 - ease(2.45, 2.75, p))),
     );
     story.style.setProperty(
       '--intro-opacity',
       String(p > 0.02 ? 1 : ease(0.22, 0.75, elapsed)),
     );
-    const drawing =
-      ease(1.59, 1.75, p) * (1 - ease(1.88, 2.08, p)) + 0.16 * spread;
-    const diagram = ease(1.59, 1.75, p) * (1 - ease(1.79, 1.96, p));
+    const diagram =
+      ease(diagramStart, diagramFull, p) * (1 - ease(matStart, matVisible, p));
+    const drawing = diagram + 0.16 * spread;
     if (diagram !== oldDiagram) {
       for (const material of solids) {
         const translucent = diagram > 0.003;
@@ -544,6 +569,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
         }
         material.opacity = 1 - 0.9 * diagram;
       }
+      story.style.setProperty('--diagram-opacity', String(diagram));
       oldDiagram = diagram;
     }
     story.style.setProperty('--radio-exit', String(1 - departRadio));
@@ -668,13 +694,13 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const spinning = speed > 0.005;
     exposure.opacity = speed * (0.88 + 0.12 * scrollMotion);
     quad.blade.opacity =
-      0.68 * (1 - speed) + (0.055 - 0.045 * scrollMotion) * speed;
+      (0.68 * (1 - speed) + 0.007 * speed) * (1 - 0.9 * diagram);
     quad.rotors.forEach((r, i) => {
       if (spinning)
         r.rotation.y +=
           delta *
           speed *
-          (78 + 58 * scrollMotion) *
+          (146 + 64 * scrollMotion) *
           (i === 0 || i === 3 ? 1 : -1) *
           (1 - spread);
     });
@@ -737,6 +763,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     shadow.material.opacity =
       (0.46 + day * 0.22 - 0.22 * take) *
       (1 - spread) *
+      (1 - diagram) *
       (1 - hero + hero * ease(0.72, 1.08, elapsed));
     radio.root.visible = p > 2.59;
     radio.root.position.set(
@@ -852,6 +879,47 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     },
     { signal },
   );
+  story.addEventListener(
+    'gate-reshape',
+    (event) => {
+      const { index, bend } = (
+        event as CustomEvent<{ index: number; bend: LapBend }>
+      ).detail;
+      ghosts.reshape(index, bend);
+      invalidate();
+    },
+    { signal },
+  );
+  // Give the replays and the assembled diagram more time on a forward gesture.
+  // Reverse scrolling and direct navigation keep their normal behavior.
+  story.addEventListener(
+    'wheel',
+    (event) => {
+      const replaying =
+        story.dataset.gatePhase === 'replays' &&
+        ghosts.elapsed < 5.4 &&
+        goal >= 0.98 &&
+        goal <= 1.31;
+      const viewingDiagram = goal >= diagramStart - 0.025 && goal < matStart;
+      if (
+        (!replaying && !viewingDiagram) ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.deltaY <= Math.abs(event.deltaX) ||
+        !event.cancelable
+      )
+        return;
+      const pixels =
+        event.deltaY *
+        (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1);
+      event.preventDefault();
+      window.scrollBy({
+        top: pixels * (replaying ? 0.24 : 0.46),
+        behavior: 'instant',
+      });
+    },
+    { passive: false, signal },
+  );
   story.addEventListener('part-focus', highlight, { signal });
   story.addEventListener(
     'radio-pose',
@@ -911,6 +979,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     delete story.dataset.live;
     delete story.dataset.gatePhase;
     delete story.dataset.gateSample;
+    story.style.removeProperty('--diagram-opacity');
     const pin = chapters[3].firstElementChild as HTMLElement;
     pin.style.removeProperty('--power-x');
     pin.style.removeProperty('--power-y');

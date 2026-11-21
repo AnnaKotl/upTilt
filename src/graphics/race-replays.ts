@@ -1,6 +1,11 @@
 import * as T from 'three';
 import { gateCrossing, gatePoint } from '../data/flight-path';
-import { laps, lapPoint, ringDiameter } from '../data/gate-replays';
+import {
+  laps,
+  lapPoint,
+  ringDiameter,
+  type LapBend,
+} from '../data/gate-replays';
 
 const trailLifetime = 2.2;
 
@@ -8,11 +13,12 @@ class ReplayCurve extends T.Curve<T.Vector3> {
   constructor(
     private index: number,
     private width: number,
+    readonly edit?: LapBend,
   ) {
     super();
   }
   getPoint(t: number, target = new T.Vector3()) {
-    return target.set(...lapPoint(this.index, t, this.width));
+    return target.set(...lapPoint(this.index, t, this.width, this.edit));
   }
 }
 
@@ -106,29 +112,30 @@ export function raceReplays(scene: T.Scene, gate: T.Group) {
     if (start !== undefined)
       swarm.position.set(...gatePoint(gateCrossing, width));
     swarm.scale.setScalar(ringDiameter(width));
-    runs.forEach((run, i) => {
-      run.curve = new ReplayCurve(i, width);
-      run.curve.arcLengthDivisions = segments * 2;
-      run.lengths = run.curve.getLengths();
-      const stamps = new Float32Array((segments + 1) * (sides + 1));
-      for (let j = 0; j <= segments; j++) {
-        const time =
-          run.curve.getUtoTmapping(j / segments, 0) * laps[i].duration;
-        stamps.fill(time, j * (sides + 1), (j + 1) * (sides + 1));
-      }
-      const deposited = new T.BufferAttribute(stamps, 1);
-      for (const { mesh, radius } of run.layers) {
-        mesh.geometry.dispose();
-        mesh.geometry = new T.TubeGeometry(
-          run.curve,
-          segments,
-          radius,
-          sides,
-          false,
-        );
-        mesh.geometry.setAttribute('deposited', deposited);
-      }
-    });
+    runs.forEach((run, i) => reshape(i, run.curve.edit));
+  }
+  function reshape(i: number, edit?: LapBend) {
+    const run = runs[i];
+    run.curve = new ReplayCurve(i, worldWidth, edit);
+    run.curve.arcLengthDivisions = segments * 2;
+    run.lengths = run.curve.getLengths();
+    const stamps = new Float32Array((segments + 1) * (sides + 1));
+    for (let j = 0; j <= segments; j++) {
+      const time = run.curve.getUtoTmapping(j / segments, 0) * laps[i].duration;
+      stamps.fill(time, j * (sides + 1), (j + 1) * (sides + 1));
+    }
+    const deposited = new T.BufferAttribute(stamps, 1);
+    for (const { mesh, radius } of run.layers) {
+      mesh.geometry.dispose();
+      mesh.geometry = new T.TubeGeometry(
+        run.curve,
+        segments,
+        radius,
+        sides,
+        false,
+      );
+      mesh.geometry.setAttribute('deposited', deposited);
+    }
   }
   function update(
     progress: number,
@@ -208,6 +215,7 @@ export function raceReplays(scene: T.Scene, gate: T.Group) {
   reset();
   return {
     reset,
+    reshape,
     resize,
     update,
     get followed() {
