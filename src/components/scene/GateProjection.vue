@@ -24,6 +24,10 @@ const uk = computed(() => locale.value === 'uk');
 const surface = ref<HTMLElement>();
 const stage = ref<HTMLElement>();
 const live = ref(false);
+const light = ref(false);
+const lapColors = computed(() =>
+  laps.map((lap) => (light.value ? lap.lightColor : lap.color)),
+);
 const studying = ref(false);
 const size = ref({ x: 1280, y: 800 });
 const selected = ref(0);
@@ -39,8 +43,13 @@ function commitBend(index: number) {
 const step = ref(75);
 const progress = ref(-1);
 const elapsed = ref(0);
+const survey = ref(0);
 const primary = computed(
-  () => live.value && progress.value >= 0 && progress.value < 0.979,
+  () =>
+    live.value &&
+    progress.value >= 0 &&
+    progress.value < gateParked &&
+    elapsed.value === 0,
 );
 function ramp(x: number, from: number, to: number) {
   const a = Math.min(1, Math.max(0, (x - from) / (to - from)));
@@ -54,7 +63,11 @@ const quantities = computed(() =>
 const drawing = computed(() =>
   !live.value
     ? 1
-    : ramp(progress.value, gateParked - 0.003, gateParked) *
+    : ramp(
+        progress.value,
+        elapsed.value > 0 ? 0.92 : gateParked - 0.003,
+        gateParked,
+      ) *
       (1 - ramp(progress.value, 1.32, 1.48)),
 );
 const grid = computed(() =>
@@ -66,31 +79,34 @@ let state: MutationObserver | undefined;
 onMounted(() => {
   const story = surface.value!.closest<HTMLElement>('[data-story]')!;
   stage.value = story.querySelector<HTMLElement>('.scene-stage')!;
+  let needsStudyStation = false;
   const update = () => {
+    light.value = document.documentElement.dataset.theme === 'light';
     const enteringLive = !live.value && !!story.dataset.live;
     live.value = !!story.dataset.live;
     if (enteringLive)
       bends.value.forEach((bend, index) => {
         if (bend.some(Boolean)) commitBend(index);
       });
-    const [p, seconds, index] = (story.dataset.gateSample || '-1,0,0')
+    const [p, seconds, index, age, reveal] = (
+      story.dataset.gateSample || '-1,0,0,0,0'
+    )
       .split(',')
       .map(Number);
     progress.value = p;
     elapsed.value = seconds;
+    survey.value = live.value ? reveal : 1;
     const phase = story.dataset.gatePhase;
-    const wasStudying = studying.value;
     studying.value = !live.value || phase === 'study';
+    if (!studying.value) finishDrag();
     if (live.value && phase === 'replays') {
       // Follow one airborne aircraft through its pass, then pick up the next.
-      selected.value = index ?? 0;
-      const lap = laps[selected.value];
-      step.value = Math.round(
-        120 * Math.max(0, Math.min(1, (seconds - lap.launch) / lap.duration)),
-      );
-    } else if (studying.value && !wasStudying) {
-      selected.value = 0;
+      selected.value = index;
+      step.value = Math.round(120 * Math.min(1, age / laps[index].duration));
+      needsStudyStation = true;
+    } else if (studying.value && needsStudyStation) {
       step.value = 75;
+      needsStudyStation = false;
     }
     const el = live.value ? stage.value! : surface.value!;
     const x = el.clientWidth,
@@ -105,6 +121,10 @@ onMounted(() => {
   state.observe(story, {
     attributes: true,
     attributeFilter: ['data-live', 'data-gate-phase', 'data-gate-sample'],
+  });
+  state.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
   });
   update();
 });
@@ -284,11 +304,15 @@ function startDrag(event: PointerEvent) {
   };
   (event.currentTarget as SVGSVGElement).setPointerCapture(event.pointerId);
 }
-function endDrag(event: PointerEvent) {
-  if (!drag.value || event.pointerId !== drag.value.id) return;
-  if (bends.value[drag.value.lap][drag.value.side] !== drag.value.startBend)
-    commitBend(drag.value.lap);
+function finishDrag() {
+  const activeDrag = drag.value;
+  if (!activeDrag) return;
   drag.value = undefined;
+  if (bends.value[activeDrag.lap][activeDrag.side] !== activeDrag.startBend)
+    commitBend(activeDrag.lap);
+}
+function endDrag(event: PointerEvent) {
+  if (drag.value?.id === event.pointerId) finishDrag();
 }
 function nudge(amount: number) {
   const side = step.value < 60 ? 0 : 1;
@@ -309,7 +333,7 @@ function nudge(amount: number) {
     <Teleport :to="stage || 'body'" :disabled="!stage || !live">
       <svg
         class="gate-sheet"
-        :class="{ 'is-ready': drawing > 0 }"
+        :class="{ 'is-ready': drawing > 0, 'is-day': light }"
         :style="{ '--drawing': drawing, '--grid': grid }"
         :viewBox="`0 0 ${size.x} ${size.y}`"
         aria-hidden="true"
@@ -331,18 +355,23 @@ function nudge(amount: number) {
           </clipPath>
           <g id="gate-tracks">
             <g class="lap-lines" fill="none">
-              <g :opacity="studying ? 1 : 0" class="survey-lines">
+              <g :opacity="survey" class="survey-lines">
                 <polyline
                   v-for="(points, i) in paths"
                   :key="i"
                   :points="points"
-                  :stroke="laps[i].color"
-                  :class="{ 'current-lap': i === selected }"
+                  :stroke="lapColors[i]"
+                  class="survey-line"
+                  :class="{ 'current-lap': i === selected, 'is-day': light }"
                 />
               </g>
               <polyline :points="primaryPath" class="primary-path" />
             </g>
-            <g v-if="studying" :fill="laps[selected].color" opacity=".8">
+            <g
+              :fill="lapColors[selected]"
+              :opacity="studying ? 0.8 : 0"
+              class="survey-detail"
+            >
               <circle
                 v-for="(tick, i) in ticks"
                 :key="i"
@@ -352,9 +381,9 @@ function nudge(amount: number) {
               />
             </g>
             <g
-              v-if="studying"
-              :style="{ '--lap': laps[selected].color }"
-              class="station"
+              :opacity="studying ? 1 : 0"
+              :style="{ '--lap': lapColors[selected] }"
+              class="station survey-detail"
             >
               <polyline
                 fill="none"
@@ -506,25 +535,45 @@ function nudge(amount: number) {
           {{ active.length ? fmt(distance / active.length) : '—' }}</span
         >
       </div>
-      <div class="lap-controls" :style="{ '--lap': laps[selected].color }">
+      <div class="lap-controls" :style="{ '--lap': lapColors[selected] }">
         <div
           v-if="!primary"
           class="lap-pick"
           role="group"
           :aria-label="uk ? 'Попередні прольоти' : 'Previous passes'"
         >
-          <span
-            >{{ uk ? 'Проліт' : 'Pass' }}
-            {{ String(selected + 1).padStart(2, '0') }}</span
-          >
-          <button
-            v-for="(lap, i) in studying ? laps : []"
-            :key="lap.color"
-            :style="{ '--lap': lap.color }"
-            :aria-pressed="i === selected"
-            :aria-label="(uk ? 'Проліт ' : 'Pass ') + (i + 1)"
-            @click="selected = i"
-          ></button>
+          <span class="lap-label">
+            {{ uk ? 'Проліт' : 'Pass' }}
+            <span class="lap-number">
+              <Transition name="lap-number">
+                <span :key="selected">{{
+                  String(selected + 1).padStart(2, '0')
+                }}</span>
+              </Transition>
+            </span>
+          </span>
+          <div class="lap-swatches" :style="{ '--lap-index': selected }">
+            <span class="lap-ring" aria-hidden="true"></span>
+            <template v-for="(lap, i) in laps" :key="lap.color">
+              <button
+                v-if="studying"
+                type="button"
+                class="lap-swatch"
+                :style="{ '--swatch': lapColors[i] }"
+                :class="{ 'is-current': i === selected }"
+                :aria-pressed="i === selected"
+                :aria-label="(uk ? 'Проліт ' : 'Pass ') + (i + 1)"
+                @click="selected = i"
+              ></button>
+              <span
+                v-else
+                class="lap-swatch"
+                :style="{ '--swatch': lapColors[i] }"
+                :class="{ 'is-current': i === selected }"
+                aria-hidden="true"
+              ></span>
+            </template>
+          </div>
         </div>
         <div v-if="primary" class="measurements">
           <span v-for="(v, i) in displacement" :key="i"
@@ -546,50 +595,52 @@ function nudge(amount: number) {
             <b>{{ fmt(velocity.speed) }}</b> D/{{ uk ? 'с' : 's' }}</span
           >
         </div>
-        <input
-          v-if="studying"
-          type="range"
-          min="0"
-          max="120"
-          v-model.number="step"
-          :aria-label="uk ? 'Час від початку прольоту' : 'Time since launch'"
-          :aria-valuetext="fmt(time) + (uk ? ' с' : ' s')"
-        />
-        <small v-if="!primary" class="mean-speed"
-          >{{ uk ? 'Середня швидкість' : 'Mean speed' }} · s/t =
-          {{ time > 0 ? fmt(active.length / time) : '—' }} D/{{
-            uk ? 'с' : 's'
-          }}</small
-        >
-        <div class="bend-controls" v-if="studying">
-          <small>{{ uk ? 'Вигин' : 'Bend' }}</small>
-          <button
-            @click="nudge(-0.1)"
-            :aria-label="uk ? 'Опустити ділянку' : 'Lower this segment'"
+        <div v-if="!primary" class="lap-tools">
+          <input
+            v-if="studying"
+            type="range"
+            min="0"
+            max="120"
+            v-model.number="step"
+            :aria-label="uk ? 'Час від початку прольоту' : 'Time since launch'"
+            :aria-valuetext="fmt(time) + (uk ? ' с' : ' s')"
+          />
+          <small class="mean-speed"
+            >{{ uk ? 'Середня швидкість' : 'Mean speed' }} · s/t =
+            {{ time > 0 ? fmt(active.length / time) : '—' }} D/{{
+              uk ? 'с' : 's'
+            }}</small
           >
-            −
-          </button>
-          <button
-            @click="nudge(0.1)"
-            :aria-label="uk ? 'Підняти ділянку' : 'Raise this segment'"
+          <div class="bend-controls" v-if="studying">
+            <small>{{ uk ? 'Вигин' : 'Bend' }}</small>
+            <button
+              @click="nudge(-0.1)"
+              :aria-label="uk ? 'Опустити ділянку' : 'Lower this segment'"
+            >
+              −
+            </button>
+            <button
+              @click="nudge(0.1)"
+              :aria-label="uk ? 'Підняти ділянку' : 'Raise this segment'"
+            >
+              +
+            </button>
+            <button
+              v-if="bends[selected].some(Boolean)"
+              @click="
+                bends[selected] = [0, 0];
+                commitBend(selected);
+              "
+              :aria-label="uk ? 'Відновити траєкторію' : 'Reset this path'"
+            >
+              ↺
+            </button>
+          </div>
+          <small v-if="studying" class="time-legend"
+            >v = ds/dt <span class="time-key">●</span>
+            {{ uk ? 'кожні 0,25 с' : 'every 0.25 s' }}</small
           >
-            +
-          </button>
-          <button
-            v-if="bends[selected].some(Boolean)"
-            @click="
-              bends[selected] = [0, 0];
-              commitBend(selected);
-            "
-            :aria-label="uk ? 'Відновити траєкторію' : 'Reset this path'"
-          >
-            ↺
-          </button>
         </div>
-        <small v-if="studying"
-          >v = ds/dt <span class="time-key">●</span>
-          {{ uk ? 'кожні 0,25 с' : 'every 0.25 s' }}</small
-        >
       </div>
     </template>
   </figure>
@@ -638,7 +689,10 @@ function nudge(amount: number) {
   transition: opacity 0.5s;
 }
 .survey-lines {
-  transition: opacity 0.65s;
+  transition: opacity 0.16s linear;
+}
+.survey-detail {
+  transition: opacity 0.3s ease;
 }
 .gate-study {
   opacity: var(--readouts, 1);
@@ -684,7 +738,7 @@ function nudge(amount: number) {
   stroke: var(--ink);
   stroke-width: 2;
 }
-.lap-lines polyline {
+.survey-line {
   stroke-width: 1;
   stroke-dasharray: 3 7;
   opacity: 0.48;
@@ -692,10 +746,20 @@ function nudge(amount: number) {
     stroke-width 0.22s,
     opacity 0.22s;
 }
-.lap-lines .current-lap {
+.survey-line.current-lap {
   stroke-width: 1.8;
   stroke-dasharray: 6 4;
   opacity: 0.94;
+}
+.survey-line.is-day {
+  stroke-width: 1.35;
+  stroke-dasharray: 4.5 5.5;
+  opacity: 0.82;
+}
+.survey-line.is-day.current-lap {
+  stroke-width: 1.95;
+  stroke-dasharray: 6 4;
+  opacity: 0.98;
 }
 .lap-lines .primary-path {
   color: var(--accent);
@@ -709,7 +773,7 @@ function nudge(amount: number) {
   );
   opacity: 0.97;
 }
-:global([data-theme='light']) .lap-lines .primary-path {
+.gate-sheet.is-day .lap-lines .primary-path {
   color: var(--accent);
   color: oklch(from var(--accent) min(0.61, calc(l + 0.095)) calc(c * 1.32) h);
 }
@@ -759,43 +823,102 @@ small {
   right: clamp(2.4rem, 7vw, 8rem);
   font-size: 0.84rem;
   pointer-events: auto;
-  max-width: calc(100% - 5rem);
+  width: min(17.5rem, calc(100% - 5rem));
   font-variant-numeric: tabular-nums;
 }
-.lap-pick,
-.measurements {
+.lap-pick {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem;
 }
-.lap-pick span {
-  margin-right: 0.8rem;
+.lap-label {
   color: var(--ink);
+  white-space: nowrap;
 }
-.lap-pick button:is(:hover, :focus-visible)::before {
-  transform: scale(1.25);
-  box-shadow: 0 0 7px var(--lap);
+.lap-number {
+  display: inline-grid;
+  width: 2ch;
+  color: var(--lap);
+  transition: color 0.26s;
 }
-.lap-pick button {
-  cursor: pointer;
-  width: 1.7rem;
+.lap-number > span {
+  grid-area: 1 / 1;
+}
+.lap-number-enter-active,
+.lap-number-leave-active {
+  transition: opacity 0.22s;
+}
+.lap-number-enter-from,
+.lap-number-leave-to {
+  opacity: 0;
+}
+.lap-swatches {
+  --swatch-slot: 1.7rem;
+  position: relative;
+  display: flex;
+}
+.lap-swatch,
+.lap-ring {
+  width: var(--swatch-slot);
   height: 2rem;
   display: grid;
-  place-content: center;
+  place-items: center;
 }
-.lap-pick button::before {
+button.lap-swatch {
+  cursor: pointer;
+}
+.lap-swatch::before {
   content: '';
   width: 11px;
   height: 3px;
-  background: var(--lap);
+  background: var(--swatch);
+  transition:
+    transform 0.25s,
+    background-color 0.25s,
+    box-shadow 0.25s;
 }
-.lap-pick button[aria-pressed='true']::before {
-  height: 9px;
-  outline: 1px solid currentColor;
-  outline-offset: 3px;
+.lap-swatch.is-current::before {
+  transform: scaleY(2.55);
+}
+button.lap-swatch:is(:hover, :focus-visible)::before {
+  box-shadow: 0 0 7px var(--swatch);
+}
+.lap-ring {
+  position: absolute;
+  inset: 0 auto auto 0;
+  pointer-events: none;
+  transform: translateX(calc(var(--lap-index) * 100%));
+  transition: transform 0.32s cubic-bezier(0.24, 0.72, 0.29, 1);
+}
+.lap-ring::before {
+  content: '';
+  width: 1.18rem;
+  height: 1.08rem;
+  border: 1px solid var(--lap);
+  transition: border-color 0.3s;
 }
 .measurements {
-  gap: 0.5rem 1.2rem;
+  display: grid;
+  grid-template-columns: 0.86fr 0.95fr 1.19fr;
+  column-gap: 0.5rem;
+  white-space: nowrap;
+}
+.lap-tools {
+  display: grid;
+  grid-template-rows: 1.9rem auto 1.8rem 1.1rem;
+}
+.lap-tools input {
+  grid-row: 1;
+}
+.lap-tools .mean-speed {
+  grid-row: 2;
+}
+.lap-tools .bend-controls {
+  grid-row: 3;
+}
+.lap-tools .time-legend {
+  grid-row: 4;
 }
 .measurements em {
   display: block;
@@ -906,7 +1029,7 @@ input::-moz-range-thumb {
   .lap-controls {
     grid-row: 4;
     justify-self: end;
-    max-width: 100%;
+    width: min(17.5rem, 100%);
   }
   .directness {
     grid-row: 5;
@@ -928,14 +1051,13 @@ input::-moz-range-thumb {
   .lap-controls {
     right: 6%;
     bottom: 9%;
-    width: max-content;
   }
   .measurements {
     gap: 0.5rem;
     font-size: 0.68rem;
   }
-  .lap-pick button {
-    width: 1.65rem;
+  .lap-swatches {
+    --swatch-slot: clamp(1.35rem, 6.8vw, 1.65rem);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -943,6 +1065,7 @@ input::-moz-range-thumb {
   .gate-sheet .datum,
   .graph-paper,
   .survey-lines,
+  .survey-detail,
   figcaption,
   .lap-controls {
     animation: none;

@@ -496,6 +496,11 @@ test('parking at the gate plays the replays before the drawing, and re-arms on r
   );
   await jump('#motion');
   await expect(story).toHaveAttribute('data-gate-phase', 'replays');
+  const lapPanel = page.locator('.lap-controls');
+  const colorRow = lapPanel.locator('.lap-swatches');
+  const replayPanel = await lapPanel.boundingBox();
+  await expect(colorRow).not.toHaveCSS('--lap-index', '0');
+  expect(await lapPanel.boundingBox()).toEqual(replayPanel);
   await expect(
     page.getByRole('slider', { name: 'Time since launch' }),
   ).toHaveCount(0);

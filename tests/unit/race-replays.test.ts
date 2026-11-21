@@ -90,6 +90,44 @@ it('lets launched aircraft and their deposited light coast when scrolling away',
   expect(replay.moving).toBe(false);
 });
 
+it('resumes pending launches after a scroll reversal without replaying aircraft already launched', () => {
+  const scene = new Scene();
+  const replay = raceReplays(scene, new Group());
+  replay.resize(16);
+  replay.update(1, 0, 0, 0);
+  const swarm = scene.getObjectByName('Previous laps')!;
+  expect(replay.update(0.968, 350, 0, 350)).toBe('replays');
+  expect(replay.update(1.37, 700, 0, 700)).toBe('pass');
+  replay.update(1.37, 4200, 0, 700);
+  expect(replay.update(1, 4600, 0, 4600)).toBe('replays');
+  expect(swarm.getObjectByName('Replay 1')!.visible).toBe(false);
+  expect(swarm.getObjectByName('Replay 3')!.visible).toBe(false);
+  replay.update(1, 5050, 0, 4600);
+  expect(swarm.getObjectByName('Replay 3')!.visible).toBe(true);
+  expect(replay.followedAge).toBeCloseTo(0.03);
+});
+
+it('crossfades the dotted survey while the last trail fades and holds it through a short departure', () => {
+  const replay = raceReplays(new Scene(), new Group());
+  replay.resize(16);
+  replay.update(1, 0, 0, 0);
+  expect(replay.update(1, 5900, 0, 0)).toBe('replays');
+  expect(replay.survey).toBeGreaterThan(0);
+  expect(replay.survey).toBeLessThan(1);
+  expect(replay.moving).toBe(true);
+  const asSeen = replay.survey;
+  replay.pause();
+  replay.update(1, 40000, 0, 0);
+  expect(replay.survey).toBe(asSeen);
+  expect(replay.update(1, 41700, 0, 0)).toBe('study');
+  expect(replay.update(1.44, 42100, 0, 42100)).toBe('pass');
+  expect(replay.update(1, 42400, 0, 42400)).toBe('study');
+  expect(replay.survey).toBe(1);
+  replay.update(1.7, 42700, 0, 42700);
+  expect(replay.update(1, 43000, 0, 43000)).toBe('replays');
+  expect(replay.survey).toBe(0);
+});
+
 it('lets each side bend independently while pinning the gate and both endpoints', () => {
   for (const index of laps.keys()) {
     const original = sampleLap(index, 16);

@@ -1,10 +1,10 @@
 import type { LapBend } from '../data/gate-replays';
-import { sampleFlight, gateYaw } from '../data/flight-path';
+import { sampleFlight, gateCrossing, gateYaw } from '../data/flight-path';
 import { radioControls } from '../data/radio-controls';
 import { currentAircraft } from '../lib/aircraft';
 import * as T from 'three';
 import { attitudeDial } from './attitude-dial';
-import { raceReplays } from './race-replays';
+import { raceReplays, replayExit } from './race-replays';
 import { parts, matPosition, separateBoards } from '../data/airframe';
 import {
   makeWhoop,
@@ -23,6 +23,12 @@ const diagramFull = 1.775;
 const matStart = 1.9;
 const matVisible = 1.975;
 const partsSettled = 1.99;
+
+// Ease in over one world unit as the silhouette approaches the framing margin.
+function approachPan(excess: number) {
+  const ramp = clamp(excess, 0, 1);
+  return Math.max(0, excess - 1) + 0.5 * ramp * ramp;
+}
 
 function fadeTexture() {
   const canvas = document.createElement('canvas');
@@ -127,6 +133,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const quad = makeWhoop(openFrame),
     gate = makeGate(),
     radio = makeRadio();
+  const airframeBounds = new T.Box3().setFromObject(quad.root);
+  const approachBounds = new T.Box3();
   const dial = attitudeDial();
   scene.add(quad.root, gate.root, radio.root, dial.root);
   // Put the readout in the glass plane so its perspective and depth follow the case.
@@ -386,6 +394,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   );
   let anchors: number[] = [],
     diagramScrollStart = 0,
+    diagramScrollEnd = 0,
+    replayScrollStart = 0,
+    replayScrollEnd = 0,
     w = 16,
     p = 0,
     goal = 0,
@@ -440,9 +451,17 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const extraRoom = parseFloat(getComputedStyle(chapters[1]).paddingBottom);
     const gateSpan = anchors[2] - anchors[1] - extraRoom;
     diagramScrollStart = anchors[1] + gateSpan * (diagramStart - 1);
+    diagramScrollEnd = mix(
+      diagramScrollStart,
+      anchors[2],
+      (matStart - diagramStart) / (2 - diagramStart),
+    );
+    replayScrollStart = mix(anchors[0], anchors[1], 0.965);
+    replayScrollEnd = anchors[1] + gateSpan * (replayExit - 1);
     scroll();
   }
   let scrollTime = 0,
+    lastWheel = -Infinity,
     lastSample = -Infinity;
   function scroll() {
     scrollTime = performance.now();
@@ -532,7 +551,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       Math.min(1, Math.abs(goal - p) * 9),
       follow,
     );
-    p = Math.abs(goal - p) > 0.65 ? goal : mix(p, goal, follow);
+    const directJump = Math.abs(goal - p) > 0.65 && now - lastWheel > 550;
+    p = directJump ? goal : mix(p, goal, follow);
     if (Math.abs(goal - p) < 0.0005) p = goal;
     day = mix(day, dayGoal, follow * 0.62);
     if (Math.abs(day - dayGoal) < 0.002) day = dayGoal;
@@ -540,6 +560,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     hoverY = mix(hoverY, ty, follow * 0.88);
     const take = ease(1.82, 3.56, elapsed),
       hero = 1 - ease(0.03, 0.46, p);
+
+    const heroFloor = (1 - ease(0.08, 0.27, p)) * (1 - day);
+    story.style.setProperty('--hero-floor', String(heroFloor));
 
     const departRadio = ease(3.5, 3.83, p);
     const [x, y, k, rx, ry, rz, z] = sampleFlight(p);
@@ -634,6 +657,16 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     );
     quad.root.rotateX(radioPitch * 0.27 * inRadio);
     quad.root.rotateZ(bank * 0.33 * inRadio);
+    // Keep the climb in frame without changing the world-space route or the
+    // fixed camera used for the ring and its trajectory overlay.
+    if (p < gateCrossing) {
+      quad.root.updateMatrix();
+      approachBounds.copy(airframeBounds).applyMatrix4(quad.root.matrix);
+      camera.position.x = approachPan(approachBounds.max.x - (w / 2 - 0.75));
+      camera.position.y = approachPan(approachBounds.max.y - 3.85);
+    } else {
+      camera.position.x = camera.position.y = 0;
+    }
     const term = story.dataset.radioTerm ?? '';
     dial.update(
       quad.root,
@@ -722,17 +755,22 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     gate.root.rotation.set(0.045, gateYaw, 0.018);
     gate.root.scale.setScalar(Math.min(w / 16, 1.15));
     const gatePhase = ghosts.update(p, now, day, scrollTime);
-    if (story.dataset.gatePhase !== gatePhase)
-      story.dataset.gatePhase = gatePhase;
+    const phaseChanged = story.dataset.gatePhase !== gatePhase;
+    if (phaseChanged) story.dataset.gatePhase = gatePhase;
     // Limit numerical readouts independently of the frame rate of the 3D scene.
     if (p >= 0.36 && p < 1.7) {
-      if (now - lastSample >= 80 || (p === goal && gatePhase !== 'replays')) {
-        const sample =
-          p.toFixed(3) +
-          ',' +
-          Math.min(ghosts.elapsed, 8).toFixed(2) +
-          ',' +
-          ghosts.followed;
+      if (
+        phaseChanged ||
+        now - lastSample >= 70 ||
+        (p === goal && gatePhase !== 'replays' && !ghosts.moving)
+      ) {
+        const sample = [
+          p.toFixed(3),
+          Math.min(ghosts.elapsed, 8).toFixed(2),
+          ghosts.followed,
+          ghosts.followedAge.toFixed(2),
+          ghosts.survey.toFixed(3),
+        ].join(',');
         if (story.dataset.gateSample !== sample)
           story.dataset.gateSample = sample;
         lastSample = now;
@@ -761,7 +799,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       1,
     );
     shadow.material.opacity =
-      (0.46 + day * 0.22 - 0.22 * take) *
+      (0.46 + day * 0.22 - 0.22 * take + 0.34 * heroFloor) *
       (1 - spread) *
       (1 - diagram) *
       (1 - hero + hero * ease(0.72, 1.08, elapsed));
@@ -890,33 +928,37 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     },
     { signal },
   );
-  // Give the replays and the assembled diagram more time on a forward gesture.
-  // Reverse scrolling and direct navigation keep their normal behavior.
+  // A fast wheel gesture can enter either viewing band without skipping it.
+  // Once inside, each gesture advances normally at the scene's slower pace.
   story.addEventListener(
     'wheel',
     (event) => {
-      const replaying =
-        story.dataset.gatePhase === 'replays' &&
-        ghosts.elapsed < 5.4 &&
-        goal >= 0.98 &&
-        goal <= 1.31;
-      const viewingDiagram = goal >= diagramStart - 0.025 && goal < matStart;
       if (
-        (!replaying && !viewingDiagram) ||
         event.ctrlKey ||
         event.metaKey ||
-        event.deltaY <= Math.abs(event.deltaX) ||
-        !event.cancelable
+        Math.abs(event.deltaY) <= Math.abs(event.deltaX)
       )
         return;
+      lastWheel = performance.now();
+      if (event.deltaY < 0 || !event.cancelable) return;
       const pixels =
         event.deltaY *
         (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1);
+      const enteringReplay =
+        ghosts.awaitingArrival &&
+        scrollY < replayScrollEnd &&
+        scrollY + pixels >= replayScrollStart;
+      const enteringDiagram =
+        scrollY < diagramScrollEnd && scrollY + pixels >= diagramScrollStart;
+      if (!enteringReplay && !enteringDiagram) return;
+      const bandStart = enteringReplay ? replayScrollStart : diagramScrollStart;
+      const distanceToBand = Math.max(0, bandStart - scrollY);
+      const rate = enteringReplay ? 0.24 : 0.46;
+      const distance =
+        distanceToBand +
+        Math.min((pixels - distanceToBand) * rate, innerHeight * 0.48);
       event.preventDefault();
-      window.scrollBy({
-        top: pixels * (replaying ? 0.24 : 0.46),
-        behavior: 'instant',
-      });
+      window.scrollBy({ top: distance, behavior: 'instant' });
     },
     { passive: false, signal },
   );
@@ -969,10 +1011,18 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const io = new IntersectionObserver(([entry]) => {
     visible = entry.isIntersecting;
     if (visible) invalidate();
+    else if (!document.hidden) ghosts.reset();
   });
   io.observe(host);
   window.addEventListener('scroll', scroll, { passive: true, signal });
-  document.addEventListener('visibilitychange', invalidate, { signal });
+  document.addEventListener(
+    'visibilitychange',
+    () => {
+      if (document.hidden) ghosts.pause();
+      else invalidate();
+    },
+    { signal },
+  );
   function dispose() {
     if (disposed) return;
     disposed = true;
@@ -980,6 +1030,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     delete story.dataset.gatePhase;
     delete story.dataset.gateSample;
     story.style.removeProperty('--diagram-opacity');
+    story.style.removeProperty('--hero-floor');
     const pin = chapters[3].firstElementChild as HTMLElement;
     pin.style.removeProperty('--power-x');
     pin.style.removeProperty('--power-y');

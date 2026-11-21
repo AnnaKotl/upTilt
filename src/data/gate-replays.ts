@@ -2,18 +2,54 @@ import { gateRadius } from './flight-path';
 
 // Distances use the ring's centreline diameter D. Each clock starts at launch.
 export const laps = [
-  { color: '#bd8aff', launch: 0, duration: 2.65, drift: 0.42, pace: 0.19 },
+  {
+    color: '#bd8aff',
+    lightColor: '#7045b6',
+    launch: 0,
+    duration: 2.65,
+    drift: 0.42,
+    pace: 0.19,
+  },
   {
     color: '#fe767c',
+    lightColor: '#b73542',
     launch: 0.44,
     duration: 2.42,
     drift: -0.025,
     pace: -0.08,
   },
-  { color: '#5fd9ab', launch: 1.12, duration: 2.56, drift: 0.18, pace: 0.08 },
-  { color: '#75adff', launch: 1.63, duration: 2.84, drift: -0.56, pace: 0.21 },
-  { color: '#e9be59', launch: 2.46, duration: 2.38, drift: 0.64, pace: -0.12 },
-  { color: '#ed86c6', launch: 2.86, duration: 2.53, drift: -0.05, pace: 0.12 },
+  {
+    color: '#5fd9ab',
+    lightColor: '#168262',
+    launch: 1.12,
+    duration: 2.56,
+    drift: 0.18,
+    pace: 0.08,
+  },
+  {
+    color: '#75adff',
+    lightColor: '#2863bb',
+    launch: 1.63,
+    duration: 2.84,
+    drift: -0.56,
+    pace: 0.21,
+  },
+  {
+    color: '#e9be59',
+    lightColor: '#896012',
+    launch: 2.46,
+    duration: 2.38,
+    drift: 0.64,
+    pace: -0.12,
+  },
+  {
+    color: '#ed86c6',
+    lightColor: '#a54585',
+    launch: 2.86,
+    duration: 2.53,
+    drift: -0.05,
+    pace: 0.12,
+  },
 ] as const;
 
 export const ringDiameter = (width: number) =>

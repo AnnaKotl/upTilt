@@ -8,6 +8,7 @@ import {
 } from '../data/gate-replays';
 
 const trailLifetime = 2.2;
+export const replayExit = 1.32;
 
 class ReplayCurve extends T.Curve<T.Vector3> {
   constructor(
@@ -28,7 +29,7 @@ export function raceReplays(scene: T.Scene, gate: T.Group) {
   scene.add(swarm);
   const segments = 120;
   const sides = 5;
-  const runs = laps.map(({ color }, i) => {
+  const runs = laps.map(({ color, lightColor }, i) => {
     const ink = new T.MeshBasicMaterial({
       color,
       transparent: true,
@@ -84,33 +85,42 @@ export function raceReplays(scene: T.Scene, gate: T.Group) {
       clock,
       layers,
       ink,
+      nightInk: new T.Color(color),
+      dayInk: new T.Color(lightColor),
       curve: new ReplayCurve(i, 16),
       lengths: [] as number[],
+      launchedAt: undefined as number | undefined,
     };
   });
   let worldWidth = 0;
   const direction = new T.Vector3();
-  const lastArrival = Math.max(...laps.map((lap) => lap.launch + lap.duration));
-  let start: number | undefined;
+  let inVisit = false;
+  let nearLastFrame = false;
+  let previousFrame: number | undefined;
   let elapsed = 0;
-  let launchLimit = Infinity;
+  let launchClock = 0;
+  let lastLanding: number | undefined;
+  let survey = 0;
+  let settled = false;
   let moving = false;
   let followed = 0;
-  let phase: 'pass' | 'replays' | 'study' = 'pass';
+  let followedAge = 0;
+
+  function pause() {
+    previousFrame = undefined;
+  }
   function reset() {
-    start = undefined;
-    launchLimit = Infinity;
-    followed = 0;
-    elapsed = 0;
-    moving = false;
+    inVisit = nearLastFrame = moving = settled = false;
+    pause();
+    elapsed = launchClock = survey = followed = followedAge = 0;
+    lastLanding = undefined;
+    for (const run of runs) run.launchedAt = undefined;
     swarm.visible = false;
-    phase = 'pass';
   }
   function resize(width: number) {
     if (width === worldWidth) return;
     worldWidth = width;
-    if (start !== undefined)
-      swarm.position.set(...gatePoint(gateCrossing, width));
+    if (inVisit) swarm.position.set(...gatePoint(gateCrossing, width));
     swarm.scale.setScalar(ringDiameter(width));
     runs.forEach((run, i) => reshape(i, run.curve.edit));
   }
@@ -143,78 +153,124 @@ export function raceReplays(scene: T.Scene, gate: T.Group) {
     day: number,
     lastScroll: number,
   ) {
-    const parked = progress >= 0.979 && progress <= 1.32;
-    if (
-      !parked &&
-      (start === undefined || progress < 0.4 || progress >= 1.72)
-    ) {
-      reset();
-      return phase;
+    const parked = progress >= 0.979 && progress <= replayExit;
+    if (progress < 0.9 || progress >= 1.56) {
+      if (inVisit) reset();
+      return 'pass';
     }
-    if (start === undefined) {
-      start = now;
+    if (!inVisit) {
+      if (!parked) return 'pass';
+      inVisit = true;
       swarm.position.copy(gate.position);
     }
-    elapsed = (now - start) / 1000;
-    if (!parked) launchLimit = Math.min(elapsed, launchLimit);
-    const studying =
-      phase === 'study' ||
-      (elapsed >= lastArrival + 1 && now - lastScroll >= 900);
-    phase = !parked ? 'pass' : studying ? 'study' : 'replays';
+    // Small scroll reversals stay in the same visit. Beyond that margin,
+    // active aircraft coast while the clock for new launches waits.
+    const near =
+      parked || (nearLastFrame && progress >= 0.958 && progress < 1.34);
+    const step = previousFrame === undefined ? 0 : (now - previousFrame) / 1000;
+    elapsed += step;
+    if (nearLastFrame) launchClock += step;
+
+    if ((near || nearLastFrame) && lastLanding === undefined) {
+      runs.forEach((run, i) => {
+        const { launch } = laps[i];
+        if (run.launchedAt === undefined && launchClock >= launch)
+          run.launchedAt = elapsed - (launchClock - launch);
+      });
+      if (runs.every((run) => run.launchedAt !== undefined))
+        lastLanding = Math.max(
+          ...runs.map((run, i) => run.launchedAt! + laps[i].duration),
+        );
+    }
+    previousFrame = now;
+    nearLastFrame = near;
+    survey =
+      lastLanding === undefined
+        ? 0
+        : T.MathUtils.smoothstep(elapsed - lastLanding, 0.04, 1.55);
+    if (
+      near &&
+      lastLanding !== undefined &&
+      elapsed >= lastLanding + trailLifetime &&
+      now - lastScroll >= 600
+    )
+      settled = true;
+    const phase = near ? (settled ? 'study' : 'replays') : 'pass';
+
     moving = false;
     let airborneIndex = -1;
     const visibility =
-      (1 - T.MathUtils.smoothstep(progress, 1.34, 1.7)) *
-      T.MathUtils.smoothstep(progress, 0.4, 0.96);
-    runs.forEach(({ hull, clock, layers, ink, curve, lengths }, i) => {
-      const age = elapsed - laps[i].launch;
-      const duration = laps[i].duration;
-      const visible =
-        laps[i].launch <= launchLimit &&
-        age >= 0 &&
-        age < duration + trailLifetime;
-      moving ||= visible;
-      clock.value = age;
-      hull.visible = visible && age < duration;
-      if (hull.visible && airborneIndex < 0) airborneIndex = i;
-      for (const { mesh } of layers) mesh.visible = visible;
-      if (!visible) return;
-      const t = Math.min(1, age / duration);
-      curve.getPoint(t, hull.position);
-      curve.getTangent(t, direction);
-      hull.rotation.set(
-        -Math.asin(direction.y) + 0.12,
-        Math.atan2(direction.x, direction.z),
-        0.06 * laps[i].drift,
-        'YXZ',
-      );
-      ink.opacity = 0.82 * visibility;
-      const station = (fraction: number) => {
-        const s = Math.round(fraction * (lengths.length - 1));
-        return (
-          Math.round((segments * lengths[s]) / lengths[lengths.length - 1]) *
-          sides *
-          6
+      (1 - T.MathUtils.smoothstep(progress, replayExit, 1.56)) *
+      T.MathUtils.smoothstep(progress, 0.9, 0.979);
+    runs.forEach(
+      (
+        {
+          hull,
+          clock,
+          layers,
+          ink,
+          nightInk,
+          dayInk,
+          curve,
+          lengths,
+          launchedAt,
+        },
+        i,
+      ) => {
+        const age = launchedAt === undefined ? -1 : elapsed - launchedAt;
+        const duration = laps[i].duration;
+        const visible = age >= 0 && age < duration + trailLifetime;
+        moving ||= visible;
+        clock.value = age;
+        hull.visible = visible && age < duration;
+        if (hull.visible && airborneIndex < 0) airborneIndex = i;
+        for (const { mesh } of layers) mesh.visible = visible;
+        if (!visible) return;
+        const t = Math.min(1, age / duration);
+        curve.getPoint(t, hull.position);
+        curve.getTangent(t, direction);
+        hull.rotation.set(
+          -Math.asin(direction.y) + 0.12,
+          Math.atan2(direction.x, direction.z),
+          0.06 * laps[i].drift,
+          'YXZ',
         );
-      };
-      const head = station(t);
+        ink.opacity = 0.82 * visibility;
+        ink.color.lerpColors(nightInk, dayInk, day);
+        const station = (fraction: number) => {
+          const s = Math.round(fraction * (lengths.length - 1));
+          return (
+            Math.round((segments * lengths[s]) / lengths[lengths.length - 1]) *
+            sides *
+            6
+          );
+        };
+        const head = station(t);
 
-      for (const { mesh, strength } of layers) {
-        mesh.geometry.setDrawRange(0, head);
-        mesh.material.opacity = strength * visibility * (1 - 0.18 * day);
-      }
-    });
+        for (const [index, { mesh, strength }] of layers.entries()) {
+          mesh.geometry.setDrawRange(0, head);
+          mesh.material.color.copy(ink.color);
+          mesh.material.blending =
+            index > 0 && day < 0.5 ? T.AdditiveBlending : T.NormalBlending;
+          const daylightWeight = index === 0 ? 1 + 0.28 * day : 1 - 0.25 * day;
+          mesh.material.opacity =
+            strength * visibility * daylightWeight * (1 - 0.4 * survey);
+        }
+      },
+    );
     if (airborneIndex >= 0) followed = airborneIndex;
+    const launchedAt = runs[followed].launchedAt;
+    followedAge =
+      launchedAt === undefined
+        ? 0
+        : Math.min(elapsed - launchedAt, laps[followed].duration);
     swarm.visible = moving;
-    if (!moving && launchLimit !== Infinity) {
-      reset();
-      if (parked) phase = 'replays'; // Start a fresh pass after the interrupted group clears.
-    }
     return phase;
   }
   reset();
   return {
     reset,
+    pause,
     reshape,
     resize,
     update,
@@ -223,6 +279,15 @@ export function raceReplays(scene: T.Scene, gate: T.Group) {
     },
     get elapsed() {
       return elapsed;
+    },
+    get followedAge() {
+      return followedAge;
+    },
+    get survey() {
+      return survey;
+    },
+    get awaitingArrival() {
+      return lastLanding === undefined || elapsed < lastLanding;
     },
     get moving() {
       return moving;

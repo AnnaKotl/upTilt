@@ -30,6 +30,17 @@
     transparent 51%
   );
 }
+.stage-light::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: var(--hero-floor, 0);
+  background: radial-gradient(
+    ellipse 31% 15% at 72% 83%,
+    color-mix(in srgb, var(--muted) 21%, transparent),
+    transparent 92%
+  );
+}
 .flight-hero,
 .gate-chapter,
 .anatomy-chapter,
@@ -2148,9 +2159,6 @@
   transform: translate(-50%, -50%);
 }
 
-[data-theme='light'] :is(.gate-sheet, .gate-foreground) .survey-lines {
-  filter: brightness(0.64) saturate(1.4);
-}
 .flight-story:not([data-live]) .gate-chapter:has(.gate-study.is-ready) {
   height: 100svh;
 }
