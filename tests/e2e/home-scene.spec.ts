@@ -59,7 +59,8 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
     },
   );
   const terms = await sequence.jsonValue();
-  expect(terms.slice(0, 3)).toEqual(['ARMED', 'Pitch', 'Roll']);
+  expect(terms.slice(0, 4)).toEqual(['ARMED', 'Throttle', 'Pitch', 'Roll']);
+  expect(terms).not.toContain('SW');
   expect(terms.at(-1)).toBe('DISARMED');
   await sequence.dispose();
   await page.screenshot({ path: test.info().outputPath('radio.png') });
@@ -78,6 +79,13 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
   await stick.hover();
   await expect(page.getByRole('tooltip')).toContainText('Правий стік');
   await expect(page.locator('.radio-study')).toHaveAttribute('data-pose', '3');
+  await page
+    .getByRole('button', { name: 'Правий зовнішній плечовий перемикач' })
+    .focus();
+  await expect(page.getByRole('tooltip')).toContainText(
+    'Призначення задає профіль моделі',
+  );
+  await expect(scene).not.toHaveAttribute('data-radio-term', 'SW');
   await page.getByRole('button', { name: 'Вибрати коптер' }).click();
   await page.getByRole('button', { name: 'Карбонова рама · 7″' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-aircraft', 'seven');
@@ -396,4 +404,75 @@ test('the goggle picture recovers when scrolling back and retains the spent char
   await page.clock.runFor(1500);
   await expect(view).toHaveAttribute('data-lost', 'false');
   expect(await page.evaluate(() => scrollY)).toBe(end);
+});
+
+test('a previous pass can be inspected without motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('uk/#motion');
+  const sheet = page.locator('#motion figure');
+  const slider = sheet.getByRole('slider');
+  await expect(slider).toBeVisible();
+  const start = await slider.getAttribute('aria-valuetext');
+  await slider.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(slider).not.toHaveAttribute('aria-valuetext', start!);
+  const speed = sheet.locator('.measurements b').last();
+  const first = await speed.textContent();
+  await sheet.getByRole('button', { name: 'Проліт 4' }).click();
+  await expect(speed).not.toHaveText(first!);
+  await expect(page.locator('canvas')).toHaveCount(0);
+});
+
+test('parking at the gate plays the replays before the drawing, and re-arms on return', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'The GPU path is covered in Chromium.');
+  await page.goto('en/');
+  const story = page.locator('[data-story]');
+  await expect(story).toHaveAttribute('data-live', 'true');
+  const jump = (id: string) =>
+    page.locator(id).evaluate((el) =>
+      scrollTo({
+        top: scrollY + el.getBoundingClientRect().top,
+        behavior: 'instant',
+      }),
+    );
+  await jump('#motion');
+  await expect(story).toHaveAttribute('data-gate-phase', 'replays');
+  await expect(
+    page.getByRole('slider', { name: 'Time since launch' }),
+  ).toHaveCount(0);
+  await expect(story).toHaveAttribute('data-gate-phase', 'study', {
+    timeout: 15000,
+  });
+  await expect(page.locator('.scene-stage .gate-sheet')).toBeVisible();
+  await page.getByRole('button', { name: 'Pass 3' }).click();
+  await expect(page.getByRole('button', { name: 'Pass 3' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  const slider = page.getByRole('slider', { name: 'Time since launch' });
+  const time = await slider.getAttribute('aria-valuetext');
+  const station = await page
+    .locator('.gate-hit polyline')
+    .nth(2)
+    .evaluate((line) => {
+      const trace = line as unknown as SVGPolylineElement;
+      const p = trace.getPointAtLength(trace.getTotalLength() * 0.4);
+      const screen = new DOMPoint(p.x, p.y).matrixTransform(
+        trace.getScreenCTM()!,
+      );
+      return { x: screen.x, y: screen.y };
+    });
+  await page.mouse.move(station.x, station.y);
+  await expect(slider).not.toHaveAttribute('aria-valuetext', time!);
+  await page.screenshot({ path: test.info().outputPath('gate-study.png') });
+  await jump('#anatomy');
+  await expect(story).toHaveAttribute('data-gate-phase', 'pass');
+  await expect(
+    page.getByRole('slider', { name: 'Time since launch' }),
+  ).toHaveCount(0);
+  await jump('#motion');
+  await expect(story).toHaveAttribute('data-gate-phase', 'replays');
 });

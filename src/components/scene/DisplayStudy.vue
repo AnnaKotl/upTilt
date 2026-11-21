@@ -5,6 +5,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useStudySelection } from '../../lib/useStudySelection';
 import { type Locale } from '../../lib/i18n';
 import StudyNote from './StudyNote.vue';
+import Icon from '../ui/Icon.vue';
 const input = defineProps<{ locale: Locale }>();
 const locale = usePageLanguage(input.locale);
 const modal = ref<InstanceType<typeof StudyNote>>(),
@@ -13,7 +14,10 @@ const phase = ref(0);
 const time = ref(0),
   throttle = ref(0),
   spentVoltage = ref(0),
-  usedCharge = ref(0);
+  usedCharge = ref(0),
+  north = ref(0),
+  east = ref(0);
+const heading = computed(() => 18 * Math.sin(time.value / 16));
 const exhausted = computed(() => spentVoltage.value >= 2);
 const voltage = computed(() =>
   exhausted.value
@@ -45,7 +49,14 @@ function advance() {
     2,
     spentVoltage.value + 0.009 * seconds + 0.009 * effort,
   );
-  usedCharge.value += (2.1 * seconds + 5.8 * effort) / 3.6;
+  const ripple =
+    8 * (Math.cos((time.value - seconds) / 8) - Math.cos(time.value / 8));
+  usedCharge.value += (2.1 * seconds + 5.8 * effort + 0.22 * ripple) / 3.6;
+  // Integrate ground speed into the local north/east displacement in metres.
+  const distance = (14 * seconds + 37 * effort + 0.8 * ripple) / 3.6;
+  const course = (heading.value * Math.PI) / 180;
+  north.value += distance * Math.cos(course);
+  east.value += distance * Math.sin(course);
   phase.value =
     time.value < 1.3
       ? 1
@@ -182,6 +193,7 @@ function resetFlight() {
   hover.value = null;
   sampledAt = sampledProgress = previous = phase.value = 0;
   throttle.value = spentVoltage.value = usedCharge.value = time.value = 0;
+  north.value = east.value = 0;
   centreView();
   advance();
   measure();
@@ -204,6 +216,11 @@ onBeforeUnmount(() => {
 });
 const { surface, noteAt, place } = usePointerNote();
 const base = import.meta.env.BASE_URL + 'media/study/';
+const fieldMarks: Record<string, string> = {
+  time: '◷',
+  altitude: 'ALT',
+  speed: 'GS',
+};
 const fields = [
   {
     id: 'time',
@@ -221,8 +238,8 @@ const fields = [
     uk: 'Напруга',
     en: 'Battery voltage',
     text: {
-      uk: 'Напруга акумулятора вимірюється у вольтах. Тут показано одну комірку.',
-      en: 'Battery voltage is measured in volts. This example shows a single cell.',
+      uk: 'Напруга однієї комірки LiHV у вольтах. У цій демонстрації заряджена комірка має 4,35 В.',
+      en: 'Voltage across a single LiHV cell, measured in volts. This simulation starts with a fully charged cell at 4.35 V.',
     },
   },
   {
@@ -247,12 +264,12 @@ const fields = [
   },
   {
     id: 'link',
-    value: 'LQ 100',
+    value: 'LQ 100%',
     uk: 'Якість зв’язку',
     en: 'Link quality',
     text: {
-      uk: 'Частка очікуваних пакетів керування, які отримав приймач, у відсотках.',
-      en: 'The percentage of expected control packets received.',
+      uk: 'Відсоток очікуваних пакетів керування, які отримав приймач. Відеосигнал має окремий канал.',
+      en: 'Percentage of expected control packets received. The video feed uses a separate link.',
     },
   },
   {
@@ -289,7 +306,7 @@ const fields = [
     id: 'position',
     uk: 'Координати',
     en: 'Coordinates',
-    value: '48.00° N · 16.00° E',
+    value: '48.0000° N · 16.0000° E',
     text: {
       uk: 'Спочатку показано широту, потім довготу. Координати тут умовні.',
       en: 'Latitude comes first, followed by longitude. These are sample coordinates.',
@@ -322,20 +339,25 @@ function reading(field: (typeof fields)[number]) {
     case 'charge':
       return Math.round(usedCharge.value) + ' mAh';
     case 'rpm':
-      return Math.round((10200 + 1350 * wave) / 10) * 10 + ' RPM';
+      return (
+        Math.round((9200 + 5100 * throttle.value + 260 * wave) / 10) * 10 +
+        ' RPM'
+      );
     case 'link':
-      return 'LQ ' + Math.round(98 + 2 * Math.cos(t / 9));
+      return 'LQ ' + Math.round(98 + 2 * Math.cos(t / 9)) + '%';
     case 'altitude':
       return Math.round(12 + 3 * Math.sin(t / 17)) + ' m';
     case 'speed':
       return Math.round(14 + 37 * throttle.value + 0.8 * wave) + ' km/h';
     case 'compass':
-      return (Math.round((360 + 18 * Math.sin(t / 16)) % 360) % 360) + '°';
+      return (Math.round((360 + heading.value) % 360) % 360) + '°';
     case 'position':
       return (
-        (48 + 0.0006 * Math.sin(t / 22)).toFixed(4) +
+        (48 + north.value / 111_200).toFixed(4) +
         '° N · ' +
-        (16 + 0.0003 * Math.cos(t / 22)).toFixed(4) +
+        (16 + east.value / (111_200 * Math.cos((48 * Math.PI) / 180))).toFixed(
+          4,
+        ) +
         '° E'
       );
   }
@@ -409,16 +431,29 @@ const shown = computed(() => fields[hover.value ?? selected.value]);
         >
           <template v-if="field.id === 'compass'"
             ><span class="compass-tape" aria-hidden="true"
-              ><i>NW</i><i>{{ reading(field) }}</i
-              ><i>NE</i></span
-            ></template
+              ><span
+                class="bearing-scale"
+                :style="{
+                  transform: 'translateX(' + (-heading / 90) * 100 + '%)',
+                }"
+                ><i>NW</i><i>N</i><i>NE</i></span
+              ></span
+            ><span class="bearing-value">{{ reading(field) }}</span></template
           >
-          <template v-else
-            ><span class="osd-icon" aria-hidden="true">{{
-              ['◷', '▰', 'ϟ'][i]
-            }}</span
-            >{{ reading(field) }}</template
-          >
+          <template v-else>
+            <Icon
+              v-if="field.id === 'voltage'"
+              name="battery"
+              class="osd-battery"
+            />
+            <span
+              v-else-if="fieldMarks[field.id]"
+              class="osd-icon"
+              aria-hidden="true"
+              >{{ fieldMarks[field.id] }}</span
+            >
+            {{ reading(field) }}
+          </template>
         </button>
         <div class="horizon-tick" aria-hidden="true"><i></i>○<i></i></div>
       </div>

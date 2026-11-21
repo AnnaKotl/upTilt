@@ -3,6 +3,7 @@ import { paths } from '../../components/ui/paths';
 import SiteLayout from '../../layouts/SiteLayout.astro';
 import BookNav from '../../components/knowledge/BookNav.vue';
 import PartsBoard from '../../components/scene/PartsBoard.vue';
+import GateProjection from '../../components/scene/GateProjection.vue';
 import RadioStudy from '../../components/scene/RadioStudy.vue';
 import DisplayStudy from '../../components/scene/DisplayStudy.vue';
 import SeasonIntro from '../../components/scene/SeasonIntro.astro';
@@ -145,15 +146,7 @@ const kit = [
         />
         <StudyPoster name="whoop" />
       </div>
-      <div class="gate-copy">
-        <a href={pageUrl(locale, 'knowledge/fundamentals')}>
-          <h2>
-            <span>{uk ? 'Фізика' : 'Flight'}</span>
-            <span>{uk ? 'польоту' : 'physics'}</span>
-          </h2>
-          <Icon name="forward" />
-        </a>
-      </div>
+      <GateProjection client:visible locale={locale} />
     </section>
     <PartsBoard client:load locale={locale} />
     <section data-stop id="radio" class="radio-chapter">

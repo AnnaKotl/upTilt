@@ -1,3 +1,4 @@
+import { gateRadius } from '../data/flight-path';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -668,14 +669,14 @@ export function makeGate() {
     const arc = Math.PI / 6;
     const segment = mesh(
       root,
-      new T.TorusGeometry(1.72, 0.102, 12, 12, arc),
+      new T.TorusGeometry(gateRadius, 0.102, 12, 12, arc),
       i % 3 === 0 ? accent : i % 3 === 1 ? trim : body,
     );
     segment.rotation.z = i * arc;
     const a = i * arc;
     const sleeve = mesh(
       root,
-      new T.TorusGeometry(1.72, 0.114, 10, 3, 0.035),
+      new T.TorusGeometry(gateRadius, 0.114, 10, 3, 0.035),
       foot,
     );
     sleeve.rotation.z = a;
@@ -789,9 +790,23 @@ export function makeRadio() {
     stick.position.set(x, y, 0.482);
     disc(stick, satin, 0, 0, 0.02, 0.085, 0.074);
     rod(stick, silver, [0, 0, 0.025], [0, 0.05, 0.288], 0.039, 0.049);
-    sphere(stick, silver, [0, 0.048, 0.29], [0.078, 0.079, 0.069]);
+    stick.name = s < 0 ? 'Left gimbal' : 'Right gimbal';
+    disc(stick, silver, 0, 0.05, 0.296, 0.081, 0.09);
     for (let i = 0; i < 3; i++)
-      disc(stick, rim, 0, 0.048, 0.281 + i * 0.023, 0.076 - i * 0.006, 0.009);
+      disc(stick, satin, 0, 0.05, 0.26 + i * 0.026, 0.084, 0.008);
+    disc(stick, graphite, 0, 0.05, 0.342, 0.052, 0.003);
+    for (let i = 0; i < 10; i++) {
+      const angle = (i * tau) / 10;
+      const tooth = mesh(
+        stick,
+        new T.ConeGeometry(0.024, 0.048, 4),
+        silver,
+        0.064 * Math.cos(angle),
+        0.05 + 0.064 * Math.sin(angle),
+        0.36,
+      );
+      tooth.rotation.set(Math.PI / 2, angle, 0);
+    }
     batch(stick);
     sticks.push(stick);
     // The face carries two toggles. The two behind them seat into the sloping shoulder.
@@ -930,7 +945,7 @@ export function makeRadio() {
 export function disposeScene(scene: T.Object3D) {
   const materials = new Set<T.Material>();
   scene.traverse((n) => {
-    if (n instanceof T.Mesh || n instanceof T.LineSegments) {
+    if (n instanceof T.Mesh || n instanceof T.Line) {
       n.geometry.dispose();
       for (const m of Array.isArray(n.material) ? n.material : [n.material])
         materials.add(m);

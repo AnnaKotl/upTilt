@@ -287,34 +287,16 @@
 .gate-chapter {
   height: 110svh;
 }
-.gate-copy {
-  position: absolute;
-  right: var(--gutter);
-  bottom: 11%;
-  max-width: 32%;
-}
-.gate-copy a,
 .kit-library {
   display: flex;
   align-items: center;
   gap: 0.8rem;
   width: fit-content;
 }
-.gate-copy h2 {
-  font:
-    700 clamp(2rem, 4.7vw, 5.6rem)/0.99 'Play',
-    sans-serif;
-  letter-spacing: -0.055em;
-}
-.gate-copy p,
 .study-note {
   line-height: 1.55;
   color: var(--muted);
   font-size: clamp(0.9rem, 1.15vw, 1.17rem);
-}
-.gate-copy p {
-  margin-top: 0.95rem;
-  max-width: 31ch;
 }
 .gate-fallback {
   position: absolute;
@@ -678,11 +660,6 @@
     height: 82svh;
     min-height: 29rem;
   }
-  .gate-copy {
-    max-width: 70%;
-    bottom: 7%;
-    right: 7%;
-  }
   .gate-fallback {
     inset: 4% 0 21%;
   }
@@ -787,8 +764,6 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-@media (min-width: 841px) {
 }
 
 /* Absolute letter tracks reserve the same hit area in both reading modes. */
@@ -908,31 +883,6 @@
 }
 .gate-chapter {
   height: 155svh;
-}
-.gate-copy {
-  position: sticky;
-  top: 78svh;
-  left: 0;
-  right: auto;
-  bottom: auto;
-  transform: translateX(-50%);
-  margin-left: 57.3%;
-  width: max-content;
-  max-width: 76%;
-  text-align: center;
-}
-.gate-copy a {
-  margin: auto;
-}
-.gate-copy h2 {
-  font-size: clamp(1.5rem, 2.5vw, 3.15rem);
-  letter-spacing: -0.035em;
-}
-[data-live] .gate-copy {
-  opacity: var(--caption-opacity, 0);
-}
-.gate-copy:focus-within {
-  opacity: 1;
 }
 .anatomy-chapter {
   height: 159svh;
@@ -1054,12 +1004,6 @@
   .radio-chapter {
     height: auto;
     min-height: 100svh;
-  }
-  .gate-copy {
-    position: absolute;
-    top: 78%;
-    margin-left: 57%;
-    white-space: nowrap;
   }
   .board-pin,
   .radio-pin {
@@ -1190,13 +1134,6 @@
     stroke-dashoffset: 0;
   }
 }
-.gate-copy h2 {
-  font:
-    400 clamp(1.15rem, 2vw, 2.35rem)/1.4 'Press Start 2P',
-    monospace;
-  letter-spacing: -0.055em;
-}
-.gate-copy svg,
 .part-dialog button svg {
   opacity: 0;
   transform: translateX(-0.35rem);
@@ -1204,12 +1141,9 @@
     opacity 0.28s,
     transform 0.28s;
 }
-:is(.gate-copy a, .part-dialog button):is(:hover, :focus-visible) svg {
+.part-dialog button:is(:hover, :focus-visible) svg {
   opacity: 1;
   transform: translateX(0.18rem);
-}
-.gate-copy a:is(:hover, :focus-visible) {
-  color: var(--accent);
 }
 .bench-mat,
 .flight-story:not([data-live]) .parts-board:before {
@@ -1458,10 +1392,6 @@
   .gate-chapter {
     height: 195svh;
   }
-  .gate-copy {
-    margin-left: 69%;
-    top: 82svh;
-  }
   .gate-fallback .study-poster:first-child {
     left: 55.5%;
   }
@@ -1488,9 +1418,6 @@
   }
   .hero-shot .scatter {
     top: 48%;
-  }
-  .gate-copy {
-    margin-left: 59%;
   }
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -1856,11 +1783,6 @@
   .gate-chapter {
     height: 485svh;
   }
-  .gate-copy {
-    margin-left: 79%;
-    top: 77svh;
-    max-width: 39%;
-  }
   .gate-fallback .study-poster:first-child {
     left: 45%;
   }
@@ -1957,26 +1879,6 @@
   height: 1em;
   opacity: 1;
   transform: none;
-}
-.gate-copy a h2 {
-  display: grid;
-  justify-items: end;
-  font-size: clamp(0.92rem, 1.6vw, 1.88rem);
-}
-.gate-copy a svg {
-  opacity: 1;
-  transform: none;
-  width: clamp(0.94rem, 1.45vw, 1.65rem);
-  height: auto;
-  flex: none;
-}
-@media (min-width: 841px) and (min-height: 510px) {
-  .gate-copy {
-    top: 77svh;
-    margin-left: auto;
-    margin-right: max(9vw, 5.5rem);
-    transform: none;
-  }
 }
 .hud-speed {
   right: 0;
@@ -2133,12 +2035,6 @@
 }
 
 @media (max-width: 840px), (max-height: 509px) {
-  .gate-copy {
-    left: auto;
-    right: 6%;
-    margin: 0;
-    transform: none;
-  }
   .hero-type abbr {
     height: 1.56em;
   }
@@ -2207,4 +2103,96 @@
 .goggle-view[data-lost='true'] .osd-hud,
 .goggle-view[data-lost='true'] .season-weather {
   visibility: hidden;
+}
+
+/* Keep the electrical readings together and the centre of the picture clear. */
+.hud-voltage,
+.hud-current,
+.hud-charge {
+  top: auto;
+}
+.hud-voltage {
+  bottom: 6rem;
+}
+.hud-current {
+  bottom: 3rem;
+}
+.hud-charge {
+  bottom: 0;
+}
+.hud-position {
+  top: 0;
+  bottom: auto;
+}
+.hud-compass {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem !important;
+}
+.compass-tape {
+  overflow: hidden;
+  padding-bottom: 0.42em;
+}
+.bearing-scale {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+.bearing-value {
+  font-size: 0.76em;
+}
+.osd-battery {
+  width: 1.15em;
+  height: 1.15em;
+  stroke-width: 2;
+}
+@media (max-width: 740px), (max-height: 540px) {
+  .hud-position {
+    top: 0;
+    max-width: 56%;
+    text-align: left;
+  }
+  .hud-compass {
+    top: 13%;
+    left: 50%;
+  }
+  .hud-rpm {
+    top: 2.8rem;
+  }
+  .hud-speed {
+    bottom: 6rem;
+  }
+  .hud-altitude {
+    bottom: 3rem;
+  }
+}
+
+/* The lightweight view uses the same drawing coordinates as the live scene. */
+.flight-story:not([data-live])
+  .gate-chapter:has(.gate-study.is-ready)
+  .gate-fallback {
+  inset: 0;
+  z-index: 2;
+}
+.gate-chapter:has(.gate-study.is-ready)
+  .gate-fallback
+  .study-poster:first-child {
+  visibility: hidden;
+}
+.gate-chapter:has(.gate-study.is-ready)
+  .gate-fallback
+  .study-poster:last-child {
+  top: 53.5%;
+  left: 20.5%;
+  width: 23%;
+  height: 24%;
+  transform: translate(-50%, -50%);
+}
+
+[data-theme='light'] .gate-sheet .lap-lines {
+  filter: brightness(0.64) saturate(1.4);
+}
+.flight-story:not([data-live]) .gate-chapter:has(.gate-study.is-ready) {
+  height: 100svh;
 }

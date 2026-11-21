@@ -14,8 +14,6 @@ const shell = [
   '[data-top]',
   '[data-top] .hint',
   '[data-author] .hint',
-  '.gate-copy a',
-  '.gate-copy h2 span',
   '.gate-fallback [aria-label]',
   '#kit h2',
   '.kit-list a',
@@ -91,7 +89,7 @@ export function initPresentation() {
   const stops = ['hero', 'motion', 'anatomy', 'radio', 'display'].map((id) =>
     document.getElementById(id)!,
   );
-  const dwell = [5300, 12300, 3200, 32300, 8500];
+  const dwell = [5300, 12300, 3200, 23700, 8500];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const stopPosition = (node: HTMLElement) => {
     const live =

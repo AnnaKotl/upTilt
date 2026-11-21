@@ -41,15 +41,15 @@ function pointerLeave() {
 const height = Math.max(208, topics.length * 23);
 function port(i: number) {
   const sockets = [
-    [81, 28],
-    [173, 17],
-    [235, 48],
+    [58, 34],
+    [209, 34],
+    [242, 83],
     [245, 120],
     [195, 168],
     [113, 181],
     [47, 151],
-    [24, 80],
-    [151, 54],
+    [28, 83],
+    [135, 19],
   ];
   const [x, y] = sockets[i];
   return { x, y: (y * height) / 208 };
@@ -60,6 +60,11 @@ function trace(i: number) {
     cy = height / 2,
     dx = x - cx,
     dy = y - cy;
+  if ([0, 1, 8].includes(i)) {
+    const pin = cx + Math.sign(dx) * 13;
+    const shoulder = cy - 37;
+    return `M${pin} ${cy} V${shoulder} L${pin + Math.sign(dx) * 12} ${shoulder - 12} V${y} H${x}`;
+  }
   const signX = Math.sign(dx) || 1,
     signY = Math.sign(dy) || 1;
   const bend = Math.min(14, Math.abs(dx) * 0.32 + 5);

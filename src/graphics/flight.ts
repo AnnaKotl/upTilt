@@ -1,6 +1,8 @@
+import { sampleFlight, gateYaw } from '../data/flight-path';
 import { radioControls } from '../data/radio-controls';
 import { currentAircraft } from '../lib/aircraft';
 import * as T from 'three';
+import { attitudeDial } from './attitude-dial';
 import { raceReplays } from './race-replays';
 import { parts, matPosition, separateBoards } from '../data/airframe';
 import {
@@ -15,35 +17,6 @@ const clamp = T.MathUtils.clamp,
   mix = T.MathUtils.lerp;
 const ease = (a: number, b: number, p: number) =>
   T.MathUtils.smoothstep(p, a, b);
-function sample(keys: number[][], p: number) {
-  let i = 1;
-  while (i < keys.length - 1 && keys[i][0] < p) i++;
-  const a = keys[i - 1],
-    b = keys[i];
-  // Monotone cubic interpolation keeps velocity continuous through the gate.
-  const span = b[0] - a[0],
-    t = clamp((p - a[0]) / span, 0, 1),
-    t2 = t * t,
-    t3 = t2 * t;
-  function tangent(index: number, column: number) {
-    if (index === 0 || index === keys.length - 1) return 0;
-    const l = keys[index - 1],
-      m = keys[index],
-      r = keys[index + 1];
-    const left = (m[column] - l[column]) / (m[0] - l[0]),
-      right = (r[column] - m[column]) / (r[0] - m[0]);
-    return left * right > 0 ? (2 * left * right) / (left + right) : 0;
-  }
-  return a
-    .slice(1)
-    .map(
-      (v, j) =>
-        (2 * t3 - 3 * t2 + 1) * v +
-        (t3 - 2 * t2 + t) * span * tangent(i - 1, j + 1) +
-        (3 * t2 - 2 * t3) * b[j + 1] +
-        (t3 - t2) * span * tangent(i, j + 1),
-    );
-}
 function fadeTexture() {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 96;
@@ -132,27 +105,6 @@ function rotorExposure() {
   }
   return new T.CanvasTexture(canvas);
 }
-// Positions are composed for the page in fractions of the viewport. They are
-// animation keyframes, not flight dynamics or a transmitter configuration.
-const path = [
-  [0, 0.72, 0.5, 0.66, 0.32, -0.38, 0, 3.5],
-  [0.12, 0.72, 0.49, 0.77, 0.08, 0, 0, 3.6],
-  [0.26, 0.738, 0.46, 0.89, -0.13, 0.49, -0.12, 3.3],
-  [0.48, 0.76, 0.58, 0.49, 0.57, 0.63, 0.22, 2.7],
-  [0.78, 0.58, 0.435, 0.22, 0.25, -1.18, 0.27, 0],
-  [0.98, 0.205, 0.535, 0.44, 0.32, 0.36, 0.08, -2.8],
-  [1.32, 0.205, 0.535, 0.44, 0.32, 0.36, 0.08, -2.8],
-  [1.57, 0.5, 0.46, 0.68, 1.03, 0, 0, 0],
-  [1.8, 0.5, 0.46, 0.68, 1.03, 0, 0, 0],
-  [2, 0.5, 0.5, 0.58, 0.58, -0.15, 0, 0],
-  [2.31, 0.5, 0.5, 0.58, 0.58, -0.15, 0, 0],
-  [2.4, 0.5, 0.5, 0.58, 0.58, -0.15, 0, 0],
-  [2.72, 0.5, 0.46, 0.68, 1.03, 0, 0, 0],
-  [2.76, 0.5, 0.46, 0.68, 1.03, 0, 0, 0],
-  [2.88, 0.645, 0.39, 0.59, 0.38, 0.55, -0.12, 0],
-  [3, 0.77, 0.41, 0.53, 0.23, 0.24, 0, 0],
-  [4, 0.77, 0.41, 0.53, 0.23, 0.24, 0, 0],
-];
 export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const renderer = new T.WebGLRenderer({
     alpha: true,
@@ -169,7 +121,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const quad = makeWhoop(openFrame),
     gate = makeGate(),
     radio = makeRadio();
-  scene.add(quad.root, gate.root, radio.root);
+  const dial = attitudeDial();
+  scene.add(quad.root, gate.root, radio.root, dial.root);
   // Put the readout in the glass plane so its perspective and depth follow the case.
   const lcd = document.createElement('canvas');
   lcd.width = 512;
@@ -435,9 +388,11 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     visible = true;
   let introStart = Number(story.dataset.takeoff ?? performance.now());
   let slowFrames = 0;
-  let lastCaption = '';
   let radioPitch = 0,
-    radioYaw = 0;
+    radioYaw = 0,
+    yawFrom = 0,
+    yawDestination = 0,
+    turnStart = 0;
   let elapsed = 0,
     lastMove = 0,
     hoverX = 0,
@@ -467,6 +422,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const h = host.clientHeight || innerHeight,
       wpx = host.clientWidth;
     w = (10 * wpx) / h;
+    ghosts.resize(w);
     camera.left = -w / 2;
     camera.right = w / 2;
     camera.updateProjectionMatrix();
@@ -474,7 +430,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     anchors = chapters.map((el) => el.getBoundingClientRect().top + scrollY);
     scroll();
   }
+  let scrollTime = 0;
   function scroll() {
+    scrollTime = performance.now();
     let i = 0;
     while (i < anchors.length - 2 && scrollY >= anchors[i + 1]) i++;
     goal = clamp(
@@ -558,7 +516,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       hero = 1 - ease(0.03, 0.46, p);
 
     const departRadio = ease(3.5, 3.83, p);
-    const [x, y, k, rx, ry, rz, z] = sample(path, p);
+    const [x, y, k, rx, ry, rz, z] = sampleFlight(p);
     const spread = ease(1.8, 1.995, p) * (1 - ease(2.4, 2.74, p));
     const boardReady = String(spread >= 1);
     if (spread < 1) focus = '';
@@ -591,26 +549,38 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const inRadio = ease(2.82, 2.99, p);
     const ax = Number(story.dataset.radioX ?? 0),
       ay = Number(story.dataset.radioY ?? 0);
-    const targetLift =
-      story.dataset.radioLanded === 'true'
-        ? 0
-        : story.dataset.radioIdle === 'true'
-          ? 0.05
-          : pose === 2
-            ? 0.74 + ay * 0.25
-            : pose === 1
-              ? 0.09
-              : 1;
-    const targetBank = pose === 3 ? ax : 0;
-    radioPitch = mix(radioPitch, pose === 3 ? ay : 0, follow * 0.6);
-    radioYaw = mix(radioYaw, pose === 2 ? ax : 0, follow * 0.6);
+    const armed = story.dataset.radioArmed === 'true';
+    const targetLift = !armed
+      ? 0
+      : story.dataset.radioIdle === 'true'
+        ? 0.05
+        : pose === 2
+          ? 0.74 + ay * 0.25
+          : pose === 1
+            ? 0.09
+            : 1;
+    const airborne = armed && story.dataset.radioIdle !== 'true';
+    const targetBank = airborne && pose === 3 ? ax : 0;
+    const targetPitch = airborne && pose === 3 ? ay : 0;
+    const targetYaw = airborne ? Number(story.dataset.radioHeading ?? 0) : 0;
+    radioPitch = mix(radioPitch, targetPitch, follow * 0.6);
+    if (targetYaw !== yawDestination) {
+      yawFrom = radioYaw;
+      yawDestination = targetYaw;
+      turnStart = now;
+    }
+    radioYaw = mix(yawFrom, yawDestination, ease(0, 1050, now - turnStart));
     lift = mix(lift, targetLift, follow * 0.65);
     bank = mix(bank, targetBank, follow * 0.65);
     if (leaves && !leaves.hidden)
       leaves.style.opacity = String(1 - ease(0.15, 0.35, p));
     const exitLanding = 1 - ease(3.16, 3.72, p);
     radioSettling =
-      Math.abs(targetLift - lift) + Math.abs(targetBank - bank) > 0.002;
+      Math.abs(targetLift - lift) +
+        Math.abs(targetBank - bank) +
+        Math.abs(radioYaw - targetYaw) +
+        Math.abs(radioPitch - targetPitch) >
+      0.002;
     const bob =
       hero *
       take *
@@ -626,15 +596,28 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
         (0.92 * lift * exitLanding - 0.42) * inRadio,
       z,
     );
-    quad.root.rotation.order = 'ZXY';
     quad.root.rotation.set(
-      rx + hoverY * 0.255 * hero + radioPitch * 0.27 * inRadio,
-      ry + hoverX * 0.44 * hero + radioYaw * 0.35 * inRadio,
-      rz - hoverX * 0.205 * hero + bank * 0.33 * inRadio,
+      rx + hoverY * 0.255 * hero,
+      ry + hoverX * 0.44 * hero + radioYaw * inRadio,
+      rz - hoverX * 0.205 * hero,
       'ZXY',
     );
     quad.root.scale.setScalar(
       Math.min(w * 0.117, 2.15) * k * (openFrame ? 0.86 : 1),
+    );
+    quad.root.rotateX(radioPitch * 0.27 * inRadio);
+    quad.root.rotateZ(bank * 0.33 * inRadio);
+    const term = story.dataset.radioTerm ?? '';
+    dial.update(
+      quad.root,
+      term,
+      term === 'Yaw'
+        ? radioYaw
+        : term === 'Pitch'
+          ? radioPitch * 0.27
+          : bank * 0.33,
+      rx,
+      airborne ? inRadio * (1 - departRadio) : 0,
     );
     quad.theme(day);
     inv.copy(quad.root.quaternion).invert();
@@ -709,18 +692,13 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
         ease(1.32, 1.55, p) * 8,
       0,
     );
-    gate.root.rotation.set(0.045, 0.76, 0.018);
+    gate.root.rotation.set(0.045, gateYaw, 0.018);
     gate.root.scale.setScalar(Math.min(w / 16, 1.15));
-    const replaying = ghosts.update(p, now, day);
+    const gatePhase = ghosts.update(p, now, day, scrollTime);
+    if (story.dataset.gatePhase !== gatePhase)
+      story.dataset.gatePhase = gatePhase;
     gate.accent.emissiveIntensity =
       (1 - day) * (0.56 + 0.12 * Math.sin(now * 0.0019));
-    const caption = (ease(0.98, 1.045, p) * (1 - ease(1.23, 1.315, p))).toFixed(
-      3,
-    );
-    if (lastCaption !== caption) {
-      story.style.setProperty('--caption-opacity', caption);
-      lastCaption = caption;
-    }
     gateShade.visible = gate.root.visible;
     gateShade.position.copy(gate.root.position);
     gateShade.position.y -= 2.8 * gate.root.scale.x;
@@ -755,7 +733,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     radio.root.scale.setScalar(Math.min(w * 0.116, 1.85));
     radio.sticks[0].rotation.x = mix(
       radio.sticks[0].rotation.x,
-      pose === 2 ? -ay * 0.7 : 0,
+      pose === 2 ? -ay * 0.7 : !armed || pose === 1 ? 0.7 : 0,
       follow,
     );
     radio.sticks[0].rotation.y = mix(
@@ -768,12 +746,20 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       pose === 3 ? -ay * 0.65 : 0,
       follow,
     );
-    radio.sticks[1].rotation.y = 0.68 * bank;
+    radio.sticks[1].rotation.y = mix(
+      radio.sticks[1].rotation.y,
+      pose === 3 ? ax * 0.68 : 0,
+      follow,
+    );
     for (const [index, control] of radioControls.entries()) {
       if (control.kind !== 'switch') continue;
       const toggle = radio.switches[control.slot];
       const angle =
-        pose === index + 1 ? (pose === 4 ? ay * 0.54 : 0.55) : -0.45;
+        index === 0 && armed
+          ? 0.55
+          : index === 3
+            ? Number(story.dataset.radioModePosition ?? -1) * 0.54
+            : -0.45;
       toggle.rotation.x = mix(toggle.rotation.x, angle, follow * 0.8);
       if (Math.abs(toggle.rotation.x - angle) > 0.002) radioSettling = true;
     }
@@ -806,7 +792,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       story.dispatchEvent(new Event('scene-painted'));
     }
     if (
-      replaying ||
+      gatePhase === 'replays' ||
       spinning ||
       (elapsed < 3.72 && p < 0.45) ||
       p !== goal ||
@@ -874,6 +860,12 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
 
     accentLight.copy(neon);
     quad.led.emissive.copy(neon);
+    dial.ink.color.set(
+      getComputedStyle(document.documentElement)
+        .getPropertyValue('--muted')
+        .trim(),
+    );
+    dial.accent.color.set(accent);
     gate.accent.color.set(accent);
     gate.accent.emissive.copy(neon);
   }
@@ -901,6 +893,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     if (disposed) return;
     disposed = true;
     delete story.dataset.live;
+    delete story.dataset.gatePhase;
     const pin = chapters[3].firstElementChild as HTMLElement;
     pin.style.removeProperty('--power-x');
     pin.style.removeProperty('--power-y');

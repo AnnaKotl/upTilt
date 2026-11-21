@@ -1,129 +1,153 @@
 import * as T from 'three';
-// Each ghost follows its own curve in screen-aligned space, crossing the open centre at z=0.
+import { laps, lapPoint, ringDiameter } from '../data/gate-replays';
+
+class ReplayCurve extends T.Curve<T.Vector3> {
+  constructor(
+    private index: number,
+    private width: number,
+  ) {
+    super();
+  }
+  getPoint(t: number, target = new T.Vector3()) {
+    return target.set(...lapPoint(this.index, t, this.width));
+  }
+}
+
 export function raceReplays(scene: T.Scene, gate: T.Group) {
   const swarm = new T.Group();
+  swarm.name = 'Previous laps';
   scene.add(swarm);
-  const runs = ['#ff6875', '#ab87ff', '#42e8ac', '#ff64bc', '#ffd349'].map(
-    (color, i) => {
-      const d = i - 2;
-      // The two cubics share a tangent at the hoop centre.
-      const v = (x: number, y: number, z: number) => new T.Vector3(x, y, z);
-      const tangent = v(3.4, 0.85 + d * 0.16, 2.85);
-      const centre = v(0, 0, 0);
-      const curve = new T.CurvePath<T.Vector3>();
-      curve.add(
-        new T.CubicBezierCurve3(
-          v(23, 13 + d * 1.7, 4.6),
-          v(10, 7.2 + d * 1.55, 3.85),
-          tangent,
-          centre,
-        ),
-      );
-      curve.add(
-        new T.CubicBezierCurve3(
-          centre,
-          tangent.clone().negate(),
-          v(-10, -0.35 + d * 0.6, -9.8),
-          v(-23, -1.1 + d * 0.72, -13),
-        ),
-      );
-      const group = new T.Group();
-      swarm.add(group);
-      const body = new T.MeshBasicMaterial({ color: '#899394' });
-      const hull = new T.Mesh(new T.BoxGeometry(0.14, 0.065, 0.22), body);
-      for (const x of [-0.12, 0.12])
-        for (const z of [-0.12, 0.12]) {
-          const fan = new T.Mesh(
-            new T.RingGeometry(0.058, 0.087, 10),
-            new T.MeshBasicMaterial({ color, side: T.DoubleSide }),
-          );
-          fan.rotation.x = -Math.PI / 2;
-          fan.position.set(x, 0, z);
-          hull.add(fan);
-        }
-      const material = new T.MeshBasicMaterial({
-        color,
-        transparent: true,
-        depthWrite: false,
-      });
-      const layers = [0.014, 0.039, 0.083].map((radius, layer) => {
-        const tube = new T.TubeGeometry(curve, 160, radius, 6, false);
-        const ink = layer ? material.clone() : material;
-        if (layer) ink.blending = T.AdditiveBlending;
-        group.add(new T.Mesh(tube, ink));
-        return { tube, ink, strength: [0.83, 0.2, 0.075][layer] };
-      });
-      group.add(hull);
-      group.visible = false;
-      return { curve, hull, layers, group, material };
-    },
-  );
-  const forward = new T.Vector3(0, 0, 1);
-  const reflected = new T.PointLight(0xffffff, 0, 3.8);
-  swarm.add(reflected);
-  let previous = 0,
-    start = -1,
-    lastLaunch = Infinity,
-    ready = true;
-  function reset() {
-    previous = 0;
-    ready = true;
-    start = -1;
-    swarm.visible = false;
-    reflected.intensity = 0;
-  }
-  function update(progress: number, now: number, day: number) {
-    const inGate = progress >= 1.04 && progress <= 1.32;
-    if (progress < 0.88) ready = true;
-    if (ready && start < 0 && previous < 1.045 && progress >= 1.045 && inGate) {
-      ready = false;
-      start = now;
-      lastLaunch = Infinity;
-      swarm.position.copy(gate.position);
-      swarm.scale.set(gate.scale.x, gate.scale.y, 1);
+  const segments = 120;
+  const sides = 5;
+  const runs = laps.map(({ color }, i) => {
+    const ink = new T.MeshBasicMaterial({
+      color,
+      transparent: true,
+      depthWrite: false,
+      side: T.DoubleSide,
+    });
+    const hull = new T.Group();
+    hull.name = 'Replay ' + (i + 1);
+    const body = new T.Mesh(new T.BoxGeometry(0.048, 0.024, 0.078), ink);
+    hull.add(body);
+    const armGeometry = new T.BoxGeometry(0.008, 0.008, 0.13);
+    for (const yaw of [-Math.PI / 4, Math.PI / 4]) {
+      const arm = new T.Mesh(armGeometry, ink);
+      arm.rotation.y = yaw;
+      hull.add(arm);
     }
-    previous = progress;
-    if (start < 0) return false;
-    const elapsed = (now - start) / 1000;
-    if (!inGate) lastLaunch = Math.min(lastLaunch, elapsed);
-    swarm.visible = true;
-    reflected.intensity = 0;
-    let active = false;
-    runs.forEach(({ curve, hull, layers, group, material }, i) => {
-      const launch = 0.5 + i * 1.85;
-      if (launch > lastLaunch) {
-        group.visible = false;
-        return;
+    const duct = new T.RingGeometry(0.024, 0.034, 14);
+    for (const x of [-0.044, 0.044])
+      for (const z of [-0.044, 0.044]) {
+        const fan = new T.Mesh(duct, ink);
+        fan.rotation.x = -Math.PI / 2;
+        fan.position.set(x, 0, z);
+        hull.add(fan);
       }
-      const age = elapsed - launch;
-      group.visible = age >= 0 && age < 4.5;
-      if (age < 4.5) active = true;
-      if (!group.visible) return;
-      const t = Math.min(1, age / 1.8);
-      hull.position.copy(curve.getPointAt(t));
-      hull.quaternion.setFromUnitVectors(forward, curve.getTangentAt(t));
-      hull.visible = t < 1;
-      const fade = Math.max(0, age - 1.8) / 2.7;
-      const reflection =
-        (1 - day) * Math.max(0, 1 - Math.abs(t - 0.51) * 4) * 0.85;
-      if (reflection > reflected.intensity) {
-        reflected.position.copy(hull.position);
-        reflected.color.copy(material.color);
-        reflected.intensity = reflection;
-      }
-      for (const { tube, ink, strength } of layers) {
-        tube.setDrawRange(0, Math.floor(t * 160) * 6 * 6);
-        ink.opacity =
-          strength *
-          (1 - T.MathUtils.smoothstep(fade, 0, 1)) *
-          (1 - 0.16 * day);
+    // Arc-length stations in TubeGeometry differ from our time stations.
+    // Build a lookup once per resize so the luminous tip stays at the aircraft.
+    const layers = [0.0035, 0.01, 0.022].map((radius, j) => {
+      const material = ink.clone();
+      if (j) material.blending = T.AdditiveBlending;
+      const mesh = new T.Mesh(new T.BufferGeometry(), material);
+      swarm.add(mesh);
+      return { mesh, radius, strength: [0.56, 0.14, 0.045][j] };
+    });
+    swarm.add(hull);
+    return {
+      hull,
+      layers,
+      ink,
+      curve: new ReplayCurve(i, 16),
+      lengths: [] as number[],
+    };
+  });
+  let worldWidth = 0;
+  const direction = new T.Vector3();
+  const fadeSeconds = 0.45;
+  const lastArrival = Math.max(...laps.map((lap) => lap.launch + lap.duration));
+  let start: number | undefined;
+  let phase: 'pass' | 'replays' | 'study' = 'pass';
+  function reset() {
+    start = undefined;
+    swarm.visible = false;
+    phase = 'pass';
+  }
+  function resize(width: number) {
+    if (width === worldWidth) return;
+    worldWidth = width;
+    swarm.scale.setScalar(ringDiameter(width));
+    runs.forEach((run, i) => {
+      run.curve = new ReplayCurve(i, width);
+      run.curve.arcLengthDivisions = segments * 2;
+      run.lengths = run.curve.getLengths();
+      for (const { mesh, radius } of run.layers) {
+        mesh.geometry.dispose();
+        mesh.geometry = new T.TubeGeometry(
+          run.curve,
+          segments,
+          radius,
+          sides,
+          false,
+        );
       }
     });
-    if (!active) {
-      start = -1;
-      swarm.visible = false;
-    }
-    return active;
   }
-  return { reset, update };
+  function update(
+    progress: number,
+    now: number,
+    day: number,
+    lastScroll: number,
+  ) {
+    if (progress < 0.979 || progress > 1.32) {
+      reset();
+      return phase;
+    }
+    if (phase === 'study') return phase;
+    start ??= now;
+    const elapsed = (now - start) / 1000;
+    phase =
+      elapsed < lastArrival + 1 || now - lastScroll < 900 ? 'replays' : 'study';
+    swarm.visible = phase === 'replays';
+    if (!swarm.visible) return phase;
+    swarm.position.copy(gate.position);
+    runs.forEach(({ hull, layers, ink, curve, lengths }, i) => {
+      const age = elapsed - laps[i].launch;
+      const duration = laps[i].duration;
+      const visible = age >= 0 && age < duration + fadeSeconds;
+      hull.visible = visible && age < duration;
+      for (const { mesh } of layers) mesh.visible = visible;
+      if (!visible) return;
+      const t = Math.min(1, age / duration);
+      curve.getPoint(t, hull.position);
+      curve.getTangent(t, direction);
+      hull.rotation.set(
+        -Math.asin(direction.y) + 0.12,
+        Math.atan2(direction.x, direction.z),
+        0.06 * laps[i].drift,
+        'YXZ',
+      );
+      ink.opacity = 0.82;
+      const station = (fraction: number) => {
+        const s = Math.round(fraction * (lengths.length - 1));
+        return (
+          Math.round((segments * lengths[s]) / lengths[lengths.length - 1]) *
+          sides *
+          6
+        );
+      };
+      const head = station(t);
+      const tail = station(Math.max(0, t - 0.28));
+      for (const { mesh, strength } of layers) {
+        mesh.geometry.setDrawRange(tail, head - tail);
+        mesh.material.opacity =
+          strength *
+          (1 - T.MathUtils.smoothstep(age, duration, duration + fadeSeconds)) *
+          (1 - 0.18 * day);
+      }
+    });
+    return phase;
+  }
+  reset();
+  return { reset, resize, update };
 }

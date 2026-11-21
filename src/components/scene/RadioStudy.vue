@@ -19,12 +19,12 @@ let previousTop: number | undefined;
 let arrived = false;
 const notes = [
   [
-    'Перемикач фіксується в обраному положенні. Тут він перемикає стан моделі.',
-    'A switch stays in position. Here it changes the state of the model.',
+    'У цьому профілі перемикач дозволяє роботу двигунів (ARMED) або блокує їх (DISARMED).',
+    'In this profile the switch arms or disarms the motors.',
   ],
   [
-    'Throttle — тяга. Yaw — поворот навколо вертикальної осі.',
-    'Throttle changes thrust. Yaw turns the nose left or right.',
+    'У Mode 2 вертикальний рух лівого стіка змінює тягу (Throttle). Горизонтальний задає поворот навколо вертикальної осі (Yaw).',
+    'In Mode 2 the left stick controls thrust vertically and yaw horizontally. Yaw turns the nose left or right.',
   ],
   [
     'Pitch — нахил носа вперед і назад. Roll — крен ліворуч або праворуч.',
@@ -47,13 +47,12 @@ const cueRotation: Record<string, number> = {
 };
 const phases = [
   { id: 1, term: 'ARMED', x: 0, y: 0, arrow: '' },
+  { id: 2, term: 'Throttle', x: 0, y: 1, arrow: 'up' },
   { id: 3, term: 'Pitch', x: 0, y: 1, arrow: 'up' },
   { id: 3, term: 'Roll', x: 1, y: 0, arrow: 'right' },
   { id: 3, term: 'Pitch', x: 0, y: -1, arrow: 'down' },
   { id: 3, term: 'Roll', x: -1, y: 0, arrow: 'left' },
-  { id: 2, term: 'Throttle', x: 0, y: 1, arrow: 'up' },
   { id: 2, term: 'Yaw', x: 1, y: 0, arrow: 'cw' },
-  { id: 2, term: 'Throttle', x: 0, y: -1, arrow: 'down' },
   { id: 2, term: 'Yaw', x: -1, y: 0, arrow: 'ccw' },
   ...['ANGLE', 'HORIZON', 'ACRO'].map((term, i) => ({
     id: 4,
@@ -62,15 +61,17 @@ const phases = [
     y: i - 1,
     arrow: '',
   })),
-  ...controls
-    .slice(4)
-    .map((_, index) => ({ id: index + 5, term: 'SW', x: 0, y: 0, arrow: '' })),
   { id: 2, term: 'Throttle', x: 0, y: -1, arrow: 'down' },
   { id: 1, term: 'DISARMED', x: 0, y: 0, arrow: '' },
 ];
 function open(i: number, event: MouseEvent) {
   if (!powered.value) return;
-  preview(i, event);
+  if (i === 0 && complete.value) {
+    manualArmed = !manualArmed;
+    manualLift = false;
+    clearTimeout(timer);
+    pose(1, manualArmed ? 'ARMED' : 'DISARMED');
+  } else preview(i, event);
   chosen.value = i;
   modal.value?.show();
 }
@@ -163,7 +164,6 @@ let next = 0,
   manualLift = false,
   lastControl = -1,
   gesture = 0;
-const modeNames = ['ANGLE', 'HORIZON', 'ACRO'];
 const complete = ref(false);
 function pose(i: number, term = '', x = 0, y = 0, arrow = '') {
   active.value = i;
@@ -171,12 +171,25 @@ function pose(i: number, term = '', x = 0, y = 0, arrow = '') {
   cue.value = arrow;
   const story = surface.value?.closest<HTMLElement>('[data-story]');
   if (!story) return;
+  if (!term || term === 'DISARMED') {
+    story.dataset.radioHeading = '0';
+    if (!term) story.dataset.radioModePosition = '-1';
+  }
+  if (
+    term === 'Yaw' &&
+    story.dataset.radioArmed === 'true' &&
+    (term !== story.dataset.radioTerm || String(x) !== story.dataset.radioX)
+  ) {
+    story.dataset.radioHeading = String(
+      Number(story.dataset.radioHeading ?? 0) - x * Math.PI,
+    );
+  }
+  if (i === 4) story.dataset.radioModePosition = String(y);
   if (term === 'ARMED') story.dataset.radioArmed = 'true';
   if (!term || !powered.value || term === 'DISARMED')
     story.dataset.radioArmed = 'false';
   story.dataset.radioTerm = term;
   story.dataset.radioCue = arrow;
-  story.dataset.radioLanded = String(!powered.value || term === 'DISARMED');
   story.dataset.radioIdle = String(
     complete.value && manualArmed && !manualLift,
   );
@@ -284,27 +297,24 @@ function preview(i: number, event?: MouseEvent | FocusEvent) {
   clearTimeout(hoverTimer);
   hover.value = i;
   if (event) place(event);
-  if (!complete.value) return;
+  if (!complete.value || i >= notes.length) return;
   clearTimeout(timer);
   if (lastControl !== i) {
     gesture++;
     lastControl = i;
   }
   if (i === 0) {
-    manualArmed = true;
-    manualLift = false;
-    pose(1, 'ARMED');
+    pose(1, manualArmed ? 'ARMED' : 'DISARMED');
     return;
   }
   const strokes = phases.filter((p) => p.id === i + 1);
-  const sample = strokes[gesture % Math.max(1, strokes.length)];
-  if (i === 1) manualLift = true;
-  const term = i === 3 ? modeNames[gesture % 3] : (sample?.term ?? 'SW');
-  pose(i + 1, term, sample?.x ?? 0, sample?.y ?? 0, sample?.arrow ?? '');
-  timer = window.setTimeout(
-    () => pose(0, manualArmed || manualLift ? 'ARMED' : 'DISARMED'),
-    1500,
-  );
+  const sample = strokes[gesture % strokes.length];
+  if (i === 1 && manualArmed) manualLift = true;
+  pose(i + 1, sample.term, sample.x, sample.y, sample.arrow);
+  timer = window.setTimeout(() => {
+    lastControl = -1;
+    pose(0, manualArmed ? 'ARMED' : 'DISARMED');
+  }, 1500);
 }
 onMounted(() => {
   const signal = inputEvents.signal;
@@ -492,7 +502,15 @@ onBeforeUnmount(() => {
       :style="noteAt"
       >{{ controls[hover][locale]
       }}<template v-if="hover === 1"> · Throttle / Yaw</template
-      ><template v-if="hover === 2"> · Pitch / Roll</template></span
+      ><template v-if="hover === 2"> · Pitch / Roll</template
+      ><template v-if="hover >= notes.length">
+        ·
+        {{
+          locale === 'uk'
+            ? 'Призначення задає профіль моделі'
+            : 'Assignable per model'
+        }}</template
+      ></span
     >
   </div>
 </template>
