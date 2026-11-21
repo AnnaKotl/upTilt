@@ -3,6 +3,9 @@ import SiteLayout from '../../../layouts/SiteLayout.astro';
 import KnowledgeCrumbs from '../../../components/knowledge/KnowledgeCrumbs.astro';
 import LessonLinks from '../../../components/knowledge/LessonLinks.astro';
 import RadioDiagram from '../../../components/knowledge/RadioDiagram.astro';
+import MediaGallery from '../../../components/knowledge/MediaGallery.astro';
+import SimulatorExercises from '../../../components/knowledge/SimulatorExercises.astro';
+import { firmwareMedia } from '../../../data/firmware-media';
 import { lessons, topicIntroductions } from '../../../data/lessons';
 import { simulators } from '../../../data/simulators';
 import { topics } from '../../../data/topics';
@@ -39,33 +42,48 @@ const uk = locale === 'uk';
     <section class="reading-note">
       <h2>{uk ? 'Теми' : 'Topics'}</h2>
       <LessonLinks locale={locale} path={path} items={lessons[topic.id]} />
+      {topic.id === 'simulators' && (
+        <a class="inline-link" href="#practice">
+          {uk ? 'До вправ' : 'Go to exercises'} ↓
+        </a>
+      )}
     </section>
+    {topic.id === 'firmware' && (
+      <>
+        <MediaGallery
+          locale={locale}
+          title={uk ? 'Інтерфейси' : 'Interfaces'}
+          items={firmwareMedia}
+        />
+        <section class="reading-note">
+          <h2>
+            {uk ? 'Якщо на платі встановлено INAV' : 'If the board runs INAV'}
+          </h2>
+          <p>
+            {uk
+              ? 'INAV має власний настільний Configurator для сумісних плат і версій. За назвою плати та версією прошивки звіряй, який застосунок потрібен саме тобі.'
+              : 'INAV has its own desktop Configurator for compatible boards and firmware versions. Check the board name and firmware version to find the right application.'}
+          </p>
+          <a
+            class="inline-link"
+            href="https://github.com/iNavFlight/inav-configurator/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            INAV Configurator ↗
+          </a>
+        </section>
+      </>
+    )}
     {topic.id === 'simulators' && (
-      <section class="reading-note">
-        <h2>{uk ? 'Симулятори для практики' : 'Simulators for practice'}</h2>
-        <ul class="simulator-list">
-          {simulators.map(({ name, description, links }) => (
-            <li>
-              <h3>{name}</h3>
-              <p>{description[locale]}</p>
-              <div class="simulator-links">
-                {Object.entries(links).map(([label, url]) => (
-                  <a
-                    href={url}
-                    aria-label={
-                      name +
-                      ' · ' +
-                      (label === 'website' ? (uk ? 'Сайт' : 'Website') : label)
-                    }
-                  >
-                    {label === 'website' ? (uk ? 'Сайт' : 'Website') : label}
-                  </a>
-                ))}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <>
+        <MediaGallery
+          locale={locale}
+          title={uk ? 'Симулятори для практики' : 'Simulators for practice'}
+          items={simulators}
+        />
+        <SimulatorExercises locale={locale} />
+      </>
     )}
   </article>
 </SiteLayout>

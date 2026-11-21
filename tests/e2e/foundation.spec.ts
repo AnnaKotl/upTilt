@@ -142,7 +142,10 @@ test('book, section bookmarks and search serve different routes', async ({
     animations: 'disabled',
     path: test.info().outputPath('hero.png'),
   });
-  await expect(page.locator('#book-branches a')).toHaveCount(8);
+  await expect(page.locator('#book-branches a')).toHaveCount(9);
+  await expect(
+    page.locator('#book-branches').getByRole('link', { name: 'Firmware' }),
+  ).toHaveAttribute('href', /\/en\/knowledge\/firmware\/$/);
   await page.keyboard.press('Escape');
   await expect(book).toHaveAttribute('aria-expanded', 'false');
   await page.locator('#anatomy').scrollIntoViewIfNeeded();
@@ -155,7 +158,7 @@ test('book, section bookmarks and search serve different routes', async ({
   await search.click();
   const query = page.getByRole('searchbox');
   await query.fill('flight physics');
-  await expect(page.locator('.topic-row:visible')).toHaveCount(8);
+  await expect(page.locator('.topic-row:visible')).toHaveCount(9);
   await page.getByRole('heading', { name: 'Knowledge base' }).click();
   await expect(query).toBeHidden();
   await search.click();
@@ -166,7 +169,7 @@ test('book, section bookmarks and search serve different routes', async ({
   await expect(query).toHaveValue('');
   await expect(page.locator('.topic-row:visible')).toHaveCount(1);
   await query.press('Enter');
-  await expect(page.locator('.topic-row:visible')).toHaveCount(8);
+  await expect(page.locator('.topic-row:visible')).toHaveCount(9);
   await query.press('Escape');
   await page.getByRole('link', { name: /Flight physics/ }).click();
   await expect(
@@ -251,4 +254,51 @@ test('reduced motion keeps the introduction static and navigation available', as
   await book.click();
   await expect(page).toHaveURL(/\/en\/knowledge\/$/);
   await expect(page.getByRole('link', { name: /^Radio links/ })).toBeVisible();
+});
+
+test('firmware and simulator galleries keep previews on-page and open sources in a new tab', async ({
+  page,
+}) => {
+  await page.context().route('https://app.betaflight.com/', (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: '<title>Betaflight</title>',
+    }),
+  );
+  await page.route('https://www.youtube-nocookie.com/**', (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: '<title>Preview player</title>',
+    }),
+  );
+  await page.goto('uk/knowledge/');
+  await page.getByRole('link', { name: /^Прошивка/ }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Прошивка', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('img', { name: /Betaflight App.*Firmware Flasher/ }),
+  ).toBeVisible();
+  const external = page.waitForEvent('popup');
+  await page
+    .getByRole('link', { name: 'Betaflight App · Відкрити вебзастосунок' })
+    .click();
+  const source = await external;
+  await expect(source).toHaveURL('https://app.betaflight.com/');
+  await source.close();
+  await expect(page).toHaveURL(/\/uk\/knowledge\/firmware\/$/);
+
+  await page.goto('uk/knowledge/simulators/');
+  await expect(
+    page.getByRole('heading', { name: 'FPV Freerider' }),
+  ).toBeVisible();
+  await expect(page.locator('.gallery-frame iframe')).toHaveCount(0);
+  await page.getByRole('button', { name: /Відтворити тут.*Uncrashed/ }).click();
+  await expect(page.locator('.gallery-frame iframe')).toHaveAttribute(
+    'src',
+    /youtube-nocookie\.com\/embed\/FUo5vAgkB3g/,
+  );
+  await page.getByRole('link', { name: 'До вправ', exact: false }).click();
+  await expect(page.locator('#practice li')).toHaveCount(8);
+  await expect(page.getByRole('heading', { name: 'Вісімка' })).toBeVisible();
 });

@@ -49,8 +49,9 @@ function port(i: number) {
     [113, 181],
     [47, 151],
     [24, 80],
+    [151, 54],
   ];
-  const [x, y] = sockets[i % sockets.length];
+  const [x, y] = sockets[i];
   return { x, y: (y * height) / 208 };
 }
 function trace(i: number) {

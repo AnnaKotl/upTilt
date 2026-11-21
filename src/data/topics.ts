@@ -179,5 +179,26 @@ export const topics = [
       url: 'https://betafpv.com/products/air65-brushless-whoop-quadcopter',
     },
   },
+  {
+    id: 'firmware',
+    icon: 'firmware',
+    title: { uk: 'Прошивка', en: 'Firmware' },
+    summary: {
+      uk: 'Betaflight для коптера, EdgeTX і налаштування пульта.',
+      en: 'Betaflight for the quad, EdgeTX and transmitter setup.',
+    },
+    question: {
+      uk: 'Прошивка й налаштування — у чому різниця?',
+      en: 'How do firmware and settings differ?',
+    },
+    note: {
+      uk: 'Прошивка — програма, що працює на пристрої. Налаштування — збережені параметри цієї програми. Зміна імені моделі на пульті або перегляд каналів у Betaflight App не потребують перепрошивки.',
+      en: 'Firmware is the software running on the device. Settings are the parameters it stores. Renaming a transmitter model or inspecting channels in Betaflight App does not require flashing firmware.',
+    },
+    source: {
+      label: 'Betaflight App',
+      url: 'https://betaflight.com/docs/wiki/app',
+    },
+  },
 ] as const;
 export type Topic = (typeof topics)[number];

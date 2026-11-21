@@ -1,0 +1,31 @@
+---
+import { simulatorExercises } from '../../data/simulator-exercises';
+import type { Locale } from '../../lib/i18n';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const uk = locale === 'uk';
+const lang = uk ? 0 : 1;
+---
+
+<section class="reading-note" id="practice">
+  <h2>{uk ? 'Вправи для початківців' : 'Beginner exercises'}</h2>
+  <p>
+    {uk
+      ? 'Почни у вільному польоті з широкими проміжками. Переходь далі, коли вправу вдається повторити кілька разів поспіль.'
+      : 'Start in free flight with plenty of space. Move on when you can repeat an exercise several times in a row.'}
+  </p>
+  <ol class="exercise-list">
+    {simulatorExercises.map(({ title, text, check }) => (
+      <li>
+        <h3>{title[lang]}</h3>
+        <p>{text[lang]}</p>
+        <p class="exercise-check">
+          <strong>{uk ? 'Орієнтир.' : 'Aim for.'}</strong> {check[lang]}
+        </p>
+      </li>
+    ))}
+  </ol>
+</section>

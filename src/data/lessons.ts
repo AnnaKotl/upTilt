@@ -276,6 +276,47 @@ export const lessons: Record<Topic['id'], readonly Lesson[]> = {
       ],
     ),
   ],
+  firmware: [
+    lesson(
+      'betaflight',
+      ['Польотний контролер і Betaflight', 'Flight controllers and Betaflight'],
+      [
+        'Betaflight Firmware працює на польотному контролері. Betaflight App відкриває його налаштування, показує стан плати та має окремий розділ Firmware Flasher. Доступні вебзастосунок і офіційні завантаження для підтримуваних систем.',
+        'Betaflight Firmware runs on the flight controller. Betaflight App reads and edits its settings, shows the board’s status and has a separate Firmware Flasher tab. The project offers a web app and downloads for supported platforms.',
+      ],
+      [
+        'У версії App 2026.6.1 і новіших Setup показує орієнтацію та стан плати, а калібрування винесено до Sensors. На зібраному коптері спочатку зніми пропелери, звір модель плати й збережи наявну конфігурацію перед змінами.',
+        'In App 2026.6.1 and later, Setup shows orientation and board status, while calibration lives under Sensors. On an assembled quad, remove the props, identify the board and save its current configuration before making changes.',
+      ],
+    ),
+    lesson(
+      'edgetx',
+      ['Пульт, профілі та EdgeTX', 'Transmitters, profiles and EdgeTX'],
+      [
+        'EdgeTX — прошивка для сумісних радіопультів. Профіль моделі зберігає її налаштування. Inputs описує входи від органів керування, Mixes призначає їх каналам, Outputs визначає вихід, а Channel Monitor показує результат.',
+        'EdgeTX is firmware for compatible transmitters. A model profile stores its own settings. Inputs describes the controls, Mixes assigns them to channels, Outputs defines the final signals, and Channel Monitor shows the result.',
+      ],
+      [
+        'EdgeTX Buddy — браузерний засіб оновлення. Companion — настільний застосунок для роботи з моделями й резервними копіями. Для симулятора зручно мати окремий профіль і спочатку перевірити осі в меню вводу гри.',
+        'EdgeTX Buddy is the browser-based update tool. Companion is a desktop app for working with models and backups. A separate simulator profile helps keep your settings organised. Check the axes in the simulator’s input screen before flying.',
+      ],
+    ),
+    lesson(
+      'versions-and-backups',
+      [
+        'Модель плати, версії та резервна копія',
+        'Board targets, versions and backups',
+      ],
+      [
+        'Назва пристрою, апаратна ревізія, версія прошивки та версія застосунку — різні дані. У Betaflight ціль збірки має відповідати конкретній платі. Для пульта звіряй точну модель з офіційним переліком EdgeTX.',
+        'The device name, hardware revision, firmware version and app version are separate details. In Betaflight, the build target must match the actual board. For a transmitter, check the exact model against the EdgeTX compatibility list.',
+      ],
+      [
+        'Резервна копія описує налаштування поточного пристрою. Перед перенесенням її на іншу версію прочитай примітки до випуску: назви параметрів і їхні допустимі значення можуть змінюватися.',
+        'A backup contains settings for the current device. Review the release notes before restoring it on another version, since setting names and valid values can change.',
+      ],
+    ),
+  ],
   simulators: [
     lesson(
       'first-laps',
@@ -332,6 +373,10 @@ export const topicIntroductions: Record<Topic['id'], Bilingual> = {
   workbench: [
     'Збірка починається з розуміння того, що має з’єднуватися механічно, а що електрично. На платі за електричний зв’язок відповідають доріжки й контакти, а паяні з’єднання приєднують деталі до кола.',
     'Assembly starts with knowing which parts need a mechanical connection and which need an electrical one. Traces and pads carry connections on a board, and solder joints attach components to the circuit.',
+  ],
+  firmware: [
+    'У FPV-коптера й пульта окремі прошивки та інтерфейси. Betaflight працює з польотним контролером. EdgeTX на сумісному пульті перетворює рухи стіків і перемикачів на канали. Нижче можна порівняти, де саме це видно на екрані.',
+    'The quad and its transmitter run separate firmware and have different interfaces. Betaflight works with the flight controller. On a compatible transmitter, EdgeTX turns stick and switch movements into channels. Compare the screens below to see where each part fits.',
   ],
   simulators: [
     'У симуляторі можна повторювати коротку вправу, одразу бачити реакцію моделі й почати спочатку після зіткнення. Обирай за тим, що хочеш потренувати: польоти в кімнатах, проходження воріт чи вільний політ.',

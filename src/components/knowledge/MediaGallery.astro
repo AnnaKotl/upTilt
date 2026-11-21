@@ -1,0 +1,111 @@
+---
+import Icon from '../ui/Icon.vue';
+import type { Locale } from '../../lib/i18n';
+import type { MediaEntry } from '../../data/knowledge-media';
+
+interface Props {
+  title: string;
+  locale: Locale;
+  items: MediaEntry[];
+}
+
+const { title, locale, items } = Astro.props;
+const play = locale === 'uk' ? 'Відтворити тут' : 'Play here';
+const mediaUrl = (image: string) =>
+  image.startsWith('https://') ? image : import.meta.env.BASE_URL + image;
+---
+
+<section class="reading-note knowledge-gallery">
+  <h2>{title}</h2>
+  <div class="gallery-grid">
+    {items.map(({ name, description, links, previews, featured }) => (
+      <article class:list={['gallery-entry', { 'gallery-featured': featured }]}>
+        <div class="gallery-previews">
+          {previews.map(({ image, caption, url, youtube, contained }) => (
+            <figure>
+              <div
+                class:list={['gallery-frame', { 'gallery-contain': contained }]}
+                data-video={youtube}
+              >
+                <a
+                  href={contained ? mediaUrl(image) : url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img
+                    src={mediaUrl(image)}
+                    alt={name + ' · ' + caption[locale]}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </a>
+                {youtube && (
+                  <button
+                    type="button"
+                    data-play-video
+                    hidden
+                    aria-label={play + ' · ' + name + ' · ' + caption[locale]}
+                  >
+                    <Icon name="play" />
+                    {play}
+                  </button>
+                )}
+              </div>
+              <figcaption>
+                <a href={url} target="_blank" rel="noopener noreferrer">
+                  {caption[locale]}
+                </a>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+        <h3>{name}</h3>
+        <p>{description[locale]}</p>
+        <ul class="gallery-links">
+          {links.map(({ label, url }) => {
+            const text = typeof label === 'string' ? label : label[locale];
+            return (
+              <li>
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={name + ' · ' + text}
+                >
+                  {text}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </article>
+    ))}
+  </div>
+</section>
+
+<script>
+  for (const frame of document.querySelectorAll<HTMLElement>(
+    '.gallery-frame[data-video]',
+  )) {
+    const button = frame.querySelector<HTMLButtonElement>('[data-play-video]');
+    if (!button || !frame.dataset.video) continue;
+    button.hidden = false;
+    button.addEventListener(
+      'click',
+      () => {
+        const player = document.createElement('iframe');
+        player.src =
+          'https://www.youtube-nocookie.com/embed/' +
+          frame.dataset.video +
+          '?autoplay=1';
+        player.title = frame.querySelector('img')?.alt || 'YouTube';
+        player.referrerPolicy = 'strict-origin-when-cross-origin';
+        player.allow = 'autoplay; encrypted-media; picture-in-picture';
+        player.allowFullscreen = true;
+        frame.replaceChildren(player);
+        player.focus();
+      },
+      { once: true },
+    );
+  }
+</script>

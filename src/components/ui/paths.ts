@@ -14,6 +14,9 @@ export const paths = {
   close: 'm6 6 12 12M18 6 6 18',
   transmitter:
     'M12 7V3m-3 0h6M4 7h16l2 12H2L4 7Zm4 4v5m-2-2.5h4m6-2.5v5m-2-2.5h4',
+  firmware:
+    'M5 5h14v14H5zM8 2v3m4-3v3m4-3v3M8 19v3m4-3v3m4-3v3M2 8h3m-3 4h3m-3 4h3m14-8h3m-3 4h3m-3 4h3m-12-4 2 2 4-4',
+  play: 'm8 5 12 7-12 7z',
   classify: 'M9 3h6v5H9z M12 8v4M5 16v-4h14v4M2 16h6v5H2zM16 16h6v5h-6z',
   up: 'M12 20V4m-7 7 7-7 7 7',
   forward: 'M4 12h16m-7-7 7 7-7 7',
