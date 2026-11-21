@@ -1,6 +1,5 @@
 ---
-// Floor coordinates around the footprint; the opening in the middle is deliberate.
-const leaves = [
+const floor = [
   [-1, 0.22, 23],
   [-0.86, 0.66, -47],
   [-0.56, 0.81, 31],
@@ -8,13 +7,399 @@ const leaves = [
   [0.4, 0.8, 17],
   [0.72, 0.6, -33],
   [0.96, 0.28, 51],
+  [-0.94, 0.38, 11],
+  [-0.65, 0.73, -23],
+  [-0.38, 0.91, 67],
+  [0.19, 0.87, -38],
+  [0.58, 0.71, 4],
+  [0.85, 0.43, -60],
+];
+const eddies = [
+  [79, 13, 21],
+  [91, 19, 29],
+  [96, 11, 13],
+  [85, 26, 25],
+  [72, 18, 11],
+  [93, 34, 16],
+  [62, 33, 13],
+  [57, 62, 9],
+  [89, 72, 22],
+  [95, 84, 11],
+  [78, 83, 12],
+];
+const ice = [
+  [2, 12, 37],
+  [12, 7, 17],
+  [17, 19, 62],
+  [28, 9, 29],
+  [44, 11, 43],
+  [51, 7, 19],
+  [68, 18, 74],
+  [81, 10, 31],
+  [91, 12, 46],
 ];
 ---
 
 <div class="scatter" hidden aria-hidden="true">
-  {leaves.map(([x, y, r], i) => (
+  {floor.map(([x, y, r], i) => (
     <i
-      style={`--x:${50 + x * 48}%;--y:${y * 91}%;--r:${r}deg;--flutter:${[29, -24, 15, -34, 26, -17, 31][i]}deg;--lift:${[-21, 17, -34, 12, -19, 23, -12][i]}px;--dx:${x < 0 ? -104 + x * 5 : 79 + x * 8}vw;--dy:${[-13, 15, -7, 19, -17, 12, -9][i]}vh;--delay:${Math.round(Math.hypot(x, y * 0.5) * 210)}ms;--sz:${17 + (i % 4) * 3}px`}
+      class="season-piece"
+      data-shape={i % 3}
+      style={`--x:${50 + x * 48}%;--y:${y * 91}%;--r:${r}deg;--flutter:${[29, -24, 15, -34][i % 4]}deg;--lift:${[-21, 17, -34, 12][i % 4]}px;--dx:${x < 0 ? -104 + x * 5 : 79 + x * 8}vw;--dy:${[-13, 15, -7, 19, -17, 12, -9][i % 7]}vh;--delay:${Math.round(Math.hypot(x, y * 0.5) * 210)}ms;--sz:${15 + (i % 5) * 3}px`}
     ></i>
   ))}
 </div>
+<div class="season-air" aria-hidden="true">
+  {eddies.map(([x, y, w], i) => (
+    <div
+      class="air-origin"
+      style={`left:${x}%;top:${y}%;--sx:${72 - x}vw;--sy:${76 - y}svh;--w:${w}px;--wind:${9 + (i % 5) * 1.65}s;--beat:${3.8 + (i % 4) * 0.8}s;--offset:${-i * 2.13}s;--bank:${i * 37}deg;--lift:${i * 0.065}s`}
+    >
+      <span class="air-loop">
+        <i class="season-piece" data-shape={i % 3}></i>
+      </span>
+    </div>
+  ))}
+  <svg class="roof-ice" viewBox="0 0 120 84" preserveAspectRatio="none">
+    {ice.map(([x, w, h], i) => (
+      <g
+        transform={`translate(${x} 0)`}
+        style={`--grow:${5 + (i % 4) * 1.4}s;--drip:${4 + (i % 3) * 1.3}s;--offset:${-i * 0.89}s`}
+      >
+        <g class="ice-tip">
+          <path
+            d={`M0 -2H${w}L${w * 0.75} ${h * 0.43} ${w * 0.46} ${h} ${w * 0.19} ${h * 0.3}Z`}
+          />
+          <path
+            class="ice-facet"
+            d={`M${w * 0.58} 0H${w * 0.87}L${w * 0.46} ${h}Z`}
+          />
+          <circle class="ice-drop" cx={w * 0.46} cy={h} r="1.05" />
+        </g>
+      </g>
+    ))}
+  </svg>
+</div>
+<script>
+  const field = document.querySelector<HTMLElement>('.season-air');
+  if (field) {
+    let inView = false;
+    const paint = () =>
+      field.toggleAttribute('data-awake', inView && !document.hidden);
+    const observer = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      paint();
+    });
+    observer.observe(field);
+    document.addEventListener('visibilitychange', paint);
+    window.addEventListener('pagehide', () => observer.disconnect());
+    window.addEventListener('pageshow', () => observer.observe(field));
+  }
+</script>
+
+<style is:global>
+  .season-air {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: clip;
+  }
+  .air-origin {
+    position: absolute;
+    width: var(--w);
+    height: var(--w);
+    opacity: 0;
+  }
+  [data-airborne] .air-origin {
+    animation: entrain 3.6s cubic-bezier(0.16, 0.62, 0.26, 1) var(--lift) both;
+  }
+  .air-loop,
+  .air-origin i {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .air-loop {
+    animation: season-eddy var(--wind) ease-in-out var(--offset) infinite;
+  }
+  .air-origin i {
+    animation: tumble var(--beat) ease-in-out var(--offset) infinite;
+  }
+  .season-piece {
+    --skin: linear-gradient(
+      52deg,
+      #895a38 23%,
+      #bb8048 47%,
+      #e9bd7c 50%,
+      #ab673b 54%,
+      #9d673c 83%
+    );
+    --cut: polygon(
+      4% 88%,
+      29% 60%,
+      8% 58%,
+      16% 47%,
+      3% 31%,
+      32% 37%,
+      29% 13%,
+      44% 29%,
+      50% 1%,
+      59% 27%,
+      80% 13%,
+      76% 36%,
+      99% 26%,
+      89% 47%,
+      97% 55%,
+      71% 64%,
+      53% 65%,
+      31% 68%,
+      8% 94%
+    );
+  }
+  [data-season='autumn'] .season-piece[data-shape='1'],
+  [data-season='summer'] .season-piece {
+    --cut: polygon(
+      1% 87%,
+      12% 54%,
+      27% 33%,
+      40% 18%,
+      65% 10%,
+      100% 3%,
+      91% 31%,
+      75% 55%,
+      55% 69%,
+      33% 74%,
+      11% 77%
+    );
+  }
+  [data-season='autumn'] .season-piece[data-shape='2'] {
+    --skin: linear-gradient(
+      27deg,
+      #724b36,
+      #c79055 48%,
+      #d9ad74 51%,
+      #a06a3c 55%
+    );
+    --cut: polygon(
+      4% 93%,
+      14% 68%,
+      17% 48%,
+      25% 27%,
+      54% 13%,
+      86% 6%,
+      91% 18%,
+      80% 41%,
+      65% 62%,
+      40% 78%,
+      18% 76%
+    );
+  }
+  [data-season='summer'] .season-piece {
+    --skin: linear-gradient(
+      143deg,
+      #648153 24%,
+      #94aa67 48%,
+      #c8cc89 51%,
+      #758c51 55%
+    );
+  }
+  [data-season='summer'] .season-piece[data-shape='2'] {
+    --cut: polygon(0 95%, 35% 42%, 82% 5%, 100% 1%, 64% 24%, 27% 70%, 5% 99%);
+  }
+  [data-season='spring'] .season-piece {
+    --skin: radial-gradient(ellipse at 60% 24%, #f4d8e2, #dfa7bd 58%, #b77e9b);
+    --cut: polygon(
+      8% 75%,
+      13% 42%,
+      30% 15%,
+      51% 6%,
+      63% 11%,
+      70% 4%,
+      89% 12%,
+      96% 32%,
+      88% 56%,
+      61% 77%,
+      17% 89%
+    );
+  }
+  [data-season='winter'] .season-piece {
+    --skin: linear-gradient(42deg, #93b3c5, #eff7fa 54%, #a5becd);
+    --cut: polygon(
+      6% 51%,
+      26% 21%,
+      60% 10%,
+      85% 29%,
+      93% 62%,
+      67% 83%,
+      34% 85%
+    );
+  }
+  [data-season='winter'] .season-piece[data-shape='1'] {
+    --cut: polygon(
+      46% 0,
+      54% 0,
+      55% 36%,
+      84% 15%,
+      90% 22%,
+      62% 46%,
+      99% 46%,
+      99% 54%,
+      62% 55%,
+      90% 78%,
+      84% 85%,
+      55% 64%,
+      54% 100%,
+      46% 100%,
+      45% 64%,
+      16% 85%,
+      10% 78%,
+      38% 54%,
+      1% 54%,
+      1% 46%,
+      38% 46%,
+      10% 22%,
+      16% 15%,
+      45% 36%
+    );
+  }
+  [data-season] :is(.scatter, .air-loop) i.season-piece {
+    background: var(--skin);
+    clip-path: var(--cut);
+    border-radius: 0;
+  }
+  @keyframes entrain {
+    from {
+      opacity: 0;
+      transform: translate(var(--sx), var(--sy)) scale(0.45);
+    }
+    22% {
+      opacity: 0.64;
+    }
+    to {
+      opacity: 0.78;
+      transform: translate(0, 0);
+    }
+  }
+  @keyframes season-eddy {
+    0%,
+    100% {
+      transform: translate(-1.2vw, 1.2svh) rotate(-14deg);
+    }
+    28% {
+      transform: translate(5vw, -3.5svh) rotate(19deg);
+    }
+    56% {
+      transform: translate(1.6vw, -5.8svh) rotate(31deg);
+    }
+    80% {
+      transform: translate(-3.6vw, -1.8svh) rotate(-6deg);
+    }
+  }
+  @supports (offset-path: ellipse(1px 1px at center)) {
+    .air-loop {
+      offset-path: ellipse(3.2vw 2.1svh at center);
+      offset-rotate: 0deg;
+      animation: orbit var(--wind) linear var(--offset) infinite;
+    }
+    .air-origin:nth-child(-n + 6) .air-loop {
+      offset-path: ellipse(7vw 4.2svh at center);
+    }
+  }
+  @keyframes orbit {
+    from {
+      offset-distance: 0%;
+    }
+    to {
+      offset-distance: 100%;
+    }
+  }
+  .flight-story:not([data-airborne]) :is(.air-loop, .air-loop i) {
+    animation-play-state: paused;
+  }
+  @keyframes tumble {
+    0%,
+    100% {
+      transform: rotate(var(--bank)) rotateY(21deg);
+    }
+    48% {
+      transform: rotate(calc(var(--bank) + 66deg)) rotateY(74deg);
+    }
+    77% {
+      transform: rotate(calc(var(--bank) + 18deg)) rotateX(35deg);
+    }
+  }
+  .roof-ice {
+    display: none;
+    position: absolute;
+    top: 0;
+    right: 2%;
+    width: clamp(150px, 21vw, 340px);
+    height: clamp(43px, 8svh, 88px);
+    overflow: visible;
+    fill: #a8c9d9;
+  }
+  [data-season='winter'] .roof-ice {
+    display: block;
+    opacity: 0.69;
+  }
+  .ice-tip {
+    transform-origin: top;
+    animation: ice-grow var(--grow) ease-out both;
+  }
+  .ice-facet {
+    fill: #e3f4fc;
+  }
+  .ice-drop {
+    animation: ice-drip var(--drip) ease-in var(--grow) infinite;
+    opacity: 0;
+  }
+  @keyframes ice-grow {
+    from {
+      transform: scaleY(0.14);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+  @keyframes ice-drip {
+    0%,
+    58% {
+      opacity: 0;
+      transform: translateY(0);
+    }
+    68% {
+      opacity: 0.85;
+      transform: translateY(1px);
+    }
+    95%,
+    100% {
+      opacity: 0;
+      transform: translateY(43px);
+    }
+  }
+  .season-air:not([data-awake])
+    :is(.air-origin, .air-loop, .season-piece, .ice-tip, .ice-drop) {
+    animation-play-state: paused;
+  }
+  @media (max-width: 840px) {
+    .air-origin:nth-child(even) {
+      display: none;
+    }
+    .air-origin {
+      width: calc(var(--w) * 0.7);
+      height: calc(var(--w) * 0.7);
+    }
+    .air-origin:nth-child(n + 8) {
+      display: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .season-air .air-origin,
+    .ice-drop {
+      display: none;
+    }
+    .season-air .ice-tip {
+      animation: none;
+    }
+  }
+</style>

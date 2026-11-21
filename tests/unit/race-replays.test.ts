@@ -42,3 +42,22 @@ it('all six paths pass within the ring and accumulate three-dimensional distance
     }
   }
 });
+
+it('lets launched aircraft and their deposited light coast when scrolling away', () => {
+  const scene = new Scene(),
+    gate = new Group();
+  const replay = raceReplays(scene, gate);
+  replay.resize(16);
+  replay.update(1, 0, 0, 0);
+  replay.update(1.34, 610, 0, 610);
+  const swarm = scene.getObjectByName('Previous laps')!;
+  expect(replay.moving).toBe(true);
+  expect(swarm.getObjectByName('Replay 2')!.visible).toBe(true);
+  replay.update(1.36, 2000, 0, 610);
+  expect(swarm.getObjectByName('Replay 3')!.visible).toBe(false);
+  replay.update(1.36, 3400, 0, 610);
+  expect(swarm.getObjectByName('Replay 2')!.visible).toBe(false);
+  expect(replay.moving).toBe(true);
+  replay.update(1.36, 5200, 0, 610);
+  expect(replay.moving).toBe(false);
+});

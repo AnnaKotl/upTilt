@@ -98,6 +98,50 @@ function trace(i: number) {
         @pointerenter="hover"
         @focus="focusBook"
       >
+        <svg
+          class="pcb-island"
+          viewBox="-108 -58 216 116"
+          fill="none"
+          aria-hidden="true"
+        >
+          <g
+            v-for="mirror in [1, -1]"
+            :key="mirror"
+            :transform="`scale(${mirror} ${mirror})`"
+          >
+            <path
+              class="pcb-route"
+              d="M15 -13H36L44 -21H62 M15 -9H38L47 -17H57 M15 4H52L59 11H83 M6 -17V-29L14 -37H34 M19 14H38L52 28H70"
+            />
+            <g
+              v-for="x in [46, 54, 62]"
+              :key="x"
+              :transform="`translate(${x} -26)`"
+            >
+              <rect
+                x="-2.4"
+                y="-5.8"
+                width="4.8"
+                height="12"
+                rx=".8"
+                class="pcb-pad"
+              />
+              <rect
+                x="-2.6"
+                y="-3.2"
+                width="5.2"
+                height="6.4"
+                rx=".6"
+                class="pcb-body"
+              />
+            </g>
+            <rect x="71" y="21" width="12" height="8" rx="1" class="pcb-pad" />
+            <rect x="74" y="21" width="6" height="8" class="pcb-body" />
+            <circle cx="87" cy="11" r="2.8" class="pcb-via" />
+            <circle cx="36" cy="-37" r="1.8" class="pcb-via" />
+            <path class="pcb-silk" d="M42 -34h24v3 M69 20v-2h16v13h-4" />
+          </g>
+        </svg>
         <span class="book-chip"><Icon name="book" /></span>
       </a>
       <Transition name="branch-fade"
@@ -150,3 +194,48 @@ function trace(i: number) {
     </div>
   </nav>
 </template>
+
+<style scoped>
+.pcb-island {
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: clamp(10rem, 20vw, 23rem);
+  height: auto;
+  max-width: none;
+  transform: translate(-50%, -50%);
+  color: var(--muted);
+  opacity: 0.72;
+  transition: opacity 0.35s;
+}
+.pcb-route,
+.pcb-silk {
+  stroke: currentColor;
+  stroke-width: 0.65;
+  opacity: 0.65;
+}
+.pcb-silk {
+  opacity: 0.42;
+}
+.pcb-pad {
+  fill: color-mix(in srgb, var(--ink) 55%, var(--surface));
+}
+.pcb-body {
+  fill: var(--surface);
+  stroke: currentColor;
+  stroke-width: 0.6;
+}
+.pcb-via {
+  stroke: var(--accent);
+  stroke-width: 0.85;
+}
+[data-open='true'] .pcb-island {
+  opacity: 0.18;
+}
+@media (max-width: 840px), (max-height: 509px) {
+  .pcb-island {
+    width: 9rem;
+  }
+}
+</style>

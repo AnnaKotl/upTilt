@@ -438,6 +438,26 @@ test('parking at the gate plays the replays before the drawing, and re-arms on r
         behavior: 'instant',
       }),
     );
+  const chapter = (fraction: number) =>
+    page.locator('#motion').evaluate((gate, p) => {
+      const start = scrollY + gate.getBoundingClientRect().top;
+      scrollTo({
+        top:
+          p < 1
+            ? start * p
+            : start + gate.getBoundingClientRect().height * (p - 1),
+        behavior: 'instant',
+      });
+    }, fraction);
+  const equation = page.locator('.equation strong');
+  await chapter(0.6);
+  await expect(equation).toBeVisible();
+  const approaching = await equation.textContent();
+  await chapter(0.75);
+  await expect(equation).not.toHaveText(approaching!);
+  await expect(page.locator('.scene-stage .gate-sheet')).not.toHaveClass(
+    /is-ready/,
+  );
   await jump('#motion');
   await expect(story).toHaveAttribute('data-gate-phase', 'replays');
   await expect(
@@ -468,6 +488,11 @@ test('parking at the gate plays the replays before the drawing, and re-arms on r
   await page.mouse.move(station.x, station.y);
   await expect(slider).not.toHaveAttribute('aria-valuetext', time!);
   await page.screenshot({ path: test.info().outputPath('gate-study.png') });
+  await chapter(1.5);
+  await expect(page.locator('.scene-stage .gate-sheet')).not.toHaveClass(
+    /is-ready/,
+  );
+  await expect(equation).toBeVisible();
   await jump('#anatomy');
   await expect(story).toHaveAttribute('data-gate-phase', 'pass');
   await expect(

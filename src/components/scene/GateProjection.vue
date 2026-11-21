@@ -21,6 +21,29 @@ const studying = ref(false);
 const size = ref({ x: 1280, y: 800 });
 const selected = ref(0);
 const step = ref(75);
+const progress = ref(-1);
+const elapsed = ref(0);
+const primary = computed(
+  () => live.value && progress.value >= 0 && progress.value < 0.979,
+);
+function ramp(x: number, from: number, to: number) {
+  const a = Math.min(1, Math.max(0, (x - from) / (to - from)));
+  return a * a * (3 - 2 * a);
+}
+const quantities = computed(() =>
+  !live.value
+    ? 1
+    : ramp(progress.value, 0.45, 0.61) * (1 - ramp(progress.value, 1.53, 1.68)),
+);
+const drawing = computed(() =>
+  !live.value
+    ? 1
+    : ramp(progress.value, 0.977, 0.98) *
+      (1 - ramp(progress.value, 1.32, 1.48)),
+);
+const grid = computed(() =>
+  !live.value || studying.value ? 1 : ramp(elapsed.value, 0.35, 2.1),
+);
 let resize: ResizeObserver | undefined;
 let state: MutationObserver | undefined;
 
@@ -29,8 +52,22 @@ onMounted(() => {
   stage.value = story.querySelector<HTMLElement>('.scene-stage')!;
   const update = () => {
     live.value = !!story.dataset.live;
-    studying.value = !live.value || story.dataset.gatePhase === 'study';
-    if (!studying.value) {
+    const [p, seconds, index] = (story.dataset.gateSample || '-1,0,0')
+      .split(',')
+      .map(Number);
+    progress.value = p;
+    elapsed.value = seconds;
+    const phase = story.dataset.gatePhase;
+    const wasStudying = studying.value;
+    studying.value = !live.value || phase === 'study';
+    if (live.value && phase === 'replays') {
+      // Follow one airborne aircraft through its pass, then pick up the next.
+      selected.value = index ?? 0;
+      const lap = laps[selected.value];
+      step.value = Math.round(
+        120 * Math.max(0, Math.min(1, (seconds - lap.launch) / lap.duration)),
+      );
+    } else if (studying.value && !wasStudying) {
       selected.value = 0;
       step.value = 75;
     }
@@ -46,7 +83,7 @@ onMounted(() => {
   state = new MutationObserver(update);
   state.observe(story, {
     attributes: true,
-    attributeFilter: ['data-live', 'data-gate-phase'],
+    attributeFilter: ['data-live', 'data-gate-phase', 'data-gate-sample'],
   });
   update();
 });
@@ -95,8 +132,8 @@ const paths = computed(() =>
   ),
 );
 const primaryPath = computed(() =>
-  Array.from({ length: 81 }, (_, i) => {
-    const [x, y] = gatePoint(0.48 + i / 160, width.value);
+  Array.from({ length: 121 }, (_, i) => {
+    const [x, y] = gatePoint((0.98 * i) / 120, width.value);
     return (
       ((0.5 + x / width.value) * size.value.x).toFixed(1) +
       ',' +
@@ -115,6 +152,18 @@ const velocity = computed(() => {
   const [x, y, z] = a.map((value, axis) => (b[axis] - value) / dt);
   return { x, y, speed: Math.hypot(x, y, z) };
 });
+// All three components and the path length use the same centreline diameter.
+const displacement = computed(() => {
+  const from = primary.value
+    ? gatePoint(0, width.value)
+    : tracks.value[selected.value][0].point;
+  const to = primary.value
+    ? gatePoint(progress.value, width.value)
+    : active.value.point;
+  const unit = primary.value ? ringDiameter(width.value) : 1;
+  return to.map((v, i) => (v - from[i]) / unit);
+});
+const distance = computed(() => Math.hypot(...displacement.value));
 const arrow = computed(() => {
   const { x, y } = velocity.value;
   return {
@@ -122,11 +171,14 @@ const arrow = computed(() => {
     y: active.value.y - 0.1 * y * scale.value,
   };
 });
-const fmt = (value: number) =>
-  value.toLocaleString(uk.value ? 'uk-UA' : 'en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+const numberFormat = computed(
+  () =>
+    new Intl.NumberFormat(uk.value ? 'uk-UA' : 'en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }),
+);
+const fmt = (value: number) => numberFormat.value.format(value);
 const time = computed(
   () => active.value.fraction * laps[selected.value].duration,
 );
@@ -159,13 +211,15 @@ function probe(event: PointerEvent) {
     ref="surface"
     class="gate-study"
     :class="{ 'is-live': live, 'is-ready': studying }"
-    :inert="!studying"
+    :inert="quantities === 0"
+    :style="{ '--readouts': quantities }"
     :aria-label="uk ? 'Кінематика прольоту' : 'Flight kinematics'"
   >
     <Teleport :to="stage || 'body'" :disabled="!stage || !live">
       <svg
         class="gate-sheet"
-        :class="{ 'is-ready': studying }"
+        :class="{ 'is-ready': drawing > 0 }"
+        :style="{ '--drawing': drawing, '--grid': grid }"
         :viewBox="`0 0 ${size.x} ${size.y}`"
         aria-hidden="true"
       >
@@ -211,9 +265,20 @@ function probe(event: PointerEvent) {
             <path d="M0 0 6 3 0 6Z" fill="context-stroke" />
           </marker>
         </defs>
-        <rect width="100%" height="100%" fill="url(#gate-minor)" />
-        <rect width="100%" height="100%" fill="url(#gate-major)" />
+        <rect
+          class="graph-paper"
+          width="100%"
+          height="100%"
+          fill="url(#gate-minor)"
+        />
+        <rect
+          class="graph-paper"
+          width="100%"
+          height="100%"
+          fill="url(#gate-major)"
+        />
         <path
+          :style="{ transformOrigin: origin.x + 'px ' + origin.y + 'px' }"
           :d="`M0 ${origin.y}H${size.x} M${origin.x} 0V${size.y}`"
           class="datum"
         />
@@ -232,16 +297,18 @@ function probe(event: PointerEvent) {
           <ellipse :rx="(scale / 2) * Math.cos(gateYaw)" :ry="scale / 2" />
         </g>
         <g class="lap-lines" fill="none">
-          <polyline
-            v-for="(points, i) in paths"
-            :key="i"
-            :points="points"
-            :stroke="laps[i].color"
-            :class="{ 'current-lap': i === selected }"
-          />
+          <g :opacity="studying ? 1 : 0" class="survey-lines">
+            <polyline
+              v-for="(points, i) in paths"
+              :key="i"
+              :points="points"
+              :stroke="laps[i].color"
+              :class="{ 'current-lap': i === selected }"
+            />
+          </g>
           <polyline :points="primaryPath" class="primary-path" />
         </g>
-        <g :fill="laps[selected].color" opacity=".8">
+        <g v-if="studying" :fill="laps[selected].color" opacity=".8">
           <circle
             v-for="(tick, i) in ticks"
             :key="i"
@@ -252,12 +319,16 @@ function probe(event: PointerEvent) {
         </g>
         <g
           :transform="`translate(${origin.x + scale * 0.49},${origin.y})`"
-          class="dimension"
+          class="dimension graph-paper"
         >
           <path :d="`M0 ${-scale / 2}v${scale}m-4 0h8M-4 ${-scale / 2}h8`" />
           <text x="8" y="-7">D</text>
         </g>
-        <g :style="{ '--lap': laps[selected].color }" class="station">
+        <g
+          v-if="studying"
+          :style="{ '--lap': laps[selected].color }"
+          class="station"
+        >
           <line
             :x1="active.x"
             :y1="active.y"
@@ -270,8 +341,9 @@ function probe(event: PointerEvent) {
         </g>
       </svg>
     </Teleport>
-    <template v-if="studying">
+    <template v-if="quantities > 0">
       <svg
+        v-if="studying"
         class="gate-hit"
         :viewBox="`0 0 ${size.x} ${size.y}`"
         aria-hidden="true"
@@ -283,9 +355,24 @@ function probe(event: PointerEvent) {
       <figcaption>
         <span>{{ uk ? 'Кінематика прольоту' : 'Flight kinematics' }}</span>
         <small>{{ uk ? 'D — діаметр кільця' : 'D = gate diameter' }}</small>
+        <div class="equation">
+          <small>{{
+            uk ? 'Переміщення від старту' : 'Displacement from launch'
+          }}</small>
+          <div>‖Δr‖ = √(Δx² + Δy² + Δz²)</div>
+          <div class="substitution">
+            √({{
+              displacement
+                .map((value) => fmt(Math.abs(value)) + '²')
+                .join(' + ')
+            }}) D
+          </div>
+          <strong>≈ {{ fmt(distance) }} D</strong>
+        </div>
       </figcaption>
       <div class="lap-controls" :style="{ '--lap': laps[selected].color }">
         <div
+          v-if="!primary"
           class="lap-pick"
           role="group"
           :aria-label="uk ? 'Попередні прольоти' : 'Previous passes'"
@@ -295,7 +382,7 @@ function probe(event: PointerEvent) {
             {{ String(selected + 1).padStart(2, '0') }}</span
           >
           <button
-            v-for="(lap, i) in laps"
+            v-for="(lap, i) in studying ? laps : []"
             :key="lap.color"
             :style="{ '--lap': lap.color }"
             :aria-pressed="i === selected"
@@ -303,7 +390,13 @@ function probe(event: PointerEvent) {
             @click="selected = i"
           ></button>
         </div>
-        <div class="measurements">
+        <div v-if="primary" class="measurements">
+          <span v-for="(v, i) in displacement" :key="i"
+            ><em>Δ{{ ['x', 'y', 'z'][i] }}</em
+            ><b>{{ fmt(v) }}</b> D</span
+          >
+        </div>
+        <div v-else class="measurements">
           <span
             ><em>{{ uk ? 'Час' : 'Time' }}</em> <b>{{ fmt(time) }}</b>
             {{ uk ? 'с' : 's' }}</span
@@ -318,6 +411,7 @@ function probe(event: PointerEvent) {
           >
         </div>
         <input
+          v-if="studying"
           type="range"
           min="0"
           max="120"
@@ -325,7 +419,13 @@ function probe(event: PointerEvent) {
           :aria-label="uk ? 'Час від початку прольоту' : 'Time since launch'"
           :aria-valuetext="fmt(time) + (uk ? ' с' : ' s')"
         />
-        <small
+        <small v-if="!primary" class="mean-speed"
+          >{{ uk ? 'Середня швидкість' : 'Mean speed' }} · s/t =
+          {{ time > 0 ? fmt(active.length / time) : '—' }} D/{{
+            uk ? 'с' : 's'
+          }}</small
+        >
+        <small v-if="studying"
           >v = ds/dt <span class="time-key">●</span>
           {{ uk ? 'кожні 0,25 с' : 'every 0.25 s' }}</small
         >
@@ -363,7 +463,7 @@ function probe(event: PointerEvent) {
 }
 .gate-sheet.is-ready {
   visibility: visible;
-  opacity: 1;
+  opacity: var(--drawing, 1);
 }
 .gate-sheet .datum,
 .dimension path {
@@ -371,6 +471,44 @@ function probe(event: PointerEvent) {
   fill: none;
   stroke-width: 1;
   opacity: 0.52;
+}
+.graph-paper {
+  opacity: var(--grid, 1);
+  transition: opacity 0.5s;
+}
+.survey-lines {
+  transition: opacity 0.65s;
+}
+.gate-study {
+  opacity: var(--readouts, 1);
+  transition: opacity 0.25s;
+}
+.equation {
+  margin-top: clamp(0.4rem, 1.8vh, 1.3rem);
+  font-variant-numeric: tabular-nums;
+}
+.equation div {
+  margin: 0.25em 0;
+  color: var(--ink);
+}
+.equation .substitution {
+  color: var(--muted);
+  font-size: 0.84em;
+}
+.equation strong {
+  font-weight: 500;
+  color: var(--accent);
+}
+.mean-speed {
+  display: block;
+  margin: 0.4em 0;
+}
+.gate-sheet .datum {
+  transform: scale(0);
+  transition: transform 0.85s cubic-bezier(0.2, 0.7, 0.24, 1);
+}
+.gate-sheet.is-ready .datum {
+  transform: scale(1);
 }
 .datum {
   stroke-dasharray: 9 5 2 5;
@@ -458,7 +596,12 @@ small {
   margin-right: 0.8rem;
   color: var(--ink);
 }
+.lap-pick button:is(:hover, :focus-visible)::before {
+  transform: scale(1.25);
+  box-shadow: 0 0 7px var(--lap);
+}
 .lap-pick button {
+  cursor: pointer;
   width: 1.7rem;
   height: 2rem;
   display: grid;
@@ -539,11 +682,14 @@ input::-moz-range-thumb {
     font-size: 0.68rem;
   }
   .lap-pick button {
-    width: 1.45rem;
+    width: 1.65rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .gate-sheet,
+  .gate-sheet .datum,
+  .graph-paper,
+  .survey-lines,
   figcaption,
   .lap-controls {
     animation: none;

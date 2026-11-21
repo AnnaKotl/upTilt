@@ -430,7 +430,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     anchors = chapters.map((el) => el.getBoundingClientRect().top + scrollY);
     scroll();
   }
-  let scrollTime = 0;
+  let scrollTime = 0,
+    lastSample = -Infinity;
   function scroll() {
     scrollTime = performance.now();
     let i = 0;
@@ -697,6 +698,20 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const gatePhase = ghosts.update(p, now, day, scrollTime);
     if (story.dataset.gatePhase !== gatePhase)
       story.dataset.gatePhase = gatePhase;
+    // Limit numerical readouts independently of the frame rate of the 3D scene.
+    if (p >= 0.36 && p < 1.7) {
+      if (now - lastSample >= 80 || (p === goal && gatePhase !== 'replays')) {
+        const sample =
+          p.toFixed(3) +
+          ',' +
+          Math.min(ghosts.elapsed, 8).toFixed(2) +
+          ',' +
+          ghosts.followed;
+        if (story.dataset.gateSample !== sample)
+          story.dataset.gateSample = sample;
+        lastSample = now;
+      }
+    } else if (story.dataset.gateSample) delete story.dataset.gateSample;
     gate.accent.emissiveIntensity =
       (1 - day) * (0.56 + 0.12 * Math.sin(now * 0.0019));
     gateShade.visible = gate.root.visible;
@@ -792,6 +807,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       story.dispatchEvent(new Event('scene-painted'));
     }
     if (
+      ghosts.moving ||
       gatePhase === 'replays' ||
       spinning ||
       (elapsed < 3.72 && p < 0.45) ||
@@ -894,6 +910,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     disposed = true;
     delete story.dataset.live;
     delete story.dataset.gatePhase;
+    delete story.dataset.gateSample;
     const pin = chapters[3].firstElementChild as HTMLElement;
     pin.style.removeProperty('--power-x');
     pin.style.removeProperty('--power-y');

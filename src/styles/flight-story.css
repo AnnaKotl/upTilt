@@ -230,56 +230,8 @@
   top: var(--y);
   width: var(--sz);
   aspect-ratio: 1.32;
-  background: linear-gradient(36deg, #996341 0 47%, #d8a16c 50%, #bb7947 55%);
   transform: scaleY(0.63) rotate(var(--r));
-  clip-path: polygon(
-    0 76%,
-    27% 54%,
-    7% 40%,
-    30% 38%,
-    22% 15%,
-    44% 32%,
-    50% 0%,
-    61% 28%,
-    85% 13%,
-    77% 39%,
-    100% 34%,
-    81% 55%,
-    92% 64%,
-    60% 74%,
-    44% 68%,
-    7% 85%
-  );
   opacity: 0.92;
-}
-[data-season='spring'] .scatter i {
-  clip-path: ellipse(47% 40% at 50% 50%);
-  border-radius: 70% 20% 65% 10%;
-  background: linear-gradient(30deg, #bc7998, #ecc3d5);
-}
-[data-season='summer'] .scatter i {
-  clip-path: none;
-  border-radius: 100% 0 100% 0;
-  background: linear-gradient(146deg, #778e54 46%, #c2d98c 50%, #90a669 55%);
-}
-[data-season='winter'] .scatter i {
-  background: #a9cddd;
-  clip-path: polygon(
-    48% 0,
-    63% 29%,
-    87% 22%,
-    79% 48%,
-    100% 67%,
-    69% 72%,
-    62% 100%,
-    42% 82%,
-    18% 98%,
-    21% 69%,
-    0 56%,
-    21% 42%,
-    15% 21%,
-    40% 26%
-  );
 }
 .blown i {
   animation: downwash 2.12s linear var(--delay) both;
