@@ -198,22 +198,20 @@
 }
 .gallery-frame button:not([hidden]) {
   position: absolute;
-  right: 0.65rem;
-  bottom: 0.65rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-height: 44px;
-  padding-inline: 0.7rem;
-  border: 1px solid var(--line);
-  border-radius: 0.35rem;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid var(--muted);
+  border-radius: 50%;
   background: var(--surface);
   color: var(--ink);
-  font-size: 0.75rem;
-  font-weight: 650;
 }
 .gallery-frame button svg {
-  width: 0.95rem;
+  width: 1.4rem;
+  fill: currentColor;
 }
 .gallery-frame button:is(:hover, :focus-visible) {
   color: var(--accent);
@@ -389,4 +387,135 @@
       opacity: 0;
     }
   }
+}
+
+[data-knowledge] .reading-page h1 {
+  font:
+    400 clamp(1.05rem, 2.5vw, 2.35rem)/1.55 'Press Start 2P',
+    monospace;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.knowledge-lead,
+.lesson-body p:first-child {
+  font-size: clamp(1.05rem, 1.5vw, 1.24rem);
+  max-width: 62ch;
+  color: var(--ink);
+  line-height: 1.7;
+}
+.reference-line {
+  margin-block: 2rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+  font: 0.84rem/1.65 var(--font-mono);
+  color: var(--muted);
+}
+.reference-line a:hover,
+.reference-line a:focus-visible {
+  color: var(--accent);
+}
+.gallery-entry .gallery-previews {
+  margin-block: 1rem;
+}
+.lesson-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  justify-items: stretch;
+  gap: 0.45rem 1.5rem;
+}
+.lesson-list li {
+  border-top: 1px solid var(--line);
+}
+.lesson-list a {
+  display: flex;
+  justify-content: space-between;
+  padding-block: 0.6rem;
+}
+.search-query {
+  font:
+    700 1.5rem/1.5 Play,
+    sans-serif;
+  overflow-wrap: anywhere;
+}
+.search-status,
+.search-results small,
+.search-facets,
+.more-results {
+  font: 0.82rem/1.6 var(--font-mono);
+  color: var(--muted);
+}
+.search-facets {
+  display: flex;
+  gap: 0.3rem 1.1rem;
+  flex-wrap: wrap;
+  margin-block: 1rem;
+}
+.search-facets a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  border-bottom: 1px solid var(--line);
+}
+.search-facets [aria-current],
+.search-results a:is(:focus-visible, :hover) h2 {
+  color: var(--accent);
+}
+.search-results {
+  max-width: 50rem;
+}
+.search-results li {
+  border-top: 1px solid var(--line);
+}
+.search-results a {
+  display: block;
+  padding-block: 1.15rem;
+}
+.search-results h2 {
+  font:
+    700 clamp(1.15rem, 2vw, 1.55rem)/1.5 Play,
+    sans-serif;
+}
+.search-results p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+.search-results mark {
+  background: transparent;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 0.24em;
+}
+.more-results {
+  min-height: 44px;
+  min-width: 44px;
+  border: 1px solid var(--line);
+}
+.sim-compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 1rem 1.5rem;
+}
+.sim-compare a {
+  display: grid;
+  gap: 0.3rem;
+  border-top: 1px solid var(--line);
+  padding-block: 0.75rem;
+}
+.sim-compare a:is(:hover, :focus-visible) strong {
+  color: var(--accent);
+}
+.sim-compare span,
+.sim-compare small {
+  color: var(--muted);
+  font: 0.8rem/1.6 var(--font-mono);
+}
+
+.crumbs .plain-back {
+  position: relative;
+}
+.crumbs .plain-back .hint {
+  left: 0;
+  top: auto;
+  bottom: 100%;
+  transform: none;
 }

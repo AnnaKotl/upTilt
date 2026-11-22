@@ -1,0 +1,20 @@
+---
+import SiteLayout from '../../../layouts/SiteLayout.astro';
+import KnowledgeCrumbs from '../../../components/knowledge/KnowledgeCrumbs.astro';
+import SearchResults from '../../../components/knowledge/SearchResults.vue';
+import { locales, type Locale } from '../../../lib/i18n';
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang } }));
+}
+const locale = Astro.params.lang as Locale;
+const path = 'knowledge/search';
+const title = locale === 'uk' ? 'Пошук' : 'Search';
+---
+
+<SiteLayout {locale} {title} {path}>
+  <section class="reading-page">
+    <KnowledgeCrumbs {locale} trail={[{ title, path }]} />
+    <h1>{title}</h1>
+    <SearchResults client:load {locale} />
+  </section>
+</SiteLayout>

@@ -7,6 +7,7 @@ const edgetxAssets =
 
 export const firmwareMedia: MediaEntry[] = [
   {
+    id: 'betaflight-app',
     name: 'Betaflight App',
     featured: true,
     description: {
@@ -46,6 +47,7 @@ export const firmwareMedia: MediaEntry[] = [
     ],
   },
   {
+    id: 'edgetx-interface',
     name: 'EdgeTX',
     featured: true,
     description: {
@@ -79,3 +81,13 @@ export const firmwareMedia: MediaEntry[] = [
     ],
   },
 ];
+
+export const inavNote = {
+  id: 'inav',
+  title: { uk: 'Якщо на платі встановлено INAV', en: 'If the board runs INAV' },
+  text: {
+    uk: 'INAV має власний настільний Configurator для сумісних плат і версій. За назвою плати та версією прошивки звіряй, який застосунок потрібен саме тобі.',
+    en: 'INAV has its own desktop Configurator for compatible boards and firmware versions. Check the board name and firmware version to find the right application.',
+  },
+  url: 'https://github.com/iNavFlight/inav-configurator/releases',
+};

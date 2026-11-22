@@ -1,0 +1,134 @@
+---
+import { simulators, accessLabels } from '../../data/simulators';
+import type { Locale } from '../../lib/i18n';
+import Icon from '../ui/Icon.vue';
+const { locale } = Astro.props as { locale: Locale };
+const uk = locale === 'uk';
+const platforms = [...new Set(simulators.flatMap((item) => item.platforms))];
+---
+
+<section class="reading-note" data-comparison>
+  <h2>{uk ? 'Порівняння версій для ПК' : 'Desktop editions'}</h2>
+  <details class="comparison-filter" hidden>
+    <summary
+      title={uk ? 'Фільтри' : 'Filters'}
+      aria-label={uk ? 'Фільтри' : 'Filters'}
+    >
+      <Icon name="filter" />
+    </summary>
+    <label>
+      <span id="filter-platform">{uk ? 'Платформа' : 'Platform'}</span>
+      <select data-platform aria-labelledby="filter-platform">
+        <option value="">{uk ? 'Усі' : 'All'}</option>
+        {platforms.map((p) => (
+          <option>{p}</option>
+        ))}
+      </select>
+    </label>
+    <label>
+      <span id="filter-access">{uk ? 'Доступ' : 'Access'}</span>
+      <select data-access aria-labelledby="filter-access">
+        <option value="">{uk ? 'Усі' : 'All'}</option>
+        {Object.entries(accessLabels).map(([value, label]) => (
+          <option value={value}>{label[locale]}</option>
+        ))}
+      </select>
+    </label>
+  </details>
+  <div class="sim-compare">
+    {simulators.map((item) => (
+      <a
+        href={'#' + item.id}
+        data-platforms={item.platforms.join(' ')}
+        data-access={item.access}
+      >
+        <strong>{item.name} ↘</strong>
+        <span>{item.platforms.join(' / ')}</span>
+        <small>{accessLabels[item.access][locale]}</small>
+      </a>
+    ))}
+  </div>
+  <p role="status" hidden data-none>
+    {uk
+      ? 'Для цих умов немає симуляторів.'
+      : 'No simulators match these filters.'}
+  </p>
+  <p class="reference-line">
+    {uk
+      ? 'Платформи та умови доступу звірено 22.11.2026. Офіційна сторінка є в кожній картці.'
+      : 'Platforms and access checked on 22 November 2026. Each entry links to its official listing.'}
+  </p>
+</section>
+<script>
+  const comparison = document.querySelector<HTMLElement>('[data-comparison]');
+  if (comparison) {
+    const filters = comparison.querySelector('details')!;
+    const platform =
+      filters.querySelector<HTMLSelectElement>('[data-platform]')!;
+    const access = filters.querySelector<HTMLSelectElement>('[data-access]')!;
+    const entries =
+      comparison.querySelectorAll<HTMLAnchorElement>('.sim-compare a');
+    const none = comparison.querySelector<HTMLElement>('[data-none]')!;
+    const gallery = document.querySelector<HTMLElement>('.knowledge-gallery')!;
+    function update() {
+      let visible = 0;
+      for (const entry of entries) {
+        const match =
+          (!platform.value ||
+            entry.dataset.platforms!.split(' ').includes(platform.value)) &&
+          (!access.value || entry.dataset.access === access.value);
+        entry.hidden = !match;
+        const card = document.getElementById(entry.hash.slice(1))!;
+        card.hidden = !match;
+        if (match) visible++;
+        else {
+          // A hidden card must not keep playing audio in the background.
+          const player = card.querySelector('iframe');
+          if (player) player.dispatchEvent(new Event('dismiss-preview'));
+        }
+      }
+      none.hidden = visible > 0;
+      gallery.hidden = !visible;
+    }
+    filters.hidden = false;
+    filters.addEventListener('change', update);
+    window.addEventListener('pageshow', update);
+  }
+</script>
+<style>
+  .comparison-filter {
+    margin-block: 0.75rem;
+    color: var(--muted);
+  }
+  .comparison-filter summary {
+    display: grid;
+    place-items: center;
+    list-style: none;
+    border: 1px solid var(--line);
+    width: 44px;
+    height: 44px;
+    border-radius: 0.5rem;
+    cursor: pointer;
+  }
+  .comparison-filter summary::-webkit-details-marker {
+    display: none;
+  }
+  .comparison-filter summary svg {
+    width: 1.15rem;
+  }
+  .comparison-filter[open] summary {
+    color: var(--accent);
+  }
+  .comparison-filter label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font: 0.82rem var(--font-mono);
+    margin: 0.65rem 1rem 0.25rem 0;
+  }
+  .comparison-filter select {
+    background: var(--panel);
+    color: var(--ink);
+    padding: 0.5rem;
+  }
+</style>

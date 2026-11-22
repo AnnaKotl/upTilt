@@ -1,0 +1,49 @@
+---
+import SiteLayout from '../../../../layouts/SiteLayout.astro';
+import KnowledgeCrumbs from '../../../../components/knowledge/KnowledgeCrumbs.astro';
+import MediaGallery from '../../../../components/knowledge/MediaGallery.astro';
+import SimulatorExercises from '../../../../components/knowledge/SimulatorExercises.astro';
+import { simulatorSections } from '../../../../data/simulator-sections';
+import SimulatorComparison from '../../../../components/knowledge/SimulatorComparison.astro';
+import { simulators } from '../../../../data/simulators';
+import { locales, type Locale } from '../../../../lib/i18n';
+export function getStaticPaths() {
+  return locales.flatMap((lang) =>
+    simulatorSections.map((section) => ({
+      params: { lang, section: section.id },
+      props: { section },
+    })),
+  );
+}
+const locale = Astro.params.lang as Locale;
+const { section } = Astro.props;
+const uk = locale === 'uk';
+const i = uk ? 0 : 1;
+const root = 'knowledge/simulators';
+const path = root + '/' + section.id;
+const title = section.title[i];
+---
+
+<SiteLayout locale={locale} path={path} title={title}>
+  <article class="reading-page">
+    <KnowledgeCrumbs
+      locale={locale}
+      trail={[
+        { title: uk ? 'Симулятори' : 'Simulators', path: root },
+        { title, path },
+      ]}
+    />
+    <h1>{title}</h1>
+    <p class="knowledge-lead">{section.intro[i]}</p>
+    {section.id === 'catalog' && <SimulatorComparison {locale} />}
+    {section.id === 'catalog' ? (
+      <MediaGallery
+        locale={locale}
+        items={simulators}
+        title={uk ? 'Віртуальні середовища' : 'Virtual environments'}
+      />
+    ) : (
+      <SimulatorExercises locale={locale} />
+    )}
+  </article>
+</SiteLayout>

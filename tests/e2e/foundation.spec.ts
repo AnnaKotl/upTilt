@@ -164,17 +164,24 @@ test('book, section bookmarks and search serve different routes', async ({
   await search.click();
   await expect(query).toHaveValue('flight physics');
   await query.press('Enter');
-  await expect(page.locator('.topic-row:visible')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Clear search' }).click();
-  await expect(query).toHaveValue('');
-  await expect(page.locator('.topic-row:visible')).toHaveCount(1);
-  await query.press('Enter');
-  await expect(page.locator('.topic-row:visible')).toHaveCount(9);
-  await query.press('Escape');
-  await page.getByRole('link', { name: /Flight physics/ }).click();
+  await expect(page).toHaveURL(/knowledge\/search\/\?q=flight\+physics/);
+  await page
+    .locator('.search-results')
+    .getByRole('link', { name: /Flight physics/ })
+    .first()
+    .click();
   await expect(
     page.getByRole('heading', { name: 'What does a force arrow show?' }),
   ).toBeVisible();
+  await page.goBack();
+  await expect(page.locator('.search-query')).toContainText('flight physics');
+  await search.click();
+  await page.getByRole('button', { name: 'Clear search' }).click();
+  await expect(query).toHaveValue('');
+  await expect(query).toBeFocused();
+  await query.press('Escape');
+  await page.locator('.crumbs .plain-back').click();
+  await expect(page).toHaveURL(/knowledge\/$/);
 });
 
 test('radio lessons keep their breadcrumb path when switching languages', async ({
@@ -190,7 +197,7 @@ test('radio lessons keep their breadcrumb path when switching languages', async 
   await page.locator('[data-language]').click();
   await expect(page.getByRole('heading', { name: 'Wavelength' })).toBeVisible();
   const trail = page.getByRole('navigation', { name: 'Breadcrumbs' });
-  await trail.getByRole('link', { name: 'Radio waves' }).click();
+  await trail.getByRole('link', { name: 'Radio waves', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'Radio waves' }),
   ).toBeVisible();
@@ -199,11 +206,9 @@ test('radio lessons keep their breadcrumb path when switching languages', async 
 test('switching languages keeps the selected part and section', async ({
   page,
 }) => {
-  await page.goto('uk/');
-  await page
-    .locator('#anatomy')
-    .evaluate((el) => el.scrollIntoView({ behavior: 'instant' }));
+  await page.goto('uk/#anatomy');
   await page.getByRole('button', { name: 'Камера FPV' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('link', { name: 'Switch to English' }).click();
   await expect(
@@ -289,6 +294,7 @@ test('firmware and simulator galleries keep previews on-page and open sources in
   await expect(page).toHaveURL(/\/uk\/knowledge\/firmware\/$/);
 
   await page.goto('uk/knowledge/simulators/');
+  await page.getByRole('link', { name: 'Каталог симуляторів' }).click();
   await expect(
     page.getByRole('heading', { name: 'FPV Freerider' }),
   ).toBeVisible();
@@ -298,7 +304,66 @@ test('firmware and simulator galleries keep previews on-page and open sources in
     'src',
     /youtube-nocookie\.com\/embed\/FUo5vAgkB3g/,
   );
-  await page.getByRole('link', { name: 'До вправ', exact: false }).click();
+  await page.getByLabel('Фільтри', { exact: true }).click();
+  await page.getByLabel('Платформа').selectOption('Linux');
+  await expect(page.locator('#uncrashed')).toBeHidden();
+  await expect(page.locator('.gallery-frame iframe')).toHaveCount(0);
+  await page.getByLabel('Доступ', { exact: true }).selectOption('free');
+  await expect(page.locator('.gallery-entry:visible')).toHaveCount(1);
+  await page.locator('.crumbs .plain-back').click();
+  await page.getByRole('link', { name: 'Вправи в симуляторі' }).click();
   await expect(page.locator('#practice li')).toHaveCount(8);
   await expect(page.getByRole('heading', { name: 'Вісімка' })).toBeVisible();
+});
+
+test('Ukrainian search links to exact materials and keeps category context', async ({
+  page,
+}) => {
+  await page.goto('uk/knowledge/radio/');
+  await page.getByRole('button', { name: 'Знайти тему' }).click();
+  const input = page.getByRole('searchbox');
+  await input.fill('частоти');
+  await input.press('Enter');
+  await expect(page.locator('.search-results li').first()).toContainText(
+    'Частота й період',
+  );
+  await expect(page.locator('.search-results mark').first()).toBeVisible();
+  await page.goto('uk/knowledge/search/?q=OSD');
+  await page
+    .locator('.search-facets a')
+    .filter({ hasText: 'FPV-окуляри' })
+    .click();
+  await expect(page).toHaveURL(/topic=video/);
+  await page.locator('.search-results a').first().click();
+  await expect(page).toHaveURL(/video\/osd\/$/);
+  await page.goBack();
+  await expect(page.locator('.search-facets [aria-current]')).toContainText(
+    'FPV-окуляри',
+  );
+  await page.goto('uk/knowledge/search/?q=Liftoff');
+  await page
+    .locator('.search-results a')
+    .filter({ hasText: 'Micro Drones' })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/catalog\/#micro-drones$/);
+  await expect(page.locator('#micro-drones')).toBeInViewport();
+  await page.goto('uk/knowledge/search/?q=wavelength');
+  await expect(page.locator('.search-results li').first()).toContainText(
+    'Довжина хвилі',
+  );
+  await page.goto('uk/knowledge/search/?q=zzqxzzqxzzqx');
+  await expect(page.getByRole('status')).toContainText('Збігів немає');
+});
+test('start routes localise with the hero and keep the mobile path reachable', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('uk/#start');
+  const start = page.locator('#start');
+  await expect(start.locator('h2')).toHaveText('З чого почати?');
+  await page.locator('[data-language]').click();
+  await expect(start.locator('h2')).toHaveText('Where to start?');
+  await start.getByRole('link', { name: /I fly in a simulator/ }).click();
+  await expect(page).toHaveURL(/en\/knowledge\/fundamentals\/axes\/$/);
 });

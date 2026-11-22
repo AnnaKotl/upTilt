@@ -1,5 +1,6 @@
 export const simulatorExercises = [
   {
+    id: 'hover',
     title: ['Зліт і зависання', 'Takeoff and hover'],
     text: [
       'Піднімися над міткою на невелику висоту й протримайся над нею десять секунд.',
@@ -11,6 +12,7 @@ export const simulatorExercises = [
     ],
   },
   {
+    id: 'landing',
     title: ['Посадка на мітку', 'Landing on a marker'],
     text: [
       'Підлети до мітки на малій швидкості, загальмуй над нею й плавно опустися.',
@@ -22,6 +24,7 @@ export const simulatorExercises = [
     ],
   },
   {
+    id: 'out-and-back',
     title: ['Пряма з поверненням', 'Out and back'],
     text: [
       'Пролети від однієї мітки до іншої, виконай широкий розворот і повернися тією самою прямою.',
@@ -33,6 +36,7 @@ export const simulatorExercises = [
     ],
   },
   {
+    id: 'rectangle',
     title: ['Прямокутник', 'Rectangle'],
     text: [
       'Облети чотири орієнтири. Після кожного повороту зроби коротку пряму ділянку. Повтори у зворотному напрямку.',
@@ -44,6 +48,7 @@ export const simulatorExercises = [
     ],
   },
   {
+    id: 'orbit',
     title: ['Орбіта', 'Orbit'],
     text: [
       'Вибери один орієнтир. Облети його по широкому колу, тримаючи в кадрі, потім зміни напрямок.',
@@ -55,6 +60,7 @@ export const simulatorExercises = [
     ],
   },
   {
+    id: 'slalom',
     title: ['Змійка', 'Slalom'],
     text: [
       'Візьми три або чотири віртуальні стійки в ряд і обходь їх почергово зліва та справа.',
@@ -66,6 +72,7 @@ export const simulatorExercises = [
     ],
   },
   {
+    id: 'figure-eight',
     title: ['Вісімка', 'Figure eight'],
     text: [
       'Облети дві мітки, змінюючи напрямок повороту в центрі між ними. Розведи мітки далі, якщо бракує місця.',
@@ -77,6 +84,7 @@ export const simulatorExercises = [
     ],
   },
   {
+    id: 'gate-laps',
     title: ['Кола через ворота', 'Gate laps'],
     text: [
       'Збери короткий віртуальний маршрут із прямих, широкого повороту й кількох воріт. Повтори його без гонитви за часом.',

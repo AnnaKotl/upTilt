@@ -392,6 +392,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const chapters = ['hero', 'motion', 'anatomy', 'radio', 'display'].map((id) =>
     document.getElementById(id)!,
   );
+  const startRoutes = document.getElementById('start')!;
+  let routesAnchor = 0;
   let anchors: number[] = [],
     diagramScrollStart = 0,
     diagramScrollEnd = 0,
@@ -445,6 +447,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     camera.right = w / 2;
     camera.updateProjectionMatrix();
     renderer.setSize(wpx, h, false);
+    routesAnchor = startRoutes.getBoundingClientRect().top + scrollY;
     anchors = chapters.map((el) => el.getBoundingClientRect().top + scrollY);
     // The gate keeps its original scroll distance until the readouts fade.
     // The extra space at the end of the chapter belongs to the diagram.
@@ -456,7 +459,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       anchors[2],
       (matStart - diagramStart) / (2 - diagramStart),
     );
-    replayScrollStart = mix(anchors[0], anchors[1], 0.965);
+    replayScrollStart = mix(routesAnchor, anchors[1], (0.965 - 0.2) / 0.8);
     replayScrollEnd = anchors[1] + gateSpan * (replayExit - 1);
     scroll();
   }
@@ -471,6 +474,17 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       end = anchors[i + 1];
     let from = i,
       to = i + 1;
+    // The reading stop holds the aircraft above the title. The gate still
+    // receives the original approach and timeline downstream.
+    if (i === 0) {
+      if (scrollY < routesAnchor) {
+        end = routesAnchor;
+        to = 0.2;
+      } else {
+        start = routesAnchor;
+        from = 0.2;
+      }
+    }
     if (i === 1) {
       if (scrollY < diagramScrollStart) {
         end = diagramScrollStart;
@@ -559,7 +573,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     hoverX = mix(hoverX, tx, follow * 0.88);
     hoverY = mix(hoverY, ty, follow * 0.88);
     const take = ease(1.82, 3.56, elapsed),
-      hero = 1 - ease(0.03, 0.46, p);
+      hero = 1 - ease(0.03, 0.2, p);
 
     const heroFloor = (1 - ease(0.08, 0.27, p)) * (1 - day);
     story.style.setProperty('--hero-floor', String(heroFloor));
@@ -868,7 +882,17 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     }
     renderer.render(scene, camera);
     if (!story.dataset.live) {
+      // The live gate adds scroll space. Keep the reading position in
+      // downstream chapters when a deep link opens before WebGL is ready.
+      const anatomy = chapters[2];
+      const previousTop = anatomy.getBoundingClientRect().top;
       story.dataset.live = 'true';
+      if (previousTop <= 1) {
+        const shift = anatomy.getBoundingClientRect().top - previousTop;
+        if (Math.abs(shift) > 1)
+          window.scrollTo({ top: scrollY + shift, behavior: 'instant' });
+      }
+      measure();
       story.dispatchEvent(new Event('scene-painted'));
     }
     if (

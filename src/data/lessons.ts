@@ -7,6 +7,12 @@ interface Lesson {
   title: Bilingual;
   paragraphs: readonly Bilingual[];
   children?: readonly Lesson[];
+  detail?: {
+    reference: { label: string; url: string };
+    figure?: 'wavelength';
+    caption?: Bilingual;
+    related?: string;
+  };
 }
 
 function lesson(
@@ -15,8 +21,9 @@ function lesson(
   explanation: Bilingual,
   example: Bilingual,
   children?: readonly Lesson[],
+  detail?: Lesson['detail'],
 ): Lesson {
-  return { id, title, paragraphs: [explanation, example], children };
+  return { id, title, paragraphs: [explanation, example], children, detail };
 }
 
 export const lessons: Record<Topic['id'], readonly Lesson[]> = {
@@ -44,6 +51,19 @@ export const lessons: Record<Topic['id'], readonly Lesson[]> = {
             'У тому самому середовищі вища частота відповідає коротшій довжині хвилі. Їх пов’язує швидкість поширення: v = fλ.',
             'In the same medium, a higher frequency corresponds to a shorter wavelength. Wave speed relates the two through v = fλ.',
           ],
+          undefined,
+          {
+            figure: 'wavelength',
+            related: 'frequency',
+            caption: [
+              'λ — відстань між двома сусідніми гребенями. У формулі v — швидкість поширення, f — частота.',
+              'λ is the distance between neighbouring crests. In the equation, v is propagation speed and f is frequency.',
+            ],
+            reference: {
+              label: 'NASA Science · Anatomy of an Electromagnetic Wave',
+              url: 'https://science.nasa.gov/ems/02_anatomy/',
+            },
+          },
         ),
         lesson(
           'reflection',
@@ -383,3 +403,14 @@ export const topicIntroductions: Record<Topic['id'], Bilingual> = {
     'A simulator lets you repeat a short exercise, see how the model responds and start again after a crash. Choose one around what you want to practise: indoor flying, following a course through gates or free flight.',
   ],
 };
+
+// Shared by static lesson routes and their search records.
+export function lessonTrails(
+  nodes: readonly Lesson[],
+  parents: readonly Lesson[] = [],
+): Lesson[][] {
+  return nodes.flatMap((node) => {
+    const trail = [...parents, node];
+    return [trail, ...lessonTrails(node.children ?? [], trail)];
+  });
+}

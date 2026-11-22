@@ -15,6 +15,11 @@ const shell = [
   '[data-top] .hint',
   '[data-author] .hint',
   '.gate-fallback [aria-label]',
+  '#start h2',
+  '#start a',
+  '#start a strong',
+  '#start a span',
+  '#start small',
   '#kit h2',
   '.kit-list a',
   '.kit-list a > span:last-child',
@@ -86,10 +91,10 @@ export function initHomeLanguage() {
 export function initPresentation() {
   const button = document.querySelector<HTMLButtonElement>('[data-tour]')!;
   const last = document.querySelector<HTMLElement>('[data-tour-end]')!;
-  const stops = ['hero', 'motion', 'anatomy', 'radio', 'display'].map((id) =>
-    document.getElementById(id)!,
+  const stops = ['hero', 'start', 'motion', 'anatomy', 'radio', 'display'].map(
+    (id) => document.getElementById(id)!,
   );
-  const dwell = [5300, 12300, 3200, 23700, 8500];
+  const dwell = [5300, 3400, 12300, 3200, 23700, 8500];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const stopPosition = (node: HTMLElement) => {
     const live =

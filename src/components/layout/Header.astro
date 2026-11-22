@@ -98,7 +98,7 @@ const models = [
     <Icon name="book" />
     <span class="hint">{text.knowledge}</span>
   </a>
-  {path === 'knowledge' && <KnowledgeSearch locale={locale} />}
+  {path.split('/')[0] === 'knowledge' && <KnowledgeSearch locale={locale} />}
   {!path && (
     <button
       type="button"

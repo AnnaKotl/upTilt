@@ -1,6 +1,6 @@
 ---
 import Icon from '../ui/Icon.vue';
-import type { Locale } from '../../lib/i18n';
+import { pageUrl, type Locale } from '../../lib/i18n';
 const { locale } = Astro.props as { locale: Locale };
 const uk = locale === 'uk';
 const label = uk ? 'Знайти тему' : 'Find a topic';
@@ -18,11 +18,19 @@ const label = uk ? 'Знайти тему' : 'Find a topic';
     <Icon name="search" />
     <span class="hint">{label}</span>
   </button>
-  <form hidden id="knowledge-search" role="search">
+  <form
+    hidden
+    id="knowledge-search"
+    role="search"
+    method="get"
+    action={pageUrl(locale, 'knowledge/search')}
+  >
     <input
       type="search"
       aria-label={label}
-      placeholder={label}
+      name="q"
+      required
+      enterkeyhint="search"
       autocomplete="off"
     />
     <button
@@ -32,9 +40,6 @@ const label = uk ? 'Знайти тему' : 'Find a topic';
       aria-label={uk ? 'Очистити пошук' : 'Clear search'}
     >
       <Icon name="close" />
-    </button>
-    <button type="submit" aria-label={uk ? 'Шукати' : 'Search'}>
-      <Icon name="forward" />
     </button>
   </form>
 </div>
@@ -48,13 +53,6 @@ const label = uk ? 'Знайти тему' : 'Find a topic';
     const form = search.querySelector('form')!;
     const input = form.querySelector('input')!;
     const clear = form.querySelector<HTMLButtonElement>('[data-search-clear]')!;
-    const rows = [
-      ...document.querySelectorAll<HTMLElement>('[data-topic-row]'),
-    ];
-    const empty = document.querySelector<HTMLElement>('[data-empty]');
-    const normalize = (text: string) =>
-      text.toLocaleLowerCase().replace(/[’ʼ']/g, '').trim();
-    const terms = rows.map((row) => normalize(row.textContent ?? ''));
     function setOpen(open: boolean) {
       form.hidden = !open;
       toggle.setAttribute('aria-expanded', String(open));
@@ -89,11 +87,10 @@ const label = uk ? 'Знайти тему' : 'Find a topic';
       input.focus();
       clear.hidden = true;
     });
-    form.addEventListener('submit', (event) => {
-      event.preventDefault();
-      const query = normalize(input.value);
-      rows.forEach((row, i) => (row.hidden = !terms[i].includes(query)));
-      if (empty) empty.hidden = rows.some((row) => !row.hidden);
-    });
+    if (location.pathname.endsWith('/knowledge/search/')) {
+      input.value = new URLSearchParams(location.search).get('q') ?? '';
+      clear.hidden = !input.value;
+      if (!input.value) setOpen(true);
+    }
   }
 </script>

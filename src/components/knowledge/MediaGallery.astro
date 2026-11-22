@@ -18,8 +18,13 @@ const mediaUrl = (image: string) =>
 <section class="reading-note knowledge-gallery">
   <h2>{title}</h2>
   <div class="gallery-grid">
-    {items.map(({ name, description, links, previews, featured }) => (
-      <article class:list={['gallery-entry', { 'gallery-featured': featured }]}>
+    {items.map(({ id, name, description, links, previews, featured }) => (
+      <article
+        id={id}
+        class:list={['gallery-entry', { 'gallery-featured': featured }]}
+      >
+        <h3>{name}</h3>
+        <p>{description[locale]}</p>
         <div class="gallery-previews">
           {previews.map(({ image, caption, url, youtube, contained }) => (
             <figure>
@@ -47,7 +52,6 @@ const mediaUrl = (image: string) =>
                     aria-label={play + ' · ' + name + ' · ' + caption[locale]}
                   >
                     <Icon name="play" />
-                    {play}
                   </button>
                 )}
               </div>
@@ -59,8 +63,6 @@ const mediaUrl = (image: string) =>
             </figure>
           ))}
         </div>
-        <h3>{name}</h3>
-        <p>{description[locale]}</p>
         <ul class="gallery-links">
           {links.map(({ label, url }) => {
             const text = typeof label === 'string' ? label : label[locale];
@@ -90,22 +92,24 @@ const mediaUrl = (image: string) =>
     const button = frame.querySelector<HTMLButtonElement>('[data-play-video]');
     if (!button || !frame.dataset.video) continue;
     button.hidden = false;
-    button.addEventListener(
-      'click',
-      () => {
-        const player = document.createElement('iframe');
-        player.src =
-          'https://www.youtube-nocookie.com/embed/' +
-          frame.dataset.video +
-          '?autoplay=1';
-        player.title = frame.querySelector('img')?.alt || 'YouTube';
-        player.referrerPolicy = 'strict-origin-when-cross-origin';
-        player.allow = 'autoplay; encrypted-media; picture-in-picture';
-        player.allowFullscreen = true;
-        frame.replaceChildren(player);
-        player.focus();
-      },
-      { once: true },
-    );
+    const preview = [...frame.childNodes];
+    button.addEventListener('click', () => {
+      const player = document.createElement('iframe');
+      player.src =
+        'https://www.youtube-nocookie.com/embed/' +
+        frame.dataset.video +
+        '?autoplay=1';
+      player.title = frame.querySelector('img')?.alt || 'YouTube';
+      player.referrerPolicy = 'strict-origin-when-cross-origin';
+      player.allow = 'autoplay; encrypted-media; picture-in-picture';
+      player.allowFullscreen = true;
+      player.addEventListener(
+        'dismiss-preview',
+        () => frame.replaceChildren(...preview),
+        { once: true },
+      );
+      frame.replaceChildren(player);
+      player.focus();
+    });
   }
 </script>

@@ -1,25 +1,16 @@
 ---
 import SiteLayout from '../../../../layouts/SiteLayout.astro';
 import KnowledgeCrumbs from '../../../../components/knowledge/KnowledgeCrumbs.astro';
+import WavelengthDiagram from '../../../../components/knowledge/WavelengthDiagram.astro';
 import LessonLinks from '../../../../components/knowledge/LessonLinks.astro';
-import { lessons } from '../../../../data/lessons';
+import { lessons, lessonTrails } from '../../../../data/lessons';
 import { topics } from '../../../../data/topics';
 import { locales, type Locale } from '../../../../lib/i18n';
 
 export function getStaticPaths() {
-  type Node = (typeof lessons)[keyof typeof lessons][number];
-  function branches(
-    nodes: readonly Node[],
-    parents: readonly Node[] = [],
-  ): Node[][] {
-    return nodes.flatMap((node) => {
-      const trail = [...parents, node];
-      return [trail, ...branches(node.children ?? [], trail)];
-    });
-  }
   return locales.flatMap((lang) =>
     topics.flatMap((topic) =>
-      branches(lessons[topic.id]).map((trail) => ({
+      lessonTrails(lessons[topic.id]).map((trail) => ({
         params: {
           lang,
           topic: topic.id,
@@ -35,6 +26,7 @@ const locale = Astro.params.lang as Locale;
 const { topic, trail } = Astro.props;
 const language = locale === 'uk' ? 0 : 1;
 const note = trail.at(-1)!;
+const reference = note.detail?.reference ?? topic.source;
 const root = 'knowledge/' + topic.id;
 const path = root + '/' + Astro.params.lesson;
 const crumbs = [
@@ -56,16 +48,43 @@ const crumbs = [
   <article class="reading-page">
     <KnowledgeCrumbs locale={locale} trail={crumbs} />
     <h1>{note.title[language]}</h1>
-    <div class="reading-note">
+    <div class="reading-note lesson-body">
       {note.paragraphs.map((paragraph) => (
         <p>{paragraph[language]}</p>
       ))}
     </div>
+    {note.detail?.figure === 'wavelength' && note.detail.caption && (
+      <WavelengthDiagram caption={note.detail.caption[language]} />
+    )}
+    {note.detail?.related && (
+      <section class="reading-note">
+        <h2>{locale === 'uk' ? 'Пов’язана тема' : 'Related topic'}</h2>
+        <LessonLinks
+          {locale}
+          path={root}
+          items={lessons[topic.id].filter(
+            (item) => item.id === note.detail?.related,
+          )}
+        />
+      </section>
+    )}
     {note.children?.length && (
       <section class="reading-note">
         <h2>{locale === 'uk' ? 'Далі в цій темі' : 'Explore this topic'}</h2>
         <LessonLinks locale={locale} path={path} items={note.children} />
       </section>
     )}
+    <aside class="reference-line">
+      <a href={reference.url}>
+        {note.detail?.reference
+          ? locale === 'uk'
+            ? 'Джерело'
+            : 'Reference'
+          : locale === 'uk'
+            ? 'Матеріали напряму'
+            : 'Section reference'}{' '}
+        · {reference.label} ↗
+      </a>
+    </aside>
   </article>
 </SiteLayout>

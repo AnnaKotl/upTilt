@@ -11,6 +11,7 @@ export interface MediaPreview {
 }
 
 export interface MediaEntry {
+  id: string;
   name: string;
   description: Localized;
   links: { label: string | Localized; url: string }[];

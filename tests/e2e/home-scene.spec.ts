@@ -477,10 +477,12 @@ test('parking at the gate plays the replays before the drawing, and re-arms on r
   const chapter = (fraction: number) =>
     page.locator('#motion').evaluate((gate, p) => {
       const start = scrollY + gate.getBoundingClientRect().top;
+      const routes =
+        scrollY + document.getElementById('start')!.getBoundingClientRect().top;
       scrollTo({
         top:
           p < 1
-            ? start * p
+            ? routes + (start - routes) * p
             : start + gate.getBoundingClientRect().height * (p - 1),
         behavior: 'instant',
       });

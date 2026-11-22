@@ -8,8 +8,20 @@ const screenshot = (id: number, file: string) =>
   file;
 const site = { uk: 'Сайт', en: 'Website' };
 
-export const simulators: MediaEntry[] = [
+export const accessLabels = {
+  paid: { uk: 'Платний', en: 'Paid' },
+  free: { uk: 'Безплатна база', en: 'Free base game' },
+  demo: { uk: 'Платний · є демо', en: 'Paid · demo available' },
+};
+interface Simulator extends MediaEntry {
+  platforms: string[];
+  access: keyof typeof accessLabels;
+}
+export const simulators: Simulator[] = [
   {
+    id: 'liftoff',
+    platforms: ['Windows', 'macOS', 'Linux'],
+    access: 'paid',
     name: 'Liftoff: FPV Drone Racing',
     featured: true,
     description: {
@@ -39,6 +51,9 @@ export const simulators: MediaEntry[] = [
     ],
   },
   {
+    id: 'uncrashed',
+    platforms: ['Windows', 'macOS'],
+    access: 'paid',
     name: 'Uncrashed: FPV Drone Simulator',
     featured: true,
     description: {
@@ -65,6 +80,9 @@ export const simulators: MediaEntry[] = [
     ],
   },
   {
+    id: 'micro-drones',
+    platforms: ['Windows', 'macOS', 'Linux'],
+    access: 'paid',
     name: 'Liftoff: Micro Drones',
     description: {
       uk: 'Мікрокоптери й польоти в кімнатах. Зручно тренувати темп і плавні повороти в невеликому просторі.',
@@ -82,6 +100,9 @@ export const simulators: MediaEntry[] = [
     ],
   },
   {
+    id: 'skydive',
+    platforms: ['Windows', 'macOS', 'Linux'],
+    access: 'free',
     name: 'FPV SkyDive',
     description: {
       uk: 'Перегони й фристайл. Базова версія безплатна.',
@@ -100,12 +121,15 @@ export const simulators: MediaEntry[] = [
     ],
   },
   {
+    id: 'velocidrone',
+    platforms: ['Windows', 'macOS', 'Linux'],
+    access: 'paid',
     name: 'VelociDrone',
     description: {
       uk: 'Траси, віртуальні ворота й заїзди на час.',
       en: 'Courses, virtual gates and timed laps.',
     },
-    links: [{ label: site, url: 'https://www.velocidrone.com/' }],
+    links: [{ label: site, url: 'https://www.velocidrone.com/shop' }],
     previews: [
       youtube('PdE7J1ORO9Y', {
         uk: 'Локація Drift Track',
@@ -114,6 +138,9 @@ export const simulators: MediaEntry[] = [
     ],
   },
   {
+    id: 'freerider',
+    platforms: ['Windows', 'macOS', 'Linux'],
+    access: 'demo',
     name: 'FPV Freerider',
     description: {
       uk: 'Польоти від першої особи або із зовнішньої камери. Є демоверсія.',

@@ -1,0 +1,205 @@
+---
+import { pageUrl, type Locale } from '../../lib/i18n';
+import Icon from '../ui/Icon.vue';
+import StudyPoster from './StudyPoster.astro';
+const { locale } = Astro.props as { locale: Locale };
+const i = locale === 'uk' ? 0 : 1;
+const routes = [
+  {
+    path: 'anatomy/frame',
+    icon: 'layers',
+    name: ['Вперше знайомлюся з FPV', 'New to FPV'],
+    detail: [
+      'Хочу впізнавати деталі коптера і розуміти їхнє призначення.',
+      'I want to recognise the parts of a quad and understand their roles.',
+    ],
+    target: ['Рама й захист', 'Frame and guards'],
+  },
+  {
+    path: 'fundamentals/axes',
+    icon: 'game',
+    name: ['Літаю в симуляторі', 'I fly in a simulator'],
+    detail: [
+      'Хочу пов’язати рух на екрані з фізикою польоту.',
+      'I want to connect what I see on screen with flight physics.',
+    ],
+    target: ['Крен, тангаж і рискання', 'Roll, pitch and yaw'],
+  },
+  {
+    path: 'workbench/boards',
+    icon: 'circuit',
+    name: ['Вже літаю наживо', 'I fly real quads'],
+    detail: [
+      'Хочу розібратися в електроніці та з’єднаннях на платі.',
+      'I want to understand electronics and the connections on a board.',
+    ],
+    target: ['Плата, доріжка й контакт', 'Boards, traces and pads'],
+  },
+] as const;
+---
+
+<section
+  id="start"
+  data-stop
+  class="start-routes"
+  aria-labelledby="start-heading"
+>
+  <div class="start-still" aria-hidden="true">
+    <StudyPoster name="whoop" />
+  </div>
+  <h2 id="start-heading">{i === 0 ? 'З чого почати?' : 'Where to start?'}</h2>
+  <ul>
+    {routes.map((route) => (
+      <li>
+        <a href={pageUrl(locale, 'knowledge/' + route.path)}>
+          <Icon name={route.icon} />
+          <strong>{route.name[i]}</strong>
+          <span>{route.detail[i]}</span>
+          <small>{route.target[i]} ↗</small>
+        </a>
+      </li>
+    ))}
+  </ul>
+  <a
+    class="start-search"
+    aria-label={i === 0 ? 'Шукаю конкретну тему' : 'Find a specific topic'}
+    href={pageUrl(locale, 'knowledge/search')}
+  >
+    <Icon name="search" />
+    <span class="hint">
+      {i === 0 ? 'Шукаю конкретну тему' : 'Find a specific topic'}
+    </span>
+  </a>
+</section>
+<style>
+  .start-routes {
+    position: relative;
+    min-height: 100svh;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    padding: clamp(8rem, 22svh, 15rem) max(5vw, 3.5rem) 5rem;
+    gap: clamp(2rem, 5vw, 4rem);
+  }
+  .start-routes h2 {
+    font:
+      400 clamp(1.05rem, 2.55vw, 2.5rem)/1.55 'Press Start 2P',
+      monospace;
+    text-align: center;
+    text-wrap: balance;
+  }
+  .start-routes ul {
+    width: min(64rem, 100%);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(1rem, 2.7vw, 3rem);
+    align-items: start;
+  }
+  .start-routes li:nth-child(1) {
+    margin-top: 3rem;
+  }
+  .start-routes li:nth-child(2) {
+    margin-top: 1.5rem;
+  }
+  .start-routes li a {
+    position: relative;
+    display: grid;
+    justify-items: start;
+    gap: 0.7rem;
+    padding: 1rem 0.3rem;
+    border-top: 1px solid var(--line);
+  }
+  .start-routes li a::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: -2px;
+    width: 1.7rem;
+    height: 3px;
+    background: var(--accent);
+  }
+  .start-routes li svg {
+    width: 2rem;
+    height: 2rem;
+    color: var(--muted);
+  }
+  .start-routes strong {
+    font:
+      700 clamp(1.15rem, 2vw, 1.55rem)/1.25 Play,
+      sans-serif;
+  }
+  .start-routes li span {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  .start-routes small,
+  .start-search {
+    color: var(--accent);
+    font: 0.8rem/1.6 var(--font-mono);
+  }
+  .start-routes a:is(:hover, :focus-visible) strong,
+  .start-search:is(:hover, :focus-visible) {
+    text-decoration: underline;
+    text-underline-offset: 0.3em;
+  }
+  .start-search {
+    position: relative;
+    display: inline-flex;
+    min-width: 44px;
+    justify-content: center;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 44px;
+  }
+  .start-search .hint {
+    left: 50%;
+    top: 100%;
+    transform: translateX(-50%);
+  }
+  .start-search svg {
+    width: 1.1rem;
+  }
+  .start-still {
+    position: absolute;
+    width: clamp(4rem, 10vw, 8rem);
+    top: 6%;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  :global([data-live]) .start-still {
+    display: none;
+  }
+  @media (max-width: 840px) {
+    .start-routes {
+      gap: 1.65rem;
+      padding: 8rem 1.25rem 3rem 3.6rem;
+    }
+    .start-routes ul {
+      grid-template-columns: 1fr;
+      max-width: 32rem;
+    }
+    .start-routes li:nth-child(n) {
+      margin: 0;
+    }
+    .start-routes li a {
+      grid-template-columns: auto 1fr;
+      column-gap: 1rem;
+    }
+    .start-routes li svg {
+      grid-row: span 3;
+    }
+    .start-routes li span,
+    .start-routes li small {
+      grid-column: 2;
+    }
+    .start-still {
+      top: 1rem;
+    }
+    .start-routes h2 {
+      font-size: clamp(0.95rem, 3.8vw, 1.5rem);
+    }
+  }
+</style>

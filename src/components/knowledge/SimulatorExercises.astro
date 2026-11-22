@@ -18,8 +18,8 @@ const lang = uk ? 0 : 1;
       : 'Start in free flight with plenty of space. Move on when you can repeat an exercise several times in a row.'}
   </p>
   <ol class="exercise-list">
-    {simulatorExercises.map(({ title, text, check }) => (
-      <li>
+    {simulatorExercises.map(({ id, title, text, check }) => (
+      <li id={id}>
         <h3>{title[lang]}</h3>
         <p>{text[lang]}</p>
         <p class="exercise-check">

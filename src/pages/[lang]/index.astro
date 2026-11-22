@@ -3,6 +3,7 @@ import { paths } from '../../components/ui/paths';
 import SiteLayout from '../../layouts/SiteLayout.astro';
 import BookNav from '../../components/knowledge/BookNav.vue';
 import PartsBoard from '../../components/scene/PartsBoard.vue';
+import StartRoutes from '../../components/scene/StartRoutes.astro';
 import GateProjection from '../../components/scene/GateProjection.vue';
 import RadioStudy from '../../components/scene/RadioStudy.vue';
 import DisplayStudy from '../../components/scene/DisplayStudy.vue';
@@ -138,6 +139,7 @@ const kit = [
         </div>
       </div>
     </section>
+    <StartRoutes locale={locale} />
     <section data-stop id="motion" class="gate-chapter">
       <div class="gate-fallback">
         <StudyPoster

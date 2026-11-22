@@ -17,9 +17,12 @@ const parent = crumbs.at(-2)!;
   <a
     class="plain-back"
     href={pageUrl(locale, parent.path)}
-    aria-label={t(locale).back}
+    aria-label={t(locale).back + ' · ' + parent.title}
   >
     <Icon name="back" />
+    <span class="hint" aria-hidden="true">
+      {t(locale).back} · {parent.title}
+    </span>
   </a>
   {crumbs.map(({ title, path }, i) => (
     <>

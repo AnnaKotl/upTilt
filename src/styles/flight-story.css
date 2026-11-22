@@ -1,3 +1,8 @@
+/* Resolve a direct chapter link before the WebGL layout is measured. */
+html:has(.flight-story [data-stop]:target) {
+  scroll-behavior: auto;
+}
+
 /* Museum-style study: one fixed-size drawing surface underneath the document. */
 .flight-story {
   --gutter: clamp(4.7rem, 8.3vw, 11rem);

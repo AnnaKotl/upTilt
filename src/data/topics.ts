@@ -131,12 +131,12 @@ export const topics = [
       en: 'Transmitter sticks, switches and indicators.',
     },
     question: {
-      uk: 'Що означає «квадрокоптер»?',
-      en: 'What makes it a quadcopter?',
+      uk: 'Що показує монітор каналів?',
+      en: 'What does a channel monitor show?',
     },
     note: {
-      uk: 'Квадрокоптер — це літальний апарат із чотирма несними роторами. Назва описує будову апарата. FPV описує спосіб спостереження — через камеру на борту.',
-      en: 'A quadcopter has four lifting rotors. The name describes the aircraft’s design. FPV describes the view through an onboard camera.',
+      uk: 'На пульті монітор каналів відображає вихідні значення поточного профілю моделі. За ними видно, як рух стіка або перемикання змінює значення каналу.',
+      en: 'The transmitter’s channel monitor displays the outputs of the current model profile. It shows how a stick movement or switch position changes a channel value.',
     },
     source: {
       label: 'EdgeTX',
