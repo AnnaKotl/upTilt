@@ -3,24 +3,29 @@ export const gateCrossing = 0.78;
 export const gateParked = 0.98;
 export const gateYaw = 0.76;
 export const gateRadius = 1.72;
+export const gateExitStart = 1.32;
+export const gateExitEnd = 1.48;
+export const routesArrival = 0.2;
+export const routesDeparture = 0.255;
 
 // Positions are composed for the page in fractions of the viewport. They are
 // animation keyframes, not flight dynamics or a transmitter configuration.
 const path = [
   [0, 0.72, 0.5, 0.66, 0.32, -0.38, 0, 3.5],
-  [0.12, 0.735, 0.44, 0.69, 0.08, 0, 0, 3.6],
-  [0.2, 0.515, 0.14, 0.22, 0.14, 0.32, -0.07, 3.1],
-  [0.255, 0.53, 0.135, 0.22, 0.12, 0.34, -0.06, 3.1],
-  // The high turn links the hero lift to the entry arc.
-  [gateApproach, 0.85, -0.16, 0.47, 0.26, 0.37, 0.21, 2.9],
-  [0.48, 0.822, -0.035, 0.42, 0.57, 0.31, 0.22, 2.7],
-  [0.59, 0.785, 0.153, 0.33, 0.49, -0.2, 0.22, 1.8],
-  [0.69, 0.718, 0.327, 0.25, 0.35, -0.82, 0.25, 0.88],
+  [0.025, 0.724, 0.51, 0.65, 0.39, -0.32, -0.035, 3.5],
+  [0.064, 0.75, 0.555, 0.54, 0.53, -0.19, -0.09, 3.35],
+  [routesArrival, 0.79, 0.205, 0.43, 0.31, 0.26, -0.045, 3.1],
+  [routesDeparture, 0.79, 0.205, 0.43, 0.31, 0.26, -0.045, 3.1],
+  [0.31, 0.745, 0.231, 0.415, 0.35, 0.08, -0.08, 3],
+  [gateApproach, 0.85, 0.255, 0.38, 0.29, 0.37, 0.1, 2.9],
+  [0.48, 0.81, 0.276, 0.35, 0.46, 0.31, 0.17, 2.7],
+  [0.59, 0.756, 0.305, 0.33, 0.49, -0.2, 0.22, 1.8],
+  [0.69, 0.678, 0.365, 0.25, 0.35, -0.82, 0.25, 0.88],
   [gateCrossing, 0.58, 0.435, 0.22, 0.25, -1.18, 0.27, 0],
   [0.88, 0.415, 0.499, 0.35, 0.3, -0.3, 0.13, -1.48],
   [gateParked, 0.205, 0.535, 0.44, 0.32, 0.36, 0.08, -2.8],
-  [1.32, 0.205, 0.535, 0.44, 0.32, 0.36, 0.08, -2.8],
-  [1.57, 0.5, 0.46, 0.68, 1.03, 0, 0, 0],
+  [1.34, 0.205, 0.535, 0.44, 0.32, 0.36, 0.08, -2.8],
+  [1.65, 0.5, 0.46, 0.68, 1.03, 0, 0, 0],
   [1.8, 0.5, 0.46, 0.68, 1.03, 0, 0, 0],
   [2, 0.5, 0.5, 0.58, 0.58, -0.15, 0, 0],
   [2.31, 0.5, 0.5, 0.58, 0.58, -0.15, 0, 0],
@@ -63,8 +68,19 @@ export function sampleFlight(p: number) {
     );
 }
 
+// The camera follows the descent into the gate scene, then locks onto
+// the ring. The completed drawing uses this same world-space trajectory.
+export function gateCameraLift(p: number) {
+  if (p <= routesDeparture || p >= 0.64) return 0;
+  const t =
+    p < gateApproach
+      ? (p - routesDeparture) / (gateApproach - routesDeparture)
+      : (0.64 - p) / (0.64 - gateApproach);
+  return 3.7 * t * t * (3 - 2 * t);
+}
+
 // World coordinates in the orthographic scene, before the radio and hero gestures.
 export function gatePoint(p: number, width: number) {
   const [x, y, , , , , z] = sampleFlight(p);
-  return [(x - 0.5) * width, (0.5 - y) * 10, z] as const;
+  return [(x - 0.5) * width, (0.5 - y) * 10 + gateCameraLift(p), z] as const;
 }

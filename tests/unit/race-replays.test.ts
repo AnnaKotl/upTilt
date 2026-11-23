@@ -4,15 +4,35 @@ import { raceReplays } from '../../src/graphics/race-replays';
 import { lapPoint, laps, sampleLap } from '../../src/data/gate-replays';
 import {
   gateApproach,
+  gateCameraLift,
+  routesArrival,
+  routesDeparture,
+  sampleFlight,
   gateCrossing,
   gateParked,
   gatePoint,
 } from '../../src/data/flight-path';
 
+it('holds the reading pose, then descends continuously in the moving camera frame', () => {
+  const held = sampleFlight(routesArrival);
+  expect(sampleFlight(routesDeparture)).toEqual(held);
+  let lastY = held[1];
+  for (let i = 1; i <= 160; i++) {
+    const p = routesDeparture + ((gateCrossing - routesDeparture) * i) / 160;
+    const [worldX, worldY] = gatePoint(p, 16);
+    const screenY = 0.5 - (worldY - gateCameraLift(p)) / 10;
+    expect(screenY).toBeGreaterThanOrEqual(lastY);
+    expect(screenY - lastY).toBeLessThan(0.01);
+    expect(Math.abs(worldX / 16)).toBeLessThan(0.37);
+    lastY = screenY;
+  }
+  expect(gateCameraLift(gateCrossing)).toBe(0);
+});
+
 it('enters from above the right side, crosses the hoop and parks without reversing the visible trace', () => {
   const width = 16;
   let previous = gatePoint(gateApproach, width);
-  expect(previous[0]).toBeGreaterThan(width / 4);
+  expect(previous[0]).toBeGreaterThan(width * 0.3);
   expect(previous[1]).toBeGreaterThan(5);
   const [gateX, gateY, gateZ] = gatePoint(gateCrossing, width);
   expect(gateX).toBeCloseTo(0.08 * width);

@@ -1,5 +1,13 @@
 import type { LapBend } from '../data/gate-replays';
-import { sampleFlight, gateCrossing, gateYaw } from '../data/flight-path';
+import {
+  sampleFlight,
+  gateCameraLift,
+  gateYaw,
+  gateExitStart,
+  gateExitEnd,
+  routesArrival,
+  routesDeparture,
+} from '../data/flight-path';
 import { radioControls } from '../data/radio-controls';
 import { currentAircraft } from '../lib/aircraft';
 import * as T from 'three';
@@ -394,6 +402,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   );
   const startRoutes = document.getElementById('start')!;
   let routesAnchor = 0;
+  let routesExit = 0;
+  let lastColumnProgress = -1;
+  let lastColumnExit = -1;
   let anchors: number[] = [],
     diagramScrollStart = 0,
     diagramScrollEnd = 0,
@@ -433,7 +444,6 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const inv = new T.Quaternion(),
     target = new T.Vector3();
 
-  const leaves = story.querySelector<HTMLElement>('.scatter');
   function invalidate() {
     if (!disposed && visible && !document.hidden && !raf)
       raf = requestAnimationFrame(draw);
@@ -449,6 +459,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     renderer.setSize(wpx, h, false);
     routesAnchor = startRoutes.getBoundingClientRect().top + scrollY;
     anchors = chapters.map((el) => el.getBoundingClientRect().top + scrollY);
+    routesExit = mix(routesAnchor, anchors[1], 0.46);
     // The gate keeps its original scroll distance until the readouts fade.
     // The extra space at the end of the chapter belongs to the diagram.
     const extraRoom = parseFloat(getComputedStyle(chapters[1]).paddingBottom);
@@ -459,7 +470,11 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       anchors[2],
       (matStart - diagramStart) / (2 - diagramStart),
     );
-    replayScrollStart = mix(routesAnchor, anchors[1], (0.965 - 0.2) / 0.8);
+    replayScrollStart = mix(
+      routesExit,
+      anchors[1],
+      (0.965 - routesDeparture) / (1 - routesDeparture),
+    );
     replayScrollEnd = anchors[1] + gateSpan * (replayExit - 1);
     scroll();
   }
@@ -474,15 +489,19 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       end = anchors[i + 1];
     let from = i,
       to = i + 1;
-    // The reading stop holds the aircraft above the title. The gate still
-    // receives the original approach and timeline downstream.
+    // Keep the drone opposite the heading across the sticky reading frame.
     if (i === 0) {
       if (scrollY < routesAnchor) {
         end = routesAnchor;
-        to = 0.2;
-      } else {
+        to = routesArrival;
+      } else if (scrollY < routesExit) {
         start = routesAnchor;
-        from = 0.2;
+        end = routesExit;
+        from = routesArrival;
+        to = routesDeparture;
+      } else {
+        start = routesExit;
+        from = routesDeparture;
       }
     }
     if (i === 1) {
@@ -575,8 +594,27 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const take = ease(1.82, 3.56, elapsed),
       hero = 1 - ease(0.03, 0.2, p);
 
-    const heroFloor = (1 - ease(0.08, 0.27, p)) * (1 - day);
+    const floorVisibility = 1 - ease(0.018, 0.055, p);
+    const heroFloor = floorVisibility * (1 - day);
     story.style.setProperty('--hero-floor', String(heroFloor));
+
+    const columnExit = ease(0.46, 0.77, p);
+    if (columnExit !== lastColumnExit) {
+      startRoutes.style.setProperty('--column-exit', String(columnExit));
+      lastColumnExit = columnExit;
+    }
+    const fold = ease(routesArrival + 0.022, routesDeparture, p);
+    if (fold !== lastColumnProgress) {
+      startRoutes.style.setProperty(
+        '--column-progress',
+        String(ease(0.48, 1, fold)),
+      );
+      startRoutes.style.setProperty(
+        '--row-progress',
+        String(ease(0, 0.56, fold)),
+      );
+      lastColumnProgress = fold;
+    }
 
     const departRadio = ease(3.5, 3.83, p);
     const [x, y, k, rx, ry, rz, z] = sampleFlight(p);
@@ -636,8 +674,6 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     radioYaw = mix(yawFrom, yawDestination, ease(0, 1050, now - turnStart));
     lift = mix(lift, targetLift, follow * 0.65);
     bank = mix(bank, targetBank, follow * 0.65);
-    if (leaves && !leaves.hidden)
-      leaves.style.opacity = String(1 - ease(0.15, 0.35, p));
     const exitLanding = 1 - ease(3.16, 3.72, p);
     radioSettling =
       Math.abs(targetLift - lift) +
@@ -651,9 +687,11 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       (elapsed < 7
         ? Math.sin(elapsed * 1.5) * 0.035 * (1 - ease(5.5, 7, elapsed))
         : 0);
+    const cameraLift = gateCameraLift(p);
     quad.root.position.set(
       (x - 0.5 + departRadio * 0.62) * w + hoverX * 0.64 * hero * take,
-      (0.5 - y) * 10 -
+      (0.5 - y) * 10 +
+        cameraLift -
         2.32 * (1 - take) * hero +
         bob -
         hoverY * 0.33 * hero * take +
@@ -671,16 +709,18 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     );
     quad.root.rotateX(radioPitch * 0.27 * inRadio);
     quad.root.rotateZ(bank * 0.33 * inRadio);
-    // Keep the climb in frame without changing the world-space route or the
-    // fixed camera used for the ring and its trajectory overlay.
-    if (p < gateCrossing) {
+    // Hero framing gives way to the descent before the flight drawing appears.
+    if (p < routesDeparture) {
       quad.root.updateMatrix();
       approachBounds.copy(airframeBounds).applyMatrix4(quad.root.matrix);
-      camera.position.x = approachPan(approachBounds.max.x - (w / 2 - 0.75));
-      camera.position.y = approachPan(approachBounds.max.y - 3.85);
+      const framing = 1 - ease(routesArrival, routesDeparture, p);
+      camera.position.x =
+        approachPan(approachBounds.max.x - (w / 2 - 0.75)) * framing;
+      camera.position.y = approachPan(approachBounds.max.y - 3.85) * framing;
     } else {
       camera.position.x = camera.position.y = 0;
     }
+    camera.position.y += cameraLift;
     const term = story.dataset.radioTerm ?? '';
     dial.update(
       quad.root,
@@ -758,14 +798,21 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     for (const lamp of lamps) lamp.material.opacity = ledPower;
     quad.led.emissiveIntensity = ledPower * 2.1;
     underglow.material.opacity = ledPower * 0.9;
-    gate.root.visible = p > 0.36 && p < 1.55;
-    gate.root.position.set(
-      (0.08 + 0.62 * ease(1.32, 1.55, p)) * w,
-      (0.5 - 0.435) * 10 -
-        (1 - ease(0.35, 0.72, p)) * 6 +
-        ease(1.32, 1.55, p) * 8,
-      0,
-    );
+    const gateOpacity =
+      ease(0.46, 0.68, p) * (1 - ease(gateExitStart, gateExitEnd, p));
+    gate.root.visible = gateOpacity > 0;
+    gate.root.position.set(0.08 * w, 0.65, 0);
+    if (gate.root.visible) {
+      const translucent = gateOpacity < 1;
+      for (const material of gate.materials) {
+        if (material.transparent !== translucent) {
+          material.transparent = translucent;
+          material.depthWrite = !translucent;
+          material.needsUpdate = true;
+        }
+        material.opacity = gateOpacity;
+      }
+    }
     gate.root.rotation.set(0.045, gateYaw, 0.018);
     gate.root.scale.setScalar(Math.min(w / 16, 1.15));
     const gatePhase = ghosts.update(p, now, day, scrollTime);
@@ -797,12 +844,12 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     gateShade.position.y -= 2.8 * gate.root.scale.x;
     gateShade.position.z = -2;
     gateShade.scale.set(2.6, 0.32, 1);
-    gateShade.material.opacity = 0.41;
+    gateShade.material.opacity = 0.41 * gateOpacity;
     shadow.position.set(
       quad.root.position.x,
       mix(
-        (0.5 - y) * 10 - quad.root.scale.x * 1.05,
-        (0.5 - y) * 10 - 2.32 - quad.root.scale.x * 0.72,
+        (0.5 - y) * 10 + cameraLift - quad.root.scale.x * 1.05,
+        (0.5 - y) * 10 + cameraLift - 2.32 - quad.root.scale.x * 0.72,
         hero,
       ),
       -3,
@@ -816,7 +863,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       (0.46 + day * 0.22 - 0.22 * take + 0.34 * heroFloor) *
       (1 - spread) *
       (1 - diagram) *
-      (1 - hero + hero * ease(0.72, 1.08, elapsed));
+      (floorVisibility * ease(0.72, 1.08, elapsed) + ease(2.72, 2.98, p));
     radio.root.visible = p > 2.59;
     radio.root.position.set(
       (-0.24 - (1 - inRadio) * 0.49 - departRadio * 0.65) * w,
@@ -1050,6 +1097,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   function dispose() {
     if (disposed) return;
     disposed = true;
+    startRoutes.style.removeProperty('--column-progress');
+    startRoutes.style.removeProperty('--row-progress');
+    startRoutes.style.removeProperty('--column-exit');
     delete story.dataset.live;
     delete story.dataset.gatePhase;
     delete story.dataset.gateSample;

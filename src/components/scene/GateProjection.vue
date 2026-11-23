@@ -2,6 +2,8 @@
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import {
   gateApproach,
+  gateExitStart,
+  gateExitEnd,
   gateParked,
   gatePoint,
   gateYaw,
@@ -58,7 +60,8 @@ function ramp(x: number, from: number, to: number) {
 const quantities = computed(() =>
   !live.value
     ? 1
-    : ramp(progress.value, 0.45, 0.61) * (1 - ramp(progress.value, 1.53, 1.68)),
+    : ramp(progress.value, 0.78, 0.84) *
+      (1 - ramp(progress.value, gateExitStart, gateExitEnd)),
 );
 const drawing = computed(() =>
   !live.value
@@ -68,7 +71,13 @@ const drawing = computed(() =>
         elapsed.value > 0 ? 0.92 : gateParked - 0.003,
         gateParked,
       ) *
-      (1 - ramp(progress.value, 1.32, 1.48)),
+      (1 - ramp(progress.value, gateExitStart, gateExitEnd)),
+);
+const formulas = computed(() =>
+  live.value ? ramp(progress.value, 0.845, 0.89) : 1,
+);
+const measurements = computed(() =>
+  live.value ? ramp(progress.value, 0.9, 0.95) : 1,
 );
 const grid = computed(() =>
   !live.value || studying.value ? 1 : ramp(elapsed.value, 0.35, 2.1),
@@ -207,6 +216,22 @@ const displacement = computed(() => {
   return to.map((v, i) => (v - from[i]) / unit);
 });
 const distance = computed(() => Math.hypot(...displacement.value));
+const directness = computed(() => {
+  if (!primary.value)
+    return active.value.length ? distance.value / active.value.length : 0;
+  const end = progress.value;
+  let previous = gatePoint(gateApproach, width.value);
+  let length = 0;
+  for (let i = 1; i <= 32; i++) {
+    const point = gatePoint(
+      gateApproach + ((end - gateApproach) * i) / 32,
+      width.value,
+    );
+    length += Math.hypot(...point.map((v, axis) => v - previous[axis]));
+    previous = point;
+  }
+  return length ? (distance.value * ringDiameter(width.value)) / length : 0;
+});
 const arrow = computed(() => {
   const track = tracks.value[selected.value];
   // Follow the plotted stations over the next interval, including tight bends.
@@ -522,20 +547,32 @@ function nudge(amount: number) {
           <strong>≈ {{ fmt(distance) }} D</strong>
         </div>
       </figcaption>
-      <div v-if="!primary" class="derived vertical-speed">
-        <small>{{ uk ? 'Вертикальна швидкість' : 'Vertical velocity' }}</small>
-        <span>vᵧ = dy/dt ≈ {{ fmt(velocity.y) }} D/{{ uk ? 'с' : 's' }}</span>
+      <div class="derived vertical-speed" :style="{ opacity: formulas }">
+        <small>{{
+          primary
+            ? uk
+              ? 'Зміна висоти'
+              : 'Height change'
+            : uk
+              ? 'Вертикальна швидкість'
+              : 'Vertical velocity'
+        }}</small>
+        <span v-if="primary">Δy = {{ fmt(displacement[1]) }} D</span>
+        <span v-else
+          >vᵧ = dy/dt ≈ {{ fmt(velocity.y) }} D/{{ uk ? 'с' : 's' }}</span
+        >
       </div>
-      <div v-if="!primary" class="derived directness">
+      <div class="derived directness" :style="{ opacity: formulas }">
         <small>{{
           uk ? 'Переміщення / шлях' : 'Displacement / distance'
         }}</small>
-        <span
-          >‖Δr‖ / s ≈
-          {{ active.length ? fmt(distance / active.length) : '—' }}</span
-        >
+        <span>‖Δr‖ / s ≈ {{ directness ? fmt(directness) : '—' }}</span>
       </div>
-      <div class="lap-controls" :style="{ '--lap': lapColors[selected] }">
+      <div
+        class="lap-controls"
+        :inert="measurements === 0"
+        :style="{ '--lap': lapColors[selected], opacity: measurements }"
+      >
         <div
           v-if="!primary"
           class="lap-pick"
@@ -669,9 +706,6 @@ function nudge(amount: number) {
   z-index: 1;
   opacity: 0;
   visibility: hidden;
-  transition:
-    opacity 0.55s,
-    visibility 0.55s;
 }
 .gate-sheet.is-ready {
   visibility: visible;
@@ -802,7 +836,7 @@ figcaption,
 .lap-controls {
   position: absolute;
   left: clamp(4.6rem, 10vw, 11rem);
-  animation: gate-ink-in 0.45s ease both;
+  animation: gate-ink-in 0.32s ease;
 }
 figcaption {
   top: 16%;

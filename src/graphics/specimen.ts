@@ -688,7 +688,7 @@ export function makeGate() {
   }
   rod(root, body, [0, -2.48, 0], [0, -2.74, -0.53], 0.05);
   batch(root);
-  return { root, accent };
+  return { root, accent, materials: [trim, body, accent, foot] };
 }
 export function makeRadio() {
   // Original exterior study drawn against RadioMaster's front view of the black TX16S MK3.

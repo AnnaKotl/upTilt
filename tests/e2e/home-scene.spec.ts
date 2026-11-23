@@ -234,7 +234,7 @@ test('the full tour finishes at the end of the FPV chapter and can be replayed',
   );
   await tour.click();
   await expect(page.locator('#hero')).toBeInViewport();
-  await page.clock.runFor(64_000);
+  await page.clock.runFor(68_000);
   await expect(page.locator('.goggle-view')).toBeInViewport();
   await expect(tour).toHaveAttribute('aria-pressed', 'false');
   expect(
@@ -488,10 +488,39 @@ test('parking at the gate plays the replays before the drawing, and re-arms on r
       });
     }, fraction);
   const equation = page.locator('.equation strong');
+  const heading = page.locator('#start h2');
+  await jump('#start');
+  const headingTop = () =>
+    heading.evaluate((el) => el.getBoundingClientRect().top);
+  const initialHeading = await headingTop();
+  await chapter(0.35);
+  expect(Math.abs((await headingTop()) - initialHeading)).toBeLessThan(1);
+  await expect(heading).toBeInViewport();
+
+  const columns = () =>
+    page
+      .locator('#start li')
+      .evaluateAll((items) =>
+        items.map((item) => Math.round(item.getBoundingClientRect().left)),
+      );
+  await chapter(0.48);
+  await expect
+    .poll(async () => {
+      const x = await columns();
+      return Math.max(...x) - Math.min(...x);
+    })
+    .toBeLessThanOrEqual(1);
+  await jump('#start');
+  await expect
+    .poll(async () => (await columns())[2] - (await columns())[0])
+    .toBeGreaterThan(600);
   await chapter(0.6);
+  await expect(equation).toBeHidden();
+  await chapter(0.86);
   await expect(equation).toBeVisible();
+  await expect(page.locator('#start li').last()).not.toBeInViewport();
   const approaching = await equation.textContent();
-  await chapter(0.75);
+  await chapter(0.94);
   await expect(equation).not.toHaveText(approaching!);
   await expect(page.locator('.scene-stage .gate-sheet')).not.toHaveClass(
     /is-ready/,
@@ -535,7 +564,15 @@ test('parking at the gate plays the replays before the drawing, and re-arms on r
   await expect(page.locator('.scene-stage .gate-sheet')).not.toHaveClass(
     /is-ready/,
   );
-  await expect(equation).toBeVisible();
+  await expect(equation).toBeHidden();
+  const drawingOpacity = () =>
+    story.evaluate((el) =>
+      Number(el.style.getPropertyValue('--diagram-opacity')),
+    );
+  await expect.poll(drawingOpacity).toBe(0);
+  await chapter(1.63);
+  await expect.poll(drawingOpacity).toBeGreaterThan(0);
+  await expect(page.locator('.scene-stage .gate-sheet')).toBeHidden();
   await jump('#anatomy');
   await expect(story).toHaveAttribute('data-gate-phase', 'pass');
   await expect(

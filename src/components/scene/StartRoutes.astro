@@ -4,6 +4,8 @@ import Icon from '../ui/Icon.vue';
 import StudyPoster from './StudyPoster.astro';
 const { locale } = Astro.props as { locale: Locale };
 const i = locale === 'uk' ? 0 : 1;
+const searchLabel =
+  i === 0 ? 'Пошук конкретної теми' : 'Search for a specific topic';
 const routes = [
   {
     path: 'anatomy/frame',
@@ -47,159 +49,355 @@ const routes = [
   <div class="start-still" aria-hidden="true">
     <StudyPoster name="whoop" />
   </div>
-  <h2 id="start-heading">{i === 0 ? 'З чого почати?' : 'Where to start?'}</h2>
-  <ul>
-    {routes.map((route) => (
-      <li>
-        <a href={pageUrl(locale, 'knowledge/' + route.path)}>
-          <Icon name={route.icon} />
-          <strong>{route.name[i]}</strong>
-          <span>{route.detail[i]}</span>
-          <small>{route.target[i]} ↗</small>
-        </a>
-      </li>
-    ))}
-  </ul>
-  <a
-    class="start-search"
-    aria-label={i === 0 ? 'Шукаю конкретну тему' : 'Find a specific topic'}
-    href={pageUrl(locale, 'knowledge/search')}
-  >
-    <Icon name="search" />
-    <span class="hint">
-      {i === 0 ? 'Шукаю конкретну тему' : 'Find a specific topic'}
-    </span>
-  </a>
+  <div class="start-frame">
+    <div class="start-heading">
+      <h2 id="start-heading">{i === 0 ? 'З чого почати' : 'Where to start'}</h2>
+      <details class="start-search">
+        <summary>
+          <Icon name="search" />
+          <span>{searchLabel}</span>
+        </summary>
+        <form
+          role="search"
+          method="get"
+          action={pageUrl(locale, 'knowledge/search')}
+        >
+          <input
+            type="search"
+            name="q"
+            required
+            enterkeyhint="search"
+            aria-label={searchLabel}
+            autocomplete="off"
+          />
+          <button type="submit" aria-label={i === 0 ? 'Пошук' : 'Search'}>
+            <Icon name="forward" />
+          </button>
+        </form>
+      </details>
+    </div>
+    <ul>
+      {routes.map((route, index) => (
+        <li style={`--step:${index}`}>
+          <a href={pageUrl(locale, 'knowledge/' + route.path)}>
+            <div class="route-title">
+              <Icon name={route.icon} />
+              <strong>{route.name[i]}</strong>
+            </div>
+            <p>{route.detail[i]}</p>
+            <small>
+              <span>{route.target[i]}</span>
+              <Icon name="forward" />
+              <span class="route-corner" aria-hidden="true">
+                <svg viewBox="0 0 100 36" preserveAspectRatio="none">
+                  <path d="M0 35H94L99 30V1" />
+                  <path
+                    class="pcb-current"
+                    pathLength="100"
+                    d="M0 35H94L99 30V1"
+                  />
+                </svg>
+              </span>
+            </small>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
 </section>
+<script>
+  const routes = document.querySelector<HTMLElement>('#start')!;
+  const search = routes.querySelector('details')!;
+  search.addEventListener('toggle', () => {
+    if (search.open) search.querySelector('input')!.focus();
+    measureColumn();
+  });
+  search.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      search.open = false;
+      search.querySelector('summary')!.focus({ preventScroll: true });
+    }
+  });
+  // Measure the two layouts only when their geometry changes. The canvas
+  // supplies one reversible progress value for all three links and the drone.
+  const list = routes.querySelector('ul')!;
+  const heading = routes.querySelector<HTMLElement>('.start-heading')!;
+  const items = Array.from(list.children) as HTMLLIElement[];
+  function measureColumn() {
+    const gap = Math.max(16, Math.min(window.innerHeight * 0.032, 36));
+    const fieldHeight = search.open
+      ? search.querySelector('form')!.offsetHeight
+      : 0;
+    let top =
+      heading.offsetTop +
+      heading.offsetHeight +
+      Math.max(gap, fieldHeight + 8) -
+      list.offsetTop;
+    for (const item of items) {
+      item.style.setProperty('--column-x', -item.offsetLeft + 'px');
+      item.style.setProperty('--column-y', top - item.offsetTop + 'px');
+      top += item.offsetHeight + gap;
+    }
+    // The native sticky release carries most of the column out of view.
+    // Give taller translations enough clearance for the gate readouts.
+    const bottom = list.offsetTop + top - gap;
+    routes.style.setProperty(
+      '--column-clearance',
+      Math.max(0, bottom - window.innerHeight * 0.66) + 'px',
+    );
+  }
+  const sizes = new ResizeObserver(measureColumn);
+  for (const element of [routes, heading, list, ...items])
+    sizes.observe(element);
+  const reveal = new IntersectionObserver(
+    ([entry]) => {
+      routes.toggleAttribute('data-entered', entry.isIntersecting);
+    },
+    { rootMargin: '0px 0px -10% 0px' },
+  );
+  routes.setAttribute('data-reveal', '');
+  reveal.observe(routes);
+</script>
 <style>
   .start-routes {
     position: relative;
     min-height: 100svh;
+  }
+  .start-frame {
+    min-height: 100svh;
     display: grid;
-    align-content: center;
-    justify-items: center;
-    padding: clamp(8rem, 22svh, 15rem) max(5vw, 3.5rem) 5rem;
-    gap: clamp(2rem, 5vw, 4rem);
+    align-content: start;
+    justify-items: start;
+    padding: clamp(3rem, 10svh, 8rem) max(6vw, 4rem) clamp(2rem, 6svh, 5rem)
+      max(10vw, 4.5rem);
+    gap: clamp(4rem, calc(30svh - 5rem), 15rem);
+  }
+  .start-heading {
+    max-width: 72%;
   }
   .start-routes h2 {
     font:
-      400 clamp(1.05rem, 2.55vw, 2.5rem)/1.55 'Press Start 2P',
+      400 clamp(1.2rem, 3.15vw, 3.4rem)/1.5 'Press Start 2P',
       monospace;
-    text-align: center;
     text-wrap: balance;
   }
-  .start-routes ul {
-    width: min(64rem, 100%);
+  ul {
+    position: relative;
+    width: 100%;
+    justify-self: center;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: clamp(1rem, 2.7vw, 3rem);
     align-items: start;
+    gap: clamp(1rem, 2.7vw, 3rem);
   }
-  .start-routes li:nth-child(1) {
-    margin-top: 3rem;
+  li {
+    margin-top: calc(var(--step) * clamp(2.8rem, 11svh, 8rem));
   }
-  .start-routes li:nth-child(2) {
-    margin-top: 1.5rem;
-  }
-  .start-routes li a {
+  li a {
     position: relative;
     display: grid;
-    justify-items: start;
-    gap: 0.7rem;
-    padding: 1rem 0.3rem;
-    border-top: 1px solid var(--line);
+    width: fit-content;
+    max-width: 100%;
+    gap: clamp(0.85rem, 2.4svh, 1.6rem);
+    padding-block: 0.32rem;
   }
-  .start-routes li a::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: -2px;
-    width: 1.7rem;
-    height: 3px;
-    background: var(--accent);
+  .route-title {
+    display: flex;
+    gap: 0.65rem;
+    align-items: baseline;
   }
-  .start-routes li svg {
-    width: 2rem;
-    height: 2rem;
+  .route-title :global(svg) {
+    flex: none;
+    align-self: flex-start;
+    width: clamp(1.75rem, 2.25vw, 2.25rem);
+    height: auto;
+    margin-top: 0.02em;
     color: var(--muted);
   }
-  .start-routes strong {
+  strong {
     font:
-      700 clamp(1.15rem, 2vw, 1.55rem)/1.25 Play,
+      700 clamp(1.22rem, 2vw, 1.68rem)/1.2 Play,
       sans-serif;
   }
-  .start-routes li span {
-    font-size: 0.95rem;
-    line-height: 1.6;
+  p {
     color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.55;
   }
-  .start-routes small,
-  .start-search {
+  small,
+  summary {
     color: var(--accent);
-    font: 0.8rem/1.6 var(--font-mono);
+    font: 0.85rem/1.5 var(--font-mono);
   }
-  .start-routes a:is(:hover, :focus-visible) strong,
-  .start-search:is(:hover, :focus-visible) {
-    text-decoration: underline;
-    text-underline-offset: 0.3em;
+  small {
+    display: flex;
+    gap: 0.45rem;
+    align-items: center;
+  }
+  small > :global(svg) {
+    flex: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    stroke-width: 2;
+    rotate: -45deg;
+    transition: translate 0.2s;
+  }
+  li a:is(:hover, :focus-visible) small > :global(svg) {
+    translate: 0.12rem -0.12rem;
+  }
+  .route-corner {
+    position: relative;
+    flex: 1 0 1.1rem;
+    align-self: center;
+    margin-left: 0.15rem;
+    pointer-events: none;
+    --pulse-period: 4.5s;
+    --pulse-delay: calc(var(--step) * -1.3s);
+  }
+  .route-corner svg {
+    position: absolute;
+    inset: auto auto -1px 0;
+    width: calc(100% + 0.25rem);
+    height: clamp(1.6rem, 5svh, 3.2rem);
+    overflow: visible;
+    fill: none;
+    stroke: var(--line);
+  }
+  .route-corner path {
+    vector-effect: non-scaling-stroke;
+  }
+  .route-corner::after {
+    content: '';
+    position: absolute;
+    width: 0.28rem;
+    height: 0.28rem;
+    border: 1px solid var(--muted);
+    border-radius: 50%;
+    background: var(--surface);
+    translate: -50% -50%;
+  }
+  .route-corner .pcb-current {
+    visibility: hidden;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    [data-entered] .route-corner .pcb-current {
+      visibility: visible;
+      animation-play-state: running;
+    }
   }
   .start-search {
     position: relative;
-    display: inline-flex;
-    min-width: 44px;
-    justify-content: center;
-    border: 1px solid var(--line);
-    border-radius: 0.5rem;
-    align-items: center;
+    width: min(22rem, 100%);
+    margin-top: 0.45rem;
+  }
+  summary {
+    font-size: clamp(0.97rem, 1.15vw, 1.12rem);
+    cursor: pointer;
+    display: flex;
     gap: 0.65rem;
+    align-items: center;
     min-height: 44px;
+    width: fit-content;
   }
-  .start-search .hint {
-    left: 50%;
-    top: 100%;
-    transform: translateX(-50%);
+  summary::-webkit-details-marker {
+    display: none;
   }
-  .start-search svg {
-    width: 1.1rem;
+  summary :global(svg),
+  form :global(svg) {
+    width: 1.35rem;
+  }
+  form {
+    position: absolute;
+    z-index: 1;
+    inset-inline: 0;
+    display: flex;
+    border: 1px solid var(--accent);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    min-height: 44px;
+    animation: search-reveal 0.24s ease-out;
+  }
+  input {
+    min-width: 0;
+    flex: 1;
+    padding: 0.5rem 0.8rem;
+  }
+  form button {
+    width: 44px;
+    display: grid;
+    place-items: center;
+    color: var(--accent);
+  }
+  @keyframes search-reveal {
+    from {
+      opacity: 0;
+      clip-path: inset(0 40% round 0.5rem);
+    }
   }
   .start-still {
     position: absolute;
-    width: clamp(4rem, 10vw, 8rem);
-    top: 6%;
-    left: 50%;
-    transform: translateX(-50%);
+    width: clamp(4rem, 13vw, 11rem);
+    top: 15svh;
+    right: 8%;
   }
   :global([data-live]) .start-still {
     display: none;
   }
-  @media (max-width: 840px) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-reveal] :is(li, details) {
+      transition:
+        opacity 0.34s,
+        translate 0.4s;
+    }
+    [data-entered] :is(li, details) {
+      transition-delay: calc(var(--step) * 95ms);
+    }
+    [data-reveal]:not([data-entered], :focus-within) :is(li, details) {
+      opacity: 0;
+      translate: 0 0.7rem;
+    }
+  }
+  @media (min-width: 841px) and (min-height: 510px) and (prefers-reduced-motion: no-preference) {
+    li {
+      transform: translate(
+        calc(var(--column-x, 0px) * var(--column-progress, 0)),
+        calc(var(--column-y, 0px) * var(--row-progress, 0))
+      );
+    }
     .start-routes {
-      gap: 1.65rem;
-      padding: 8rem 1.25rem 3rem 3.6rem;
+      min-height: 175svh;
     }
-    .start-routes ul {
-      grid-template-columns: 1fr;
-      max-width: 32rem;
+    .start-frame {
+      position: sticky;
+      top: 0;
+      translate: 0
+        calc(-1 * var(--column-clearance, 0px) * var(--column-exit, 0));
     }
-    .start-routes li:nth-child(n) {
-      margin: 0;
+  }
+  @media (max-width: 840px) {
+    .start-frame {
+      padding: 6rem 1.25rem 2rem 3.6rem;
+      gap: 3rem;
     }
-    .start-routes li a {
-      grid-template-columns: auto 1fr;
-      column-gap: 1rem;
-    }
-    .start-routes li svg {
-      grid-row: span 3;
-    }
-    .start-routes li span,
-    .start-routes li small {
-      grid-column: 2;
-    }
-    .start-still {
-      top: 1rem;
+    .start-heading {
+      max-width: 100%;
     }
     .start-routes h2 {
-      font-size: clamp(0.95rem, 3.8vw, 1.5rem);
+      font-size: clamp(1rem, 4vw, 1.65rem);
+    }
+    ul {
+      grid-template-columns: 1fr;
+      max-width: 32rem;
+      row-gap: 2.25rem;
+    }
+    li {
+      margin-top: 0;
+    }
+    form {
+      position: static;
+    }
+    .start-still {
+      top: 0.5rem;
     }
   }
 </style>

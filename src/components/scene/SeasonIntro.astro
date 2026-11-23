@@ -83,7 +83,7 @@ const ice = [
           data-eddy={region}
           data-compact={compact ? 'true' : undefined}
           data-drifting={i >= eddies.length ? 'true' : undefined}
-          style={`left:${x}%;top:${y}%;--sx:${floorX - x}vw;
+          style={`left:${x}%;top:${y}%;--exit-x:${(floorX < 75 ? -1 : 1) * (12 + (i % 5) * 2.7)}vw;--exit-y:${[-3, 2, -1, 4][i % 4]}svh;--sx:${floorX - x}vw;
           --sy:${floorY - y}svh;--mobile-sy:${53 + (floorY - 83) / 2 - y}svh;
           --edge:${liftX - x}vw;--rim-y:${region === 'top' ? Math.min(25, y + 8) - y : 0}svh;
           --w:${width}px;--wind:${4.6 + (i % 5) * 0.64}s;
@@ -120,17 +120,49 @@ const ice = [
 <script>
   const field = document.querySelector<HTMLElement>('.season-air');
   if (field) {
-    let inView = false;
-    const paint = () =>
-      field.toggleAttribute('data-awake', inView && !document.hidden);
-    const observer = new IntersectionObserver(([entry]) => {
-      inView = entry.isIntersecting;
+    const story = field.closest<HTMLElement>('[data-story]')!;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    let frame = 0;
+    let previousTime: number | undefined;
+    let depart: number | undefined;
+    function paint(now = performance.now()) {
+      frame = 0;
+      const distance = scrollY / (innerHeight * 0.25);
+      const scroll = Math.min(1, Math.max(0, distance));
+      const target = scroll * scroll * (3 - 2 * scroll);
+      const dt = Math.min(40, now - (previousTime ?? now - 16.7));
+      previousTime = now;
+      depart ??= target;
+      const remaining = target - depart;
+      if (reduced.matches || document.hidden || Math.abs(remaining) < 0.002) {
+        depart = target;
+        previousTime = undefined;
+      } else {
+        depart += remaining * (1 - Math.exp(-dt / (remaining > 0 ? 115 : 160)));
+        schedule();
+      }
+      story.style.setProperty('--floor-depart', String(depart));
+      story.toggleAttribute('data-left-floor', depart === 1);
+      field!.toggleAttribute('data-awake', depart < 1 && !document.hidden);
+    }
+    function schedule() {
+      if (!frame) frame = requestAnimationFrame(paint);
+    }
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    document.addEventListener('visibilitychange', () => {
+      cancelAnimationFrame(frame);
       paint();
     });
-    observer.observe(field);
-    document.addEventListener('visibilitychange', paint);
-    window.addEventListener('pagehide', () => observer.disconnect());
-    window.addEventListener('pageshow', () => observer.observe(field));
+    reduced.addEventListener('change', schedule);
+    window.addEventListener('pagehide', () => {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      previousTime = undefined;
+      field!.removeAttribute('data-awake');
+    });
+    window.addEventListener('pageshow', schedule);
+    paint();
   }
 </script>
 
@@ -146,7 +178,20 @@ const ice = [
     pointer-events: none;
     overflow: clip;
   }
+  .season-air,
+  .scatter {
+    opacity: calc(1 - var(--floor-depart, 0));
+  }
+  [data-left-floor] :is(.season-air, .scatter) {
+    visibility: hidden;
+  }
+  .scatter i {
+    translate: calc(0.2 * var(--dx) * var(--floor-depart, 0))
+      calc(0.32 * var(--dy) * var(--floor-depart, 0));
+  }
   .air-origin {
+    translate: calc(var(--exit-x) * var(--floor-depart, 0))
+      calc(var(--exit-y) * var(--floor-depart, 0));
     --wind-x: 3.2vw;
     --wind-y: 2.1svh;
     position: absolute;

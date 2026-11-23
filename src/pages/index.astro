@@ -1,5 +1,6 @@
 ---
 import { pageUrl } from '../lib/i18n';
+import { paths } from '../components/ui/paths';
 ---
 
 <!doctype html>
@@ -7,10 +8,51 @@ import { pageUrl } from '../lib/i18n';
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta http-equiv="refresh" content={`0;url=${pageUrl('uk')}`} />
     <title>upTilt</title>
+    <style is:inline>
+      html {
+        background: #0d0f13;
+        color: #a7abb2;
+        color-scheme: dark;
+      }
+      html[data-theme='light'] {
+        background: #f6f7f9;
+        color: #526669;
+        color-scheme: light;
+      }
+      body {
+        margin: 0;
+        height: 100svh;
+        display: grid;
+        place-items: center;
+      }
+      svg {
+        width: 2.5rem;
+      }
+    </style>
+    <script is:inline define:vars={{ home: pageUrl('uk') }}>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem('uptilt:theme') || 'dark';
+      } catch {}
+      location.replace(home + location.search + location.hash);
+    </script>
+    <noscript>
+      <meta http-equiv="refresh" content={`0;url=${pageUrl('uk')}`} />
+    </noscript>
   </head>
   <body>
-    <a href={pageUrl('uk')}>Українська</a> / <a href={pageUrl('en')}>English</a>
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+    >
+      <path d={paths.quad} stroke-width="1.3" />
+    </svg>
+    <noscript>
+      <a href={pageUrl('uk')}>Українська</a> /{' '}
+      <a href={pageUrl('en')}>English</a>
+    </noscript>
   </body>
 </html>

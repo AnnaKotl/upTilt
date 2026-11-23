@@ -90,6 +90,33 @@ html:has(.flight-story [data-stop]:target) {
   display: flex;
   gap: 0.7rem;
 }
+.pcb-current {
+  stroke: color-mix(in srgb, var(--accent) 72%, var(--ink));
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  stroke-dasharray: 7 110;
+  filter: drop-shadow(0 0 1px var(--accent));
+  animation: pcb-current var(--pulse-period) linear var(--pulse-delay) infinite
+    paused;
+}
+@keyframes pcb-current {
+  0% {
+    stroke-dashoffset: 7;
+    opacity: 0;
+  }
+  3% {
+    opacity: 0.9;
+  }
+  24% {
+    opacity: 0.9;
+  }
+  28%,
+  100% {
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+}
+
 .book-chip {
   height: 3.4rem;
   width: 3.4rem;
@@ -1700,7 +1727,11 @@ html:has(.flight-story [data-stop]:target) {
 }
 @media (min-width: 841px) and (min-height: 510px) {
   .flight-hero {
-    min-height: 246svh;
+    min-height: 121svh;
+  }
+  .hero-shot {
+    position: sticky;
+    top: 0;
   }
   .hero-type {
     position: absolute;
@@ -1750,7 +1781,7 @@ html:has(.flight-story [data-stop]:target) {
     height: 15%;
   }
   .gate-chapter {
-    height: 485svh;
+    height: 100svh;
   }
   [data-live] .gate-chapter {
     --diagram-scroll-room: 145svh;

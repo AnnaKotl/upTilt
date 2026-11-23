@@ -154,12 +154,12 @@ test('book, section bookmarks and search serve different routes', async ({
   await expect(page.getByRole('dialog')).toContainText('onboard view');
   await page.keyboard.press('Escape');
   await page.locator('[data-library]').click();
-  const search = page.getByRole('button', { name: 'Find a topic' });
+  const search = page.getByRole('button', { name: 'Search' });
   await search.click();
   const query = page.getByRole('searchbox');
   await query.fill('flight physics');
   await expect(page.locator('.topic-row:visible')).toHaveCount(9);
-  await page.getByRole('heading', { name: 'Knowledge base' }).click();
+  await page.locator('.search-shade').click({ position: { x: 400, y: 180 } });
   await expect(query).toBeHidden();
   await search.click();
   await expect(query).toHaveValue('flight physics');
@@ -320,7 +320,7 @@ test('Ukrainian search links to exact materials and keeps category context', asy
   page,
 }) => {
   await page.goto('uk/knowledge/radio/');
-  await page.getByRole('button', { name: 'Знайти тему' }).click();
+  await page.getByRole('button', { name: 'Пошук' }).click();
   const input = page.getByRole('searchbox');
   await input.fill('частоти');
   await input.press('Enter');
@@ -361,9 +361,16 @@ test('start routes localise with the hero and keep the mobile path reachable', a
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('uk/#start');
   const start = page.locator('#start');
-  await expect(start.locator('h2')).toHaveText('З чого почати?');
+  await expect(start.locator('h2')).toHaveText('З чого почати');
   await page.locator('[data-language]').click();
-  await expect(start.locator('h2')).toHaveText('Where to start?');
+  await expect(start.locator('h2')).toHaveText('Where to start');
+  await start.locator('summary').click();
+  const query = start.getByRole('searchbox');
+  await query.fill('wavelength');
+  await query.press('Enter');
+  await expect(page.locator('.search-results li').first()).toBeVisible();
+  await page.goBack();
+  await expect(start).toBeInViewport();
   await start.getByRole('link', { name: /I fly in a simulator/ }).click();
   await expect(page).toHaveURL(/en\/knowledge\/fundamentals\/axes\/$/);
 });

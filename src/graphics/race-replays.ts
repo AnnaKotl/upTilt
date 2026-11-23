@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { gateCrossing, gatePoint } from '../data/flight-path';
+import { gateCrossing, gateExitEnd, gatePoint } from '../data/flight-path';
 import {
   laps,
   lapPoint,
@@ -154,7 +154,7 @@ export function raceReplays(scene: T.Scene, gate: T.Group) {
     lastScroll: number,
   ) {
     const parked = progress >= 0.979 && progress <= replayExit;
-    if (progress < 0.9 || progress >= 1.56) {
+    if (progress < 0.9 || progress >= gateExitEnd) {
       if (inVisit) reset();
       return 'pass';
     }
@@ -200,7 +200,7 @@ export function raceReplays(scene: T.Scene, gate: T.Group) {
     moving = false;
     let airborneIndex = -1;
     const visibility =
-      (1 - T.MathUtils.smoothstep(progress, replayExit, 1.56)) *
+      (1 - T.MathUtils.smoothstep(progress, 1.355, gateExitEnd)) *
       T.MathUtils.smoothstep(progress, 0.9, 0.979);
     runs.forEach(
       (

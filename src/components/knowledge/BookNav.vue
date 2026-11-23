@@ -9,14 +9,25 @@ const locale = usePageLanguage(input.locale);
 const expanded = ref(false);
 const trigger = ref<HTMLAnchorElement>();
 const menu = ref<HTMLElement>();
-const pulsePhase = ref('0s');
-onMounted(() => (pulsePhase.value = `${-Math.random() * 11}s`));
-const pulseRoutes = {
-  upperRight: 'M23 -18H35L48-31H85L101-47H121',
-  lowerLeft: 'M-24 18H-40L-55 33H-73L-101 61H-120',
-  diagonal: 'M24 0H38L65 27H84L126 69H137',
-  lowerRight: 'M24 -7H43L61 11H105L127 33H159L174 18H210',
-};
+// Each trace ends in a plated via or a small component pad.
+const traces = [
+  { d: 'M-7 -20V-44L-29 -66H-73', x: -76, y: -66, kind: 'via' },
+  { d: 'M-19 -15H-42L-64 -37H-96', x: -99, y: -37, kind: 'pad' },
+  { d: 'M6 -21V-52L23 -69V-87', x: 23, y: -90, kind: 'via', faint: true },
+  { d: 'M21 -13H47L66 -32H100', x: 103, y: -32, kind: 'chip', faint: true },
+  { d: 'M22 1H49L66 18H113', x: 116, y: 18, kind: 'via' },
+  { d: 'M21 10H41L67 36V53', x: 67, y: 56, kind: 'pad' },
+  { d: 'M5 21V46L27 68H58', x: 61, y: 68, kind: 'via', faint: true },
+  { d: 'M-21 12H-46L-65 31H-106', x: -109, y: 31, kind: 'chip', faint: true },
+  { d: 'M-11 22V45L-30 64H-67', x: -70, y: 64, kind: 'via' },
+];
+const clocks = ref(traces.map((_, i) => ({ period: 4.5, delay: -i * 0.61 })));
+onMounted(() => {
+  clocks.value = traces.map(() => {
+    const period = 3.6 + Math.random() * 2.3;
+    return { period, delay: -Math.random() * period };
+  });
+});
 let hoverTimer = 0;
 onBeforeUnmount(() => clearTimeout(hoverTimer));
 function close() {
@@ -109,177 +120,38 @@ function trace(i: number) {
         <svg
           class="pcb-island"
           viewBox="-158 -104 316 208"
-          :style="{ '--pulse-phase': pulsePhase }"
           fill="none"
           aria-hidden="true"
         >
-          <g class="pcb-etching" transform="scale(.9)">
+          <g v-for="(trace, i) in traces" :key="trace.d">
             <path
-              d="M17 -23V-42L30-55H43L60-72V-85L76-101H84
-                 M133 -77H141L151-67H165"
-            />
-            <path :d="pulseRoutes.upperRight" />
-            <path
-              :d="pulseRoutes.upperRight"
-              pathLength="100"
-              class="pcb-current"
-              style="--pulse-period: 17s; --pulse-delay: 5s"
-            />
-            <circle cx="87" cy="-101" r="2.2" />
-            <circle cx="124" cy="-47" r="2.2" />
-            <circle cx="168" cy="-67" r="2.1" />
-            <g transform="translate(106 -115) scale(.85)">
-              <rect x="-8" y="-8" width="16" height="16" rx="1.3" />
-              <rect x="-4.3" y="-4.3" width="8.6" height="8.6" rx=".8" />
-              <path
-                d="M-5 -8v-3m5 3v-3m5 3v-3M-5 8v3m5-3v3m5-3v3M-8-4h-3m3 4h-3m3 4h-3m19-8h3m-3 4h3m-3 4h3"
-              />
-              <circle cx="-6" cy="-6" r=".6" fill="currentColor" />
-            </g>
-            <g transform="translate(165 -93) scale(.85)">
-              <rect x="-5" y="-5" width="10" height="10" rx=".9" />
-              <path d="M-5-3h-3m3 3h-3m3 3h-3m13-6h3m-3 3h3m-3 3h3" />
-              <circle r="1.7" />
-            </g>
-            <g transform="translate(121 -76) scale(.85)">
-              <path d="M0-7 10-2 0 3-10-2ZM-10 1 0 6 10 1m-20 3 10 5 10-5" />
-              <path d="M-4-2 0-4 4-2 0 0Z" />
-            </g>
-          </g>
-          <g class="pcb-etching">
-            <path d="M-53 20H-70L-87 37H-121" />
-            <path :d="pulseRoutes.lowerLeft" />
-            <path
-              :d="pulseRoutes.lowerLeft"
-              pathLength="100"
-              class="pcb-current"
-              style="--pulse-period: 23s; --pulse-delay: 9s"
-            />
-            <circle cx="-123" cy="61" r="2.2" />
-            <g transform="translate(-131 37)">
-              <rect x="-7" y="-5.5" width="14" height="11" rx="1" />
-              <path
-                d="M-7-3h-3m3 3h-3m3 3h-3m17-6h3m-3 3h3m-3 3h3M-3-2h6v4h-6z"
-              />
-            </g>
-          </g>
-          <g
-            v-for="side in ['upper', 'compact-tail']"
-            :key="side"
-            :class="'pcb-' + side"
-            :transform="side === 'upper' ? 'rotate(20) scale(-.9)' : undefined"
-          >
-            <path
+              :d="trace.d"
               class="pcb-route"
-              d="M24 -7H42L67 18H89L127 56H143
-                 M24 14H29L55 40H68L99 71H107
-                 M12 23V35L32 55V61L54 83H73"
+              :class="{ 'pcb-faint': trace.faint }"
             />
-            <path :d="pulseRoutes.diagonal" class="pcb-route" />
             <path
-              :d="pulseRoutes.diagonal"
+              :d="trace.d"
               pathLength="100"
               class="pcb-current"
               :style="{
-                '--pulse-period': side === 'upper' ? '13s' : '19s',
-                '--pulse-delay': side === 'upper' ? '1s' : '6s',
+                '--pulse-period': clocks[i].period + 's',
+                '--pulse-delay': clocks[i].delay + 's',
               }"
             />
-            <g class="pcb-via">
-              <circle cx="146" cy="56" r="2.7" />
-              <circle cx="110" cy="71" r="2.5" />
-              <circle cx="76" cy="83" r="2.6" />
-            </g>
-            <g transform="translate(142 69)">
-              <rect
-                x="-5"
-                y="-2.7"
-                width="10"
-                height="5.4"
-                rx=".8"
-                class="pcb-pad"
-              />
-              <path d="M-2.5 -2.7h5v5.4h-5z" class="pcb-body" />
-            </g>
-            <g v-if="side === 'compact-tail'">
-              <g
-                v-for="x in [64, 71, 78]"
-                :key="x"
-                :transform="`translate(${x} 65)`"
-              >
-                <rect
-                  x="-2.2"
-                  y="-5"
-                  width="4.4"
-                  height="10"
-                  rx=".7"
-                  class="pcb-pad"
-                />
-                <rect
-                  x="-2.2"
-                  y="-2.7"
-                  width="4.4"
-                  height="5.4"
-                  rx=".5"
-                  class="pcb-body"
+            <g
+              :transform="`translate(${trace.x} ${trace.y})`"
+              class="pcb-terminal"
+              :class="{ 'pcb-faint': trace.faint }"
+            >
+              <circle v-if="trace.kind === 'via'" r="2.6" />
+              <g v-else-if="trace.kind === 'chip'">
+                <rect x="-4" y="-4" width="8" height="8" rx="1" />
+                <path
+                  d="M-2 -4v-2m4 2v-2m-4 10v2m4-2v2M-4 -2h-2m2 4h-2m10-4h2m-2 4h2"
                 />
               </g>
-              <path class="pcb-silk" d="M60 60v-3h22v3 M60 70v3h20" />
+              <rect v-else x="-3.5" y="-1.9" width="7" height="3.8" rx=".6" />
             </g>
-          </g>
-          <g class="pcb-wide-tail">
-            <path
-              class="pcb-route"
-              d="M24 0H39L62 23H96L121 48H151L169 30H188
-                 M24 7H35L62 34H85L112 61H144L164 81H203
-                 M5 23V40L31 66V71L54 94H83"
-            />
-            <path :d="pulseRoutes.lowerRight" class="pcb-route" />
-            <path
-              :d="pulseRoutes.lowerRight"
-              pathLength="100"
-              class="pcb-current"
-              style="--pulse-period: 19s; --pulse-delay: 8s"
-            />
-            <path class="pcb-route pcb-spur" d="M151 48L166 63H174" />
-            <g class="pcb-via">
-              <circle cx="213" cy="18" r="2.7" />
-              <circle cx="206" cy="81" r="2.4" />
-            </g>
-            <g transform="translate(193 30)">
-              <rect
-                x="-5"
-                y="-2.7"
-                width="10"
-                height="5.4"
-                rx=".8"
-                class="pcb-pad"
-              />
-              <path d="M-2.5 -2.7h5v5.4h-5z" class="pcb-body" />
-            </g>
-            <g
-              v-for="x in [178, 186, 194]"
-              :key="x"
-              :transform="`translate(${x} 63)`"
-            >
-              <rect
-                x="-2.2"
-                y="-5"
-                width="4.4"
-                height="10"
-                rx=".7"
-                class="pcb-pad"
-              />
-              <rect
-                x="-2.2"
-                y="-2.7"
-                width="4.4"
-                height="5.4"
-                rx=".5"
-                class="pcb-body"
-              />
-            </g>
-            <path class="pcb-silk" d="M173 59V55H199V59 M173 68V71H199V68" />
           </g>
         </svg>
         <span class="book-chip"><Icon name="book" /></span>
@@ -341,7 +213,7 @@ function trace(i: number) {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: clamp(16rem, 38vw, 44rem);
+  width: clamp(18rem, 36vw, 40rem);
   height: auto;
   max-width: none;
   overflow: visible;
@@ -350,18 +222,23 @@ function trace(i: number) {
   opacity: 0.44;
   transition: opacity 0.35s;
 }
+.pcb-route,
+.pcb-terminal {
+  stroke: currentColor;
+  stroke-width: 0.65;
+  opacity: 0.36;
+}
+.pcb-terminal {
+  fill: var(--surface);
+}
+.pcb-faint {
+  opacity: 0.22;
+}
 .pcb-current {
   visibility: hidden;
-  stroke: var(--accent);
-  stroke-width: 1.25;
-  stroke-linecap: round;
-  stroke-dasharray: 0.45 150;
-  filter: drop-shadow(0 0 1px var(--accent));
-  animation: pcb-current var(--pulse-period) linear
-    calc(var(--pulse-phase) + var(--pulse-delay)) infinite paused;
 }
 :global(
-  [data-airborne]
+  [data-airborne]:not([data-left-floor])
     .hero-shot:has(.season-air[data-awake])
     [data-open='false']
     .pcb-current
@@ -369,76 +246,17 @@ function trace(i: number) {
   visibility: visible;
   animation-play-state: running;
 }
-[data-open='true'] .pcb-current {
-  visibility: hidden;
-  animation-play-state: paused;
-}
-@keyframes pcb-current {
-  0% {
-    stroke-dashoffset: 1;
-    opacity: 0;
-  }
-  3%,
-  13% {
-    opacity: 0.87;
-  }
-  17%,
-  100% {
-    stroke-dashoffset: -100;
-    opacity: 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .pcb-current {
-    display: none;
-  }
-}
-.pcb-compact-tail {
-  display: none;
-}
-.pcb-etching {
-  color: color-mix(in srgb, var(--muted) 75%, var(--surface));
-  stroke: currentColor;
-  stroke-width: 0.43;
-  opacity: 0.48;
-}
-.pcb-route,
-.pcb-silk {
-  stroke: currentColor;
-  stroke-width: 0.65;
-  opacity: 0.65;
-}
-.pcb-silk {
-  opacity: 0.42;
-}
-.pcb-pad {
-  fill: color-mix(in srgb, var(--ink) 55%, var(--surface));
-}
-.pcb-body {
-  fill: var(--surface);
-  stroke: currentColor;
-  stroke-width: 0.6;
-}
-.pcb-via {
-  stroke: color-mix(in srgb, var(--accent) 60%, var(--muted));
-  stroke-width: 0.8;
-}
-.pcb-spur {
-  opacity: 0.45;
-}
 [data-open='true'] .pcb-island {
   opacity: 0.13;
 }
 @media (max-width: 840px), (max-height: 509px) {
   .pcb-island {
-    width: clamp(8rem, 43vw, 14rem);
+    width: clamp(10rem, 53vw, 16rem);
   }
-  .pcb-etching,
-  .pcb-wide-tail {
+}
+@media (prefers-reduced-motion: reduce) {
+  .pcb-current {
     display: none;
-  }
-  .pcb-compact-tail {
-    display: inline;
   }
 }
 </style>

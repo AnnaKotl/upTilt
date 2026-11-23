@@ -3,10 +3,11 @@ import Icon from '../ui/Icon.vue';
 import { pageUrl, type Locale } from '../../lib/i18n';
 const { locale } = Astro.props as { locale: Locale };
 const uk = locale === 'uk';
-const label = uk ? 'Знайти тему' : 'Find a topic';
+const label = uk ? 'Пошук' : 'Search';
 ---
 
 <div class="library-search" data-library-search>
+  <div class="search-shade" aria-hidden="true"></div>
   <button
     type="button"
     class="edge-tab"
@@ -54,13 +55,19 @@ const label = uk ? 'Знайти тему' : 'Find a topic';
     const input = form.querySelector('input')!;
     const clear = form.querySelector<HTMLButtonElement>('[data-search-clear]')!;
     function setOpen(open: boolean) {
+      search!.toggleAttribute('data-open', open);
       form.hidden = !open;
       toggle.setAttribute('aria-expanded', String(open));
-      if (open) input.focus();
+      if (open) input.focus({ preventScroll: true });
     }
     toggle.addEventListener('click', () =>
       setOpen(form.hasAttribute('hidden')),
     );
+    search.querySelector('.search-shade')!.addEventListener('click', () => {
+      setOpen(false);
+      toggle.focus({ preventScroll: true });
+    });
+    window.addEventListener('pagehide', () => setOpen(false));
     // Keep the drawer open while a pointer activates one of its buttons.
     search.addEventListener('mousedown', (event) => {
       if (!form.hidden && (event.target as Element).closest('button'))

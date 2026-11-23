@@ -19,7 +19,11 @@ const shell = [
   '#start a',
   '#start a strong',
   '#start a span',
-  '#start small',
+  '#start p',
+  '#start summary span',
+  '#start form',
+  '#start input',
+  '#start button',
   '#kit h2',
   '.kit-list a',
   '.kit-list a > span:last-child',
@@ -34,9 +38,15 @@ function capture(doc: Document) {
   return shell.map((selector) =>
     Array.from(doc.querySelectorAll(selector), (node) => ({
       text: node.children.length ? null : node.textContent,
-      attributes: ['aria-label', 'href', 'lang', 'hreflang', 'content'].flatMap(
-        (name) =>
-          node.hasAttribute(name) ? [[name, node.getAttribute(name)!]] : [],
+      attributes: [
+        'aria-label',
+        'href',
+        'lang',
+        'hreflang',
+        'content',
+        'action',
+      ].flatMap((name) =>
+        node.hasAttribute(name) ? [[name, node.getAttribute(name)!]] : [],
       ),
     })),
   );
@@ -94,7 +104,7 @@ export function initPresentation() {
   const stops = ['hero', 'start', 'motion', 'anatomy', 'radio', 'display'].map(
     (id) => document.getElementById(id)!,
   );
-  const dwell = [5300, 3400, 12300, 3200, 23700, 8500];
+  const dwell = [5300, 6800, 12300, 3200, 23700, 8500];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const stopPosition = (node: HTMLElement) => {
     const live =
