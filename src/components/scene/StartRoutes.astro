@@ -52,12 +52,19 @@ const routes = [
   <div class="start-frame">
     <div class="start-heading">
       <h2 id="start-heading">{i === 0 ? 'З чого почати' : 'Where to start'}</h2>
-      <details class="start-search">
-        <summary>
+      <div class="start-search">
+        <button
+          class="search-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="start-query"
+        >
           <Icon name="search" />
           <span>{searchLabel}</span>
-        </summary>
+        </button>
         <form
+          id="start-query"
+          inert
           role="search"
           method="get"
           action={pageUrl(locale, 'knowledge/search')}
@@ -74,7 +81,7 @@ const routes = [
             <Icon name="forward" />
           </button>
         </form>
-      </details>
+      </div>
     </div>
     <ul>
       {routes.map((route, index) => (
@@ -107,17 +114,22 @@ const routes = [
 </section>
 <script>
   const routes = document.querySelector<HTMLElement>('#start')!;
-  const search = routes.querySelector('details')!;
-  search.addEventListener('toggle', () => {
-    if (search.open) search.querySelector('input')!.focus();
-    measureColumn();
-  });
+  const search = routes.querySelector<HTMLElement>('.start-search')!;
+  const toggle = search.querySelector('button')!;
+  const form = search.querySelector('form')!;
+  function setOpen(open: boolean) {
+    toggle.setAttribute('aria-expanded', String(open));
+    form.inert = !open;
+    if (open) form.querySelector('input')!.focus({ preventScroll: true });
+  }
+  toggle.addEventListener('click', () => setOpen(form.inert));
   search.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      search.open = false;
-      search.querySelector('summary')!.focus({ preventScroll: true });
+    if (event.key === 'Escape' && !form.inert) {
+      setOpen(false);
+      toggle.focus({ preventScroll: true });
     }
   });
+  window.addEventListener('pagehide', () => setOpen(false));
   // Measure the two layouts only when their geometry changes. The canvas
   // supplies one reversible progress value for all three links and the drone.
   const list = routes.querySelector('ul')!;
@@ -125,14 +137,9 @@ const routes = [
   const items = Array.from(list.children) as HTMLLIElement[];
   function measureColumn() {
     const gap = Math.max(16, Math.min(window.innerHeight * 0.032, 36));
-    const fieldHeight = search.open
-      ? search.querySelector('form')!.offsetHeight
-      : 0;
+    const leadGap = Math.max(12, gap - 12);
     let top =
-      heading.offsetTop +
-      heading.offsetHeight +
-      Math.max(gap, fieldHeight + 8) -
-      list.offsetTop;
+      heading.offsetTop + heading.offsetHeight + leadGap - list.offsetTop;
     for (const item of items) {
       item.style.setProperty('--column-x', -item.offsetLeft + 'px');
       item.style.setProperty('--column-y', top - item.offsetTop + 'px');
@@ -170,15 +177,13 @@ const routes = [
     justify-items: start;
     padding: clamp(3rem, 10svh, 8rem) max(6vw, 4rem) clamp(2rem, 6svh, 5rem)
       max(10vw, 4.5rem);
-    gap: clamp(4rem, calc(30svh - 5rem), 15rem);
+    gap: clamp(3rem, calc(26svh - 5rem), 13rem);
   }
   .start-heading {
     max-width: 72%;
   }
   .start-routes h2 {
-    font:
-      400 clamp(1.2rem, 3.15vw, 3.4rem)/1.5 'Press Start 2P',
-      monospace;
+    font: 700 clamp(1.85rem, 3.5vw, 3.65rem)/1.15 var(--font-mono);
     text-wrap: balance;
   }
   ul {
@@ -196,7 +201,7 @@ const routes = [
   li a {
     position: relative;
     display: grid;
-    width: fit-content;
+    width: 100%;
     max-width: 100%;
     gap: clamp(0.85rem, 2.4svh, 1.6rem);
     padding-block: 0.32rem;
@@ -225,7 +230,7 @@ const routes = [
     line-height: 1.55;
   }
   small,
-  summary {
+  .search-toggle {
     color: var(--accent);
     font: 0.85rem/1.5 var(--font-mono);
   }
@@ -247,9 +252,9 @@ const routes = [
   }
   .route-corner {
     position: relative;
-    flex: 1 0 1.1rem;
+    flex: 0 1 clamp(2rem, 5vw, 5rem);
     align-self: center;
-    margin-left: 0.15rem;
+    margin-left: auto;
     pointer-events: none;
     --pulse-period: 4.5s;
     --pulse-delay: calc(var(--step) * -1.3s);
@@ -289,8 +294,9 @@ const routes = [
     position: relative;
     width: min(22rem, 100%);
     margin-top: 0.45rem;
+    padding-bottom: 48px;
   }
-  summary {
+  .search-toggle {
     font-size: clamp(0.97rem, 1.15vw, 1.12rem);
     cursor: pointer;
     display: flex;
@@ -299,10 +305,8 @@ const routes = [
     min-height: 44px;
     width: fit-content;
   }
-  summary::-webkit-details-marker {
-    display: none;
-  }
-  summary :global(svg),
+
+  .search-toggle :global(svg),
   form :global(svg) {
     width: 1.35rem;
   }
@@ -311,11 +315,39 @@ const routes = [
     z-index: 1;
     inset-inline: 0;
     display: flex;
-    border: 1px solid var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 48%, transparent);
     border-radius: 0.5rem;
     background: var(--surface);
     min-height: 44px;
-    animation: search-reveal 0.24s ease-out;
+    opacity: 1;
+    transition:
+      opacity 0.22s,
+      transform 0.22s,
+      border-color 0.22s;
+  }
+  form[inert] {
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+  }
+  form:focus-within {
+    border-color: var(--accent);
+  }
+  input:focus-visible {
+    outline: none;
+  }
+  .search-toggle,
+  li a :is(strong, small),
+  form button {
+    transition: color 0.2s ease;
+  }
+  .search-toggle:is(:hover, :focus-visible),
+  li a:is(:hover, :focus-visible) small,
+  form button:is(:hover, :focus-visible) {
+    color: color-mix(in srgb, var(--accent) 65%, var(--ink));
+  }
+  li a:is(:hover, :focus-visible) strong {
+    color: var(--accent);
   }
   input {
     min-width: 0;
@@ -328,12 +360,6 @@ const routes = [
     place-items: center;
     color: var(--accent);
   }
-  @keyframes search-reveal {
-    from {
-      opacity: 0;
-      clip-path: inset(0 40% round 0.5rem);
-    }
-  }
   .start-still {
     position: absolute;
     width: clamp(4rem, 13vw, 11rem);
@@ -344,15 +370,15 @@ const routes = [
     display: none;
   }
   @media (prefers-reduced-motion: no-preference) {
-    [data-reveal] :is(li, details) {
+    [data-reveal] :is(li, .start-search) {
       transition:
         opacity 0.34s,
         translate 0.4s;
     }
-    [data-entered] :is(li, details) {
+    [data-entered] :is(li, .start-search) {
       transition-delay: calc(var(--step) * 95ms);
     }
-    [data-reveal]:not([data-entered], :focus-within) :is(li, details) {
+    [data-reveal]:not([data-entered], :focus-within) :is(li, .start-search) {
       opacity: 0;
       translate: 0 0.7rem;
     }
@@ -367,6 +393,9 @@ const routes = [
     .start-routes {
       min-height: 175svh;
     }
+    :global([data-live]) .start-routes {
+      margin-bottom: 90svh;
+    }
     .start-frame {
       position: sticky;
       top: 0;
@@ -377,13 +406,13 @@ const routes = [
   @media (max-width: 840px) {
     .start-frame {
       padding: 6rem 1.25rem 2rem 3.6rem;
-      gap: 3rem;
+      gap: 2.25rem;
     }
     .start-heading {
       max-width: 100%;
     }
     .start-routes h2 {
-      font-size: clamp(1rem, 4vw, 1.65rem);
+      font-size: clamp(1.75rem, 6vw, 2.35rem);
     }
     ul {
       grid-template-columns: 1fr;
@@ -393,9 +422,7 @@ const routes = [
     li {
       margin-top: 0;
     }
-    form {
-      position: static;
-    }
+
     .start-still {
       top: 0.5rem;
     }

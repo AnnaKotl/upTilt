@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { useStudySelection } from '../../lib/useStudySelection';
-import { type Locale, t, pageUrl } from '../../lib/i18n';
+import { type Locale } from '../../lib/i18n';
 import Icon from '../ui/Icon.vue';
+import StudyNote from './StudyNote.vue';
+import StudyLink from './StudyLink.vue';
+import { partArticle } from '../../data/study-titles';
 const props = defineProps<{ locale: Locale }>();
 import { parts } from '../../data/specimen';
 import { ref } from 'vue';
-const dialog = ref<HTMLDialogElement>();
+const dialog = ref<InstanceType<typeof StudyNote>>();
 const marker = ref<HTMLButtonElement>();
 
 const { selected, choose, ready } = useStudySelection(parts, 'part');
@@ -36,11 +39,8 @@ const base = import.meta.env.BASE_URL;
         ref="marker"
         class="locator"
         :disabled="!ready"
-        :aria-label="
-          (locale === 'uk' ? 'Докладніше: ' : 'Details: ') +
-          parts[selected][locale]
-        "
-        @click="dialog?.showModal()"
+        :aria-label="parts[selected][locale]"
+        @click="dialog?.show()"
         :style="{ left: parts[selected].x + '%', top: parts[selected].y + '%' }"
       >
         <Icon name="details" />
@@ -62,31 +62,16 @@ const base = import.meta.env.BASE_URL;
       <p class="study-note" aria-live="polite">
         {{ parts[selected].description[locale] }}
       </p>
-      <a class="inline-link" :href="pageUrl(locale, 'knowledge/anatomy')"
-        >{{ t(locale).knowledge }} <Icon name="next"
-      /></a>
+      <StudyLink :locale="locale" :article="partArticle(parts[selected].id)" />
     </div>
-    <dialog
+    <StudyNote
       ref="dialog"
-      class="part-dialog"
-      @close="marker?.focus({ preventScroll: true })"
-      aria-labelledby="part-name"
-      @click="
-        (event) => {
-          if (event.target === dialog) dialog?.close();
-        }
-      "
-    >
-      <div>
-        <h3 id="part-name">{{ parts[selected][locale] }}</h3>
-        <p>{{ parts[selected].description[locale] }}</p>
-        <form method="dialog">
-          <button autofocus>
-            {{ locale === 'uk' ? 'До огляду' : 'Back to the photo' }}
-            <Icon name="back" />
-          </button>
-        </form>
-      </div>
-    </dialog>
+      :locale="locale"
+      title-id="part-name"
+      :title="parts[selected][locale]"
+      :body="parts[selected].description[locale]"
+      :article="partArticle(parts[selected].id)"
+      @closed="marker?.focus({ preventScroll: true })"
+    />
   </section>
 </template>

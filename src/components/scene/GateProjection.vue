@@ -530,7 +530,7 @@ function nudge(amount: number) {
         <polyline v-for="(points, i) in paths" :key="i" :points="points" />
       </svg>
       <figcaption>
-        <span>{{ uk ? 'Кінематика прольоту' : 'Flight kinematics' }}</span>
+        <h2>{{ uk ? 'Кінематика прольоту' : 'Flight kinematics' }}</h2>
         <small>{{ uk ? 'D — діаметр кільця' : 'D = gate diameter' }}</small>
         <div class="equation">
           <small>{{
@@ -700,7 +700,7 @@ function nudge(amount: number) {
 .gate-study,
 .gate-sheet {
   color: var(--muted);
-  font: 500 0.75rem/1.4 var(--font-mono);
+  font: 500 0.825rem/1.4 var(--font-mono);
 }
 .gate-sheet {
   z-index: 1;
@@ -843,21 +843,21 @@ figcaption {
   display: grid;
   gap: 0.35rem;
 }
-figcaption span {
-  font: 600 clamp(1.1rem, 2vw, 1.9rem)/1.1 var(--font-display, inherit);
+figcaption h2 {
+  font: 600 clamp(1.21rem, 2.2vw, 2.09rem)/1.1 var(--font-mono);
   color: var(--ink);
 }
 small {
-  font-size: 0.74rem;
+  font-size: 0.814rem;
   color: var(--muted);
 }
 .lap-controls {
   bottom: 10%;
   left: auto;
   right: clamp(2.4rem, 7vw, 8rem);
-  font-size: 0.84rem;
+  font-size: 0.924rem;
   pointer-events: auto;
-  width: min(17.5rem, calc(100% - 5rem));
+  width: min(19.25rem, calc(100% - 5rem));
   font-variant-numeric: tabular-nums;
 }
 .lap-pick {
@@ -957,7 +957,7 @@ button.lap-swatch:is(:hover, :focus-visible)::before {
 .measurements em {
   display: block;
   font-style: normal;
-  font-size: 0.72rem;
+  font-size: 0.792rem;
 }
 .measurements b {
   color: var(--ink);
@@ -1063,7 +1063,7 @@ input::-moz-range-thumb {
   .lap-controls {
     grid-row: 4;
     justify-self: end;
-    width: min(17.5rem, 100%);
+    width: min(19.25rem, 100%);
   }
   .directness {
     grid-row: 5;

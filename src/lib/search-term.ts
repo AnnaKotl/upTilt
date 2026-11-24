@@ -21,3 +21,7 @@ export function searchTerm(query: string, locale: Locale) {
     (word) => ukForms.find(([form]) => form.test(word))?.[1] ?? word,
   );
 }
+
+export function searchWords(text: string, locale: Locale) {
+  return [...new Set(searchTerm(text, locale).match(/[\p{L}\p{N}]+/gu) ?? [])];
+}

@@ -158,7 +158,7 @@
     700 clamp(1.4rem, 2.8vw, 3rem) 'Play',
     sans-serif;
 }
-.pass-label:hover {
+.pass-label:is(:hover, :focus-visible) {
   color: var(--accent);
 }
 .study {
@@ -232,6 +232,9 @@
     700 clamp(2.4rem, 5vw, 5rem)/1.05 'Play',
     sans-serif;
   letter-spacing: -0.04em;
+}
+.study h2 {
+  font-family: var(--font-mono);
 }
 .part-list {
   display: flex;

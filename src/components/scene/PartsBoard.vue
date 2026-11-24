@@ -5,12 +5,13 @@ import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { parts, matPosition, separateBoards } from '../../data/airframe';
 import { useStudySelection } from '../../lib/useStudySelection';
 import { type Locale } from '../../lib/i18n';
-import Icon from '../ui/Icon.vue';
+import StudyNote from './StudyNote.vue';
+import { partArticle } from '../../data/study-titles';
 const input = defineProps<{ locale: Locale }>();
 const locale = usePageLanguage(input.locale);
 const { selected, choose, ready } = useStudySelection(parts, 'part');
 const hover = ref<number | null>(null),
-  dialog = ref<HTMLDialogElement>(),
+  dialog = ref<InstanceType<typeof StudyNote>>(),
   opener = ref<HTMLElement>();
 const base = import.meta.env.BASE_URL + 'media/study/';
 const model = ref<Aircraft>('whoop');
@@ -104,7 +105,7 @@ const aliases: Record<string, [string, string]> = {
   'light-strip': ['Ледка', 'LED strip'],
 };
 function positionDialog() {
-  const box = dialog.value,
+  const box = dialog.value?.element,
     button = opener.value;
   if (!box?.open || !button) return;
   const rect = button.getBoundingClientRect();
@@ -134,7 +135,7 @@ async function open(event: Event, index: number) {
   choose(index);
   opener.value = event.currentTarget as HTMLElement;
   await nextTick();
-  dialog.value?.showModal();
+  dialog.value?.show();
   positionDialog();
 }
 </script>
@@ -188,18 +189,17 @@ async function open(event: Event, index: number) {
         </button>
       </div>
     </div>
-    <dialog
+    <StudyNote
       ref="dialog"
-      class="part-dialog anchored-dialog"
-      aria-labelledby="part-name"
-      @close="opener?.focus({ preventScroll: true })"
-      @click="
-        (e) => {
-          if (e.target === dialog) dialog?.close();
-        }
-      "
+      class="anchored-dialog"
+      title-id="part-name"
+      :title="name(parts[selected])"
+      :body="description(parts[selected])"
+      :article="partArticle(parts[selected].id)"
+      :locale="locale"
+      @closed="opener?.focus({ preventScroll: true })"
     >
-      <div>
+      <template #image>
         <span class="dialog-render" aria-hidden="true"
           ><img
             :class="{ 'night-image': themed.includes(parts[selected].id) }"
@@ -210,7 +210,8 @@ async function open(event: Event, index: number) {
             :src="art(parts[selected].id) + '-light.webp'"
             alt=""
         /></span>
-        <h3 id="part-name">{{ name(parts[selected]) }}</h3>
+      </template>
+      <template #alias>
         <small
           v-if="
             aliases[parts[selected].id] &&
@@ -218,14 +219,7 @@ async function open(event: Event, index: number) {
           "
           >{{ aliases[parts[selected].id][locale === 'uk' ? 0 : 1] }}</small
         >
-        <p>{{ description(parts[selected]) }}</p>
-        <form method="dialog">
-          <button autofocus>
-            {{ locale === 'uk' ? 'До огляду' : 'Back to the board' }}
-            <Icon name="forward" />
-          </button>
-        </form>
-      </div>
-    </dialog>
+      </template>
+    </StudyNote>
   </section>
 </template>

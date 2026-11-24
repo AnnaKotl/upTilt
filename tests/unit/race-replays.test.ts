@@ -13,16 +13,19 @@ import {
   gatePoint,
 } from '../../src/data/flight-path';
 
-it('holds the reading pose, then descends continuously in the moving camera frame', () => {
+it('moves closer beside the column and stays inside the frame on approach', () => {
   const held = sampleFlight(routesArrival);
-  expect(sampleFlight(routesDeparture)).toEqual(held);
-  let lastY = held[1];
+  const column = sampleFlight(routesDeparture);
+  expect(column[0]).toBeLessThan(held[0]);
+  expect(column[1]).toBeCloseTo(0.5, 1);
+  expect(column[2]).toBeGreaterThan(held[2]);
+  let lastY = column[1];
   for (let i = 1; i <= 160; i++) {
     const p = routesDeparture + ((gateCrossing - routesDeparture) * i) / 160;
     const [worldX, worldY] = gatePoint(p, 16);
     const screenY = 0.5 - (worldY - gateCameraLift(p)) / 10;
-    expect(screenY).toBeGreaterThanOrEqual(lastY);
-    expect(screenY - lastY).toBeLessThan(0.01);
+    expect(screenY).toBeGreaterThan(0.18);
+    expect(Math.abs(screenY - lastY)).toBeLessThan(0.01);
     expect(Math.abs(worldX / 16)).toBeLessThan(0.37);
     lastY = screenY;
   }

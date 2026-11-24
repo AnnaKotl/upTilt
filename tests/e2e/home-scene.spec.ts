@@ -13,7 +13,7 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
   const scene = page.locator('[data-story]');
   await expect(scene).toHaveAttribute('data-live', 'true');
   await expect(scene.locator('canvas')).toHaveCount(1);
-  await expect(scene.locator('header, [data-replay]')).toHaveCount(0);
+  await expect(scene.locator(':scope > header, [data-replay]')).toHaveCount(0);
   await expect(page.locator('.scatter')).toHaveClass(/blown/);
   await expect(scene).toHaveAttribute('data-airborne', 'true');
   await expect(page.locator('.scatter')).toBeHidden();
@@ -86,6 +86,9 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
     'Призначення задає профіль моделі',
   );
   await expect(scene).not.toHaveAttribute('data-radio-term', 'SW');
+  await radio.getByRole('button', { name: 'Повторити рухи стіків' }).click();
+  await expect(radio).toHaveAttribute('data-complete', 'false');
+  await expect(scene).toHaveAttribute('data-radio-term', 'ARMED');
   await page.getByRole('button', { name: 'Вибрати коптер' }).click();
   await page.getByRole('button', { name: 'Карбонова рама · 7″' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-aircraft', 'seven');
@@ -169,7 +172,17 @@ test('the title, aircraft menu and language switch preserve the live scene', asy
   expect((await book.boundingBox())?.y).toBe(before?.y);
   const start = await story.getAttribute('data-takeoff');
   await page.locator('[data-model-menu]').click();
-  await expect(page.locator('[data-aircraft-option="whoop"]')).toBeDisabled();
+  const selected = page.locator('[data-aircraft-option="whoop"]');
+  await expect(selected).toBeDisabled();
+  await page.keyboard.press('Tab');
+  await expect(selected).toBeFocused();
+  await expect(selected.locator('.model-name')).toHaveCSS('opacity', '1');
+  await page.keyboard.press('Enter');
+  await expect(story).toHaveAttribute('data-takeoff', start!);
+  await expect(page.locator('[data-model-menu]')).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
   await page.locator('[data-language]').click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   expect(await story.getAttribute('data-takeoff')).toBe(start);
@@ -493,7 +506,7 @@ test('parking at the gate plays the replays before the drawing, and re-arms on r
   const headingTop = () =>
     heading.evaluate((el) => el.getBoundingClientRect().top);
   const initialHeading = await headingTop();
-  await chapter(0.35);
+  await chapter(0.25);
   expect(Math.abs((await headingTop()) - initialHeading)).toBeLessThan(1);
   await expect(heading).toBeInViewport();
 

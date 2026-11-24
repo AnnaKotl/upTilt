@@ -1,3 +1,4 @@
+import { studyTitles } from './study-titles';
 import type { Topic } from './topics';
 
 type Bilingual = readonly [uk: string, en: string];
@@ -157,7 +158,7 @@ export const lessons: Record<Topic['id'], readonly Lesson[]> = {
   anatomy: [
     lesson(
       'frame',
-      ['Рама й захист', 'Frame and guards'],
+      studyTitles['anatomy/frame'],
       [
         'Рама утримує двигуни, електроніку й камеру у визначених місцях. Обтічник захищає частину електроніки й утримує камеру в окремих моделях.',
         'The frame holds the motors, electronics and camera in position. On some models a canopy protects part of the electronics and holds the camera.',
@@ -169,7 +170,7 @@ export const lessons: Record<Topic['id'], readonly Lesson[]> = {
     ),
     lesson(
       'controller',
-      ['Контролер і регулятори обертів', 'Flight controller and ESCs'],
+      studyTitles['anatomy/controller'],
       [
         'Польотний контролер (FC) обробляє команди та дані сенсорів. Регулятор обертів (ESC) керує подачею електроенергії до двигуна відповідно до цих команд.',
         'The flight controller (FC) processes commands and sensor readings. An electronic speed controller (ESC) controls how power is delivered to a motor in response.',
@@ -181,7 +182,7 @@ export const lessons: Record<Topic['id'], readonly Lesson[]> = {
     ),
     lesson(
       'propulsion',
-      ['Двигун і пропелер', 'Motor and propeller'],
+      studyTitles['anatomy/propulsion'],
       [
         'Двигун обертає пропелер, а лопаті прискорюють повітря. Саме пропелер створює тягу, яка діє на коптер.',
         'The motor turns the propeller, and its blades accelerate air. The propeller produces the thrust acting on the quad.',
@@ -195,7 +196,7 @@ export const lessons: Record<Topic['id'], readonly Lesson[]> = {
   equipment: [
     lesson(
       'sticks',
-      ['Стіки й осі', 'Sticks and axes'],
+      studyTitles['equipment/sticks'],
       [
         'Два стіки мають по дві осі. У типовій розкладці Mode 2 лівий стік відповідає за газ і рискання, правий — за тангаж і крен.',
         'Two sticks provide two axes each. In the common Mode 2 layout, the left stick controls throttle and yaw. The right stick controls pitch and roll.',
@@ -207,7 +208,7 @@ export const lessons: Record<Topic['id'], readonly Lesson[]> = {
     ),
     lesson(
       'controls',
-      ['Стіки, перемикачі й індикатори', 'Sticks, switches and indicators'],
+      studyTitles['equipment/controls'],
       [
         'Стік має неперервний хід. Перемикач зазвичай має кілька фіксованих положень. Екран та індикатори показують стан пульта або активний вибір.',
         'A stick moves through a continuous range. A switch usually has a small number of fixed positions. The display and indicators show transmitter status or the current selection.',
@@ -221,7 +222,7 @@ export const lessons: Record<Topic['id'], readonly Lesson[]> = {
   video: [
     lesson(
       'video-path',
-      ['Шлях зображення', 'The video path'],
+      studyTitles['video/video-path'],
       [
         'Камера створює зображення, відеопередавач (VTX) передає сигнал, а відеоприймач (VRX) приймає його для показу на екрані.',
         'The camera captures the image, the video transmitter (VTX) sends the signal, and the video receiver (VRX) receives it for display.',
@@ -233,7 +234,7 @@ export const lessons: Record<Topic['id'], readonly Lesson[]> = {
     ),
     lesson(
       'osd',
-      ['Що показує OSD', 'Reading an OSD'],
+      studyTitles['video/osd'],
       [
         'OSD — дані, накладені поверх відео. Склад показників залежить від підключених датчиків і налаштувань.',
         'An on-screen display (OSD) overlays data on the video. Available readings depend on the sensors and configuration.',
@@ -247,7 +248,7 @@ export const lessons: Record<Topic['id'], readonly Lesson[]> = {
   power: [
     lesson(
       'cells',
-      ['Комірки й позначення S', 'Cells and the S rating'],
+      studyTitles['power/cells'],
       [
         'S вказує кількість послідовно з’єднаних комірок. За послідовного з’єднання їхні напруги додаються.',
         'S indicates the number of cells in series. Connecting cells in series adds their voltages.',
@@ -273,7 +274,7 @@ export const lessons: Record<Topic['id'], readonly Lesson[]> = {
   workbench: [
     lesson(
       'boards',
-      ['Плата, доріжка й контакт', 'Boards, traces and pads'],
+      studyTitles['workbench/boards'],
       [
         'Доріжка проводить струм між точками кола. Контактний майданчик — відкрита металева поверхня, до якої приєднують вивід компонента або провід.',
         'A trace conducts current between points in a circuit. A pad is an exposed metal area where a component lead or wire can be attached.',

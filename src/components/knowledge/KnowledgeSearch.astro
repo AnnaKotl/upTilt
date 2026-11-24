@@ -20,7 +20,7 @@ const label = uk ? 'Пошук' : 'Search';
     <span class="hint">{label}</span>
   </button>
   <form
-    hidden
+    inert
     id="knowledge-search"
     role="search"
     method="get"
@@ -56,13 +56,11 @@ const label = uk ? 'Пошук' : 'Search';
     const clear = form.querySelector<HTMLButtonElement>('[data-search-clear]')!;
     function setOpen(open: boolean) {
       search!.toggleAttribute('data-open', open);
-      form.hidden = !open;
+      form.inert = !open;
       toggle.setAttribute('aria-expanded', String(open));
       if (open) input.focus({ preventScroll: true });
     }
-    toggle.addEventListener('click', () =>
-      setOpen(form.hasAttribute('hidden')),
-    );
+    toggle.addEventListener('click', () => setOpen(form.inert));
     search.querySelector('.search-shade')!.addEventListener('click', () => {
       setOpen(false);
       toggle.focus({ preventScroll: true });
@@ -70,7 +68,7 @@ const label = uk ? 'Пошук' : 'Search';
     window.addEventListener('pagehide', () => setOpen(false));
     // Keep the drawer open while a pointer activates one of its buttons.
     search.addEventListener('mousedown', (event) => {
-      if (!form.hidden && (event.target as Element).closest('button'))
+      if (!form.inert && (event.target as Element).closest('button'))
         event.preventDefault();
     });
     search.addEventListener('focusout', (event) => {
@@ -80,7 +78,7 @@ const label = uk ? 'Пошук' : 'Search';
       if (!search.contains(event.target as Node)) setOpen(false);
     });
     search.addEventListener('keydown', (event) => {
-      if (event.key !== 'Escape' || form.hidden) return;
+      if (event.key !== 'Escape' || form.inert) return;
       event.preventDefault();
       toggle.focus();
       setOpen(false);

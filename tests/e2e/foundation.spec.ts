@@ -222,10 +222,11 @@ test('switching languages keeps the selected part and section', async ({
 });
 
 test('the detail card returns focus to its trigger', async ({ page }) => {
-  await page.goto('en/');
-  await page
-    .locator('#anatomy')
-    .evaluate((el) => el.scrollIntoView({ behavior: 'instant' }));
+  await page.goto('en/#anatomy');
+  await expect(page.locator('html')).not.toHaveAttribute(
+    'data-boot',
+    'pending',
+  );
   const details = page.getByRole('button', { name: 'Frame', exact: true });
   await details.click();
   await expect(page.getByRole('dialog')).toBeVisible();
@@ -352,7 +353,7 @@ test('Ukrainian search links to exact materials and keeps category context', asy
   await expect(page.locator('.search-results li').first()).toContainText(
     'Довжина хвилі',
   );
-  await page.goto('uk/knowledge/search/?q=zzqxzzqxzzqx');
+  await page.goto('uk/knowledge/search/?q=авітллятсчяьмтьятмяьчтмьтмьямтьят');
   await expect(page.getByRole('status')).toContainText('Збігів немає');
 });
 test('start routes localise with the hero and keep the mobile path reachable', async ({
@@ -364,7 +365,7 @@ test('start routes localise with the hero and keep the mobile path reachable', a
   await expect(start.locator('h2')).toHaveText('З чого почати');
   await page.locator('[data-language]').click();
   await expect(start.locator('h2')).toHaveText('Where to start');
-  await start.locator('summary').click();
+  await start.locator('.search-toggle').click();
   const query = start.getByRole('searchbox');
   await query.fill('wavelength');
   await query.press('Enter');

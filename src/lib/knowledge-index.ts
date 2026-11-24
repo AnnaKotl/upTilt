@@ -1,3 +1,4 @@
+import { searchWords } from './search-term';
 import type { CustomRecord } from 'pagefind';
 import { lessonTrails, lessons, topicIntroductions } from '../data/lessons';
 import { topics } from '../data/topics';
@@ -32,7 +33,13 @@ export function knowledgeRecords(): CustomRecord[] {
             trail: trail.join(' / '),
             ...(options.alias && { alias: options.alias }),
           },
-          filters: { topic: [topic.id] },
+          filters: {
+            topic: [topic.id],
+            word: searchWords(
+              [title, ...trail, options.alias ?? '', ...body].join(' '),
+              locale,
+            ),
+          },
         });
       }
       add(

@@ -75,8 +75,7 @@ const ice = [
 <div class="season-air" aria-hidden="true">
   {[...eddies, ...drifting].map(
     ([region, x, y, width, floorX, floorY, compact], i) => {
-      const liftOnRight = region === 'top' || region === 'rim';
-      const liftX = liftOnRight ? 101 : region === 'centre' ? 47 : floorX;
+      const liftX = floorX + (floorX - 72) * 0.4;
       return (
         <div
           class="air-origin"
@@ -86,8 +85,10 @@ const ice = [
           style={`left:${x}%;top:${y}%;--exit-x:${(floorX < 75 ? -1 : 1) * (12 + (i % 5) * 2.7)}vw;--exit-y:${[-3, 2, -1, 4][i % 4]}svh;--sx:${floorX - x}vw;
           --sy:${floorY - y}svh;--mobile-sy:${53 + (floorY - 83) / 2 - y}svh;
           --edge:${liftX - x}vw;--rim-y:${region === 'top' ? Math.min(25, y + 8) - y : 0}svh;
-          --w:${width}px;--wind:${4.6 + (i % 5) * 0.64}s;
+          --w:${width}px;--wind:${6.4 + (i % 5) * 0.85}s;
           --beat:${2.3 + (i % 4) * 0.59}s;--offset:${-i * 2.13}s;
+          --fall-x:${region === 'rim' || region === 'bottom' ? (x < 75 ? -4 : 4) : ((i % 5) - 2) * 1.8}vw;
+          --fall-y:${region === 'top' ? -y - 7 : -6 - (i % 7)}svh;--fall-time:${3.8 + (i % 4) * 0.46}s;
           --bank:${i * 37}deg;--lift:${i * 0.065}s`}
         >
           <span class="air-loop">
@@ -100,12 +101,12 @@ const ice = [
   <svg class="roof-ice" viewBox="0 0 120 84" preserveAspectRatio="none">
     {ice.map(([x, w, h], i) => (
       <g
-        transform={`translate(${x} 0)`}
+        transform={`translate(${x} 0) scale(0.48 1)`}
         style={`--grow:${5 + (i % 4) * 1.4}s;--drip:${4 + (i % 3) * 1.3}s;--offset:${-i * 0.89}s`}
       >
         <g class="ice-tip">
           <path
-            d={`M0 -2H${w}L${w * 0.75} ${h * 0.43} ${w * 0.46} ${h} ${w * 0.19} ${h * 0.3}Z`}
+            d={`M0 -2H${w}Q${w * 0.72} ${h * 0.12} ${w * 0.74} ${h * 0.36} T${w * 0.56} ${h * 0.72} Q${w * 0.55} ${h * 0.95} ${w * 0.46} ${h} L${w * 0.32} ${h * 0.72} Q${w * 0.35} ${h * 0.53} ${w * 0.21} ${h * 0.4} T0 -2Z`}
           />
           <path
             class="ice-facet"
@@ -161,7 +162,15 @@ const ice = [
       previousTime = undefined;
       field!.removeAttribute('data-awake');
     });
-    window.addEventListener('pageshow', schedule);
+    function syncField() {
+      cancelAnimationFrame(frame);
+      previousTime = undefined;
+      depart = undefined;
+      paint();
+    }
+    window.addEventListener('pageshow', syncField);
+    window.addEventListener('page-language', schedule);
+    story.addEventListener('restart-intro', syncField);
     paint();
   }
 </script>
@@ -213,6 +222,27 @@ const ice = [
   }
   [data-downwash] .air-origin {
     animation: entrain 3.2s cubic-bezier(0.16, 0.62, 0.26, 1) var(--lift) both;
+  }
+  /* Autumn leaves enter from above their own stream. The inner flutter
+     keeps its phase as the entrance gradually hands off to the rotor eddy. */
+  [data-season='autumn'] .air-origin {
+    --orbit-span: 1;
+    opacity: 0;
+    transform: translate(var(--fall-x), var(--fall-y));
+  }
+  [data-season='autumn'] [data-downwash] .air-origin {
+    animation: autumn-arrive var(--fall-time) cubic-bezier(0.32, 0, 0.3, 1)
+      var(--lift) both;
+  }
+  @keyframes autumn-arrive {
+    from {
+      opacity: 0;
+      transform: translate(var(--fall-x), var(--fall-y));
+    }
+    to {
+      opacity: 0.78;
+      transform: translate(0, 0);
+    }
   }
   .air-loop,
   .air-origin i {
@@ -361,7 +391,13 @@ const ice = [
     );
   }
   [data-season='winter'] .season-piece {
-    --skin: linear-gradient(42deg, #93b3c5, #eff7fa 54%, #a5becd);
+    --skin: radial-gradient(
+      ellipse at 42% 38%,
+      #fff 4%,
+      #e8f7ff 33%,
+      #aecad9a6 61%,
+      transparent 73%
+    );
     --cut: polygon(
       6% 51%,
       26% 21%,
@@ -467,7 +503,7 @@ const ice = [
           calc(var(--wind-y) * var(--orbit-span)) at center
       );
       offset-rotate: 0deg;
-      animation: orbit var(--wind) linear var(--offset) infinite;
+      animation: leaf-eddy-orbit var(--wind) linear var(--offset) infinite;
     }
   }
   .air-origin[data-eddy='rim'] .air-loop {
@@ -489,7 +525,7 @@ const ice = [
       transform: translate(0, calc(var(--wind-y) * var(--orbit-span)));
     }
   }
-  @keyframes orbit {
+  @keyframes leaf-eddy-orbit {
     from {
       offset-distance: 0%;
     }
@@ -518,7 +554,7 @@ const ice = [
     top: 0;
     right: 2%;
     width: clamp(150px, 21vw, 340px);
-    height: clamp(43px, 8svh, 88px);
+    height: clamp(62px, 12svh, 126px);
     overflow: visible;
     fill: #a8c9d9;
   }

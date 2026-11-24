@@ -51,9 +51,13 @@ const models = [
         aria-controls="aircraft-options"
         aria-label={locale === 'uk' ? 'Вибрати коптер' : 'Choose aircraft'}
       >
-        <Icon name="quad" />
-        <span class="hint">
-          {locale === 'uk' ? 'Вибрати коптер' : 'Choose aircraft'}
+        {models.map((item) => (
+          <span data-menu-icon={item.id} hidden={item.id !== 'whoop'}>
+            <Icon name={item.icon} />
+          </span>
+        ))}
+        <span class="model-name">
+          <span>Whoop</span>
         </span>
       </button>
       <div id="aircraft-options" inert>
@@ -65,10 +69,12 @@ const models = [
               data-aircraft-option={item.id}
               aria-label={item.name}
               aria-pressed={item.id === 'whoop'}
-              disabled={item.id === 'whoop'}
+              aria-disabled={item.id === 'whoop'}
             >
               <Icon name={item.icon} />
-              <span class="hint">{item.name}</span>
+              <span class="model-name">
+                <span>{item.name}</span>
+              </span>
             </button>
           ))}
         </div>
@@ -158,22 +164,28 @@ const models = [
     if (!menu.parentElement?.contains(e.relatedTarget as Node)) reveal(false);
   });
   function updatePicker() {
-    for (const option of options)
-      option.disabled = option.dataset.aircraftOption === currentAircraft();
-    for (const option of options)
-      option.setAttribute(
-        'aria-pressed',
-        String(option.dataset.aircraftOption === currentAircraft()),
-      );
+    const current = currentAircraft();
+    for (const option of options) {
+      const selected = String(option.dataset.aircraftOption === current);
+      option.setAttribute('aria-disabled', selected);
+      option.setAttribute('aria-pressed', selected);
+      if (selected === 'true' && menu) {
+        menu.querySelector('.model-name > span')!.textContent =
+          option.getAttribute('aria-label');
+      }
+    }
+    menu?.querySelectorAll<HTMLElement>('[data-menu-icon]').forEach((icon) => {
+      icon.hidden = icon.dataset.menuIcon !== current;
+    });
   }
   for (const option of options)
     option.addEventListener('click', () => {
-      selectAircraft(
-        option.dataset.aircraftOption === 'seven' ? 'seven' : 'whoop',
-      );
-      reveal(false);
-      menu?.focus({ preventScroll: true });
+      const id = option.dataset.aircraftOption;
+      if (option.getAttribute('aria-disabled') === 'true') return;
+      if (id === 'whoop' || id === 'seven') selectAircraft(id);
     });
+  window.addEventListener('page-language', updatePicker);
+  window.addEventListener('pageshow', updatePicker);
   updatePicker();
   window.addEventListener('aircraft-change', updatePicker);
   const hero = document.querySelector('#hero');

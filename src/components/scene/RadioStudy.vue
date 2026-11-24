@@ -2,9 +2,11 @@
 import { usePageLanguage } from '../../lib/page-language';
 import { radioControls as controls } from '../../data/radio-controls';
 import posterControls from '../../data/radio-poster.json';
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import type { Locale } from '../../lib/i18n';
 import { usePointerNote } from '../../lib/usePointerNote';
+import Icon from '../ui/Icon.vue';
+import StudyLink from './StudyLink.vue';
 import StudyNote from './StudyNote.vue';
 const input = defineProps<{ locale: Locale }>();
 const locale = usePageLanguage(input.locale);
@@ -78,6 +80,21 @@ function open(i: number, event: MouseEvent) {
 const { surface, place, noteAt } = usePointerNote();
 const active = ref(0);
 const hover = ref<number | null>(null);
+const noteControl = computed(
+  () =>
+    hover.value ??
+    (powered.value && !complete.value && [2, 3].includes(active.value)
+      ? active.value - 1
+      : null),
+);
+const controlNoteAt = computed(() => {
+  if (hover.value !== null) return noteAt.value;
+  const i = noteControl.value;
+  return {
+    left: `clamp(14px, calc(var(--control-${i}-x, var(--poster-${i}-x)) + 24px), 100% - 160px)`,
+    top: `clamp(14px, calc(var(--control-${i}-y, var(--poster-${i}-y)) - 76px), 100% - 84px)`,
+  };
+});
 const base = import.meta.env.BASE_URL + 'media/study/';
 const poster = ref<HTMLImageElement>();
 let sizeObserver: ResizeObserver | undefined;
@@ -214,6 +231,7 @@ function run() {
   );
 }
 function reset() {
+  cancelPreview();
   clearTimeout(powerTimer);
   powered.value = true;
   level.value = 6;
@@ -228,6 +246,15 @@ function reset() {
   gesture = 0;
   complete.value = matchMedia('(prefers-reduced-motion: reduce)').matches;
   pose(0);
+  run();
+}
+function replay() {
+  reset();
+  complete.value = false;
+  // An explicit replay starts from the visible poster or live scene, including
+  // the leading edge of the sticky chapter before automatic playback starts.
+  const rect = surface.value!.getBoundingClientRect();
+  visible = rect.bottom > 0 && rect.top < innerHeight;
   run();
 }
 function publishPower() {
@@ -402,6 +429,22 @@ onBeforeUnmount(() => {
     :data-powered="powered"
     @keydown.esc="hover = null"
   >
+    <header class="radio-heading">
+      <h2>
+        {{
+          locale === 'uk'
+            ? 'Демонстрація керування коптером'
+            : 'Drone control demonstration'
+        }}
+      </h2>
+      <StudyLink :locale="locale" article="equipment/controls" />
+    </header>
+    <button class="radio-replay" type="button" @click="replay">
+      <Icon name="replay" />
+      <span>{{
+        locale === 'uk' ? 'Повторити рухи стіків' : 'Replay stick movements'
+      }}</span>
+    </button>
     <div class="radio-pair">
       <span class="study-poster" role="img" aria-label="RadioMaster TX16S MK3">
         <img
@@ -446,7 +489,10 @@ onBeforeUnmount(() => {
       ref="modal"
       :title="controls[chosen][locale]"
       :body="(chosen < 4 ? notes[chosen] : switchNote)[locale === 'uk' ? 0 : 1]"
-      :back="locale === 'uk' ? 'До пульта' : 'Back to the radio'"
+      :locale="locale"
+      :article="
+        chosen === 1 || chosen === 2 ? 'equipment/sticks' : 'equipment/controls'
+      "
     />
     <div class="radio-controls">
       <button
@@ -494,23 +540,31 @@ onBeforeUnmount(() => {
         @click="open(i, $event)"
       />
     </div>
-    <span
-      v-if="hover !== null"
-      id="control-note"
-      role="tooltip"
-      class="cursor-note"
-      :style="noteAt"
-      >{{ controls[hover][locale]
-      }}<template v-if="hover === 1"> · Throttle / Yaw</template
-      ><template v-if="hover === 2"> · Pitch / Roll</template
-      ><template v-if="hover >= notes.length">
-        ·
-        {{
-          locale === 'uk'
-            ? 'Призначення задає профіль моделі'
-            : 'Assignable per model'
-        }}</template
-      ></span
-    >
+    <Transition name="note-fade"
+      ><span
+        v-if="noteControl !== null"
+        id="control-note"
+        role="tooltip"
+        class="cursor-note"
+        :style="controlNoteAt"
+        >{{ controls[noteControl][locale]
+        }}<template v-if="noteControl === 1"
+          ><br />↕ Throttle · {{ locale === 'uk' ? 'тяга' : 'thrust' }}<br />↔
+          Yaw ·
+          {{ locale === 'uk' ? 'поворот носа' : 'turn the nose' }}</template
+        ><template v-if="noteControl === 2"
+          ><br />↕ Pitch · {{ locale === 'uk' ? 'нахил носа' : 'tilt the nose'
+          }}<br />↔ Roll ·
+          {{ locale === 'uk' ? 'крен убік' : 'bank sideways' }}</template
+        ><template v-if="noteControl >= notes.length">
+          ·
+          {{
+            locale === 'uk'
+              ? 'Призначення задає профіль моделі'
+              : 'Assignable per model'
+          }}</template
+        ></span
+      >
+    </Transition>
   </div>
 </template>

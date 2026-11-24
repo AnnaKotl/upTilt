@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { searchTerm } from '../../lib/search-term';
+import { searchTerm, searchWords } from '../../lib/search-term';
 import { topics } from '../../data/topics';
 import type { Locale } from '../../lib/i18n';
 const { locale } = defineProps<{ locale: Locale }>();
@@ -69,15 +69,26 @@ onMounted(async () => {
       basePath: import.meta.env.BASE_URL + 'search-index/',
       excerptLength: 28,
     });
-    await index.filters();
+    const vocabulary = Object.keys((await index.filters()).word ?? {});
     const term = searchTerm(query.value, locale);
-    const response = await index.search(
-      term,
-      selected.value ? { filters: { topic: selected.value } } : {},
+    // Pagefind can match a shorter indexed word inside a longer query.
+    // Require every query token to start an indexed word in the same record.
+    const words = searchWords(term, locale);
+    const completions = words.map((prefix) =>
+      vocabulary.filter((word) => word.startsWith(prefix)),
     );
-    matches = response.results;
-    facets.value = response.totalFilters?.topic ?? response.filters.topic ?? {};
-    total.value = response.unfilteredResultCount ?? matches.length;
+    if (!words.length || completions.some((options) => !options.length)) return;
+    const clauses = completions.map((any) => ({ word: { any } }));
+    const response = await index.search(term, { filters: { all: clauses } });
+    facets.value = response.filters.topic ?? {};
+    total.value = response.results.length;
+    matches = selected.value
+      ? (
+          await index.search(term, {
+            filters: { all: [...clauses, { topic: selected.value }] },
+          })
+        ).results
+      : response.results;
     const page = Math.max(
       1,
       Number.parseInt(params.get('page') ?? '1', 10) || 1,

@@ -403,6 +403,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const startRoutes = document.getElementById('start')!;
   let routesAnchor = 0;
   let routesExit = 0;
+  let routesBottom = 0;
   let lastColumnProgress = -1;
   let lastColumnExit = -1;
   let anchors: number[] = [],
@@ -459,7 +460,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     renderer.setSize(wpx, h, false);
     routesAnchor = startRoutes.getBoundingClientRect().top + scrollY;
     anchors = chapters.map((el) => el.getBoundingClientRect().top + scrollY);
-    routesExit = mix(routesAnchor, anchors[1], 0.46);
+    routesBottom = routesAnchor + startRoutes.offsetHeight;
+    routesExit = mix(routesAnchor, routesBottom, 0.46);
     // The gate keeps its original scroll distance until the readouts fade.
     // The extra space at the end of the chapter belongs to the diagram.
     const extraRoom = parseFloat(getComputedStyle(chapters[1]).paddingBottom);
@@ -799,7 +801,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     quad.led.emissiveIntensity = ledPower * 2.1;
     underglow.material.opacity = ledPower * 0.9;
     const gateOpacity =
-      ease(0.46, 0.68, p) * (1 - ease(gateExitStart, gateExitEnd, p));
+      ease(0.65, 0.77, p) *
+      ease(0, innerHeight * 0.18, scrollY - routesBottom) *
+      (1 - ease(gateExitStart, gateExitEnd, p));
     gate.root.visible = gateOpacity > 0;
     gate.root.position.set(0.08 * w, 0.65, 0);
     if (gate.root.visible) {
@@ -871,7 +875,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       0,
     );
     radio.root.rotation.set(0.22 * inRadio, 0.1 * inRadio, 0.28 * inRadio);
-    radio.root.scale.setScalar(Math.min(w * 0.116, 1.85));
+    radio.root.scale.setScalar(0.95 * Math.min(w * 0.116, 1.85));
     radio.sticks[0].rotation.x = mix(
       radio.sticks[0].rotation.x,
       pose === 2 ? -ay * 0.7 : !armed || pose === 1 ? 0.7 : 0,

@@ -457,21 +457,24 @@ const shown = computed(() => fields[hover.value ?? selected.value]);
         </button>
         <div class="horizon-tick" aria-hidden="true"><i></i>○<i></i></div>
       </div>
-      <div
-        v-if="hover !== null"
-        id="osd-note"
-        class="osd-note cursor-note"
-        :style="noteAt"
-        role="tooltip"
-      >
-        <b>{{ shown[locale] }}</b>
-        <p>{{ shown.text[locale] }}</p>
-      </div>
+      <Transition name="note-fade"
+        ><div
+          v-if="hover !== null"
+          id="osd-note"
+          class="osd-note cursor-note"
+          :style="noteAt"
+          role="tooltip"
+        >
+          <b>{{ shown[locale] }}</b>
+          <p>{{ shown.text[locale] }}</p>
+        </div>
+      </Transition>
       <StudyNote
         ref="modal"
         :title="fields[selected][locale]"
         :body="fields[selected].text[locale]"
-        :back="locale === 'uk' ? 'До показників' : 'Back to the display'"
+        :locale="locale"
+        article="video/osd"
       />
     </div>
   </section>

@@ -162,8 +162,8 @@
   display: grid;
   grid-template-rows: 0fr;
   transition:
-    grid-template-rows 0.32s ease,
-    opacity 0.24s;
+    grid-template-rows 280ms var(--ui-ease),
+    opacity var(--ui-motion);
   opacity: 0;
 }
 .aircraft-picker:has([aria-expanded='true']) #aircraft-options {
@@ -172,44 +172,88 @@
 }
 .model-rows {
   min-height: 0;
-  visibility: hidden;
-  pointer-events: none;
+  max-height: min(42svh, 24rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   display: flex;
   flex-direction: column;
-  gap: 0;
-}
-#aircraft-options:not([inert]) .model-rows {
-  visibility: visible;
-  pointer-events: auto;
+  align-items: flex-start;
 }
 .model-row {
-  width: 35px;
   flex: none;
-  margin-top: -1px;
-  height: 35px;
-  border-radius: 0 0.25rem 0.25rem 0;
-}
-.model-row:enabled:is(:hover, :focus-visible) {
-  width: 40px;
-}
-.model-row:disabled {
-  cursor: default;
-  width: 35px;
-  border-color: var(--line);
+  display: inline-flex;
+  justify-content: start;
+  gap: 0;
+  width: max-content;
+  max-width: min(82vw, 24rem);
+  height: 38px;
+  min-width: 40px;
+  padding-inline: 9px;
+  border-radius: 0 6px 6px 0;
   color: var(--muted);
 }
-.model-row:disabled .hint {
-  opacity: 0;
+.model-row + .model-row {
+  margin-top: 2px;
 }
-.model-row:disabled::after {
-  content: '';
-  position: absolute;
-  right: 4px;
-  bottom: 5px;
-  width: 4px;
-  height: 4px;
-  background: var(--accent);
-  border-radius: 50%;
+.model-row svg {
+  width: 21px;
+  flex: none;
+}
+.model-row:is(:hover, :focus-visible) {
+  width: max-content;
+  color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 9%, var(--surface));
+}
+.model-row:focus-visible {
+  outline-offset: -3px;
+}
+.model-row[aria-pressed='true'] {
+  color: var(--surface);
+  background-color: var(--accent);
+  border-color: var(--accent);
+  outline-color: var(--surface);
+  cursor: default;
+}
+.model-name {
+  display: grid;
+  grid-template-columns: 0fr;
+  font: 500 0.78rem/1.35 var(--font-mono);
+  opacity: 0;
+  transition:
+    grid-template-columns var(--ui-motion),
+    opacity var(--ui-motion),
+    margin var(--ui-motion);
+}
+.model-name > span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+[data-model-menu] {
+  justify-content: flex-start;
+  padding-inline: 10px;
+  width: max-content;
+  min-width: 45px;
+}
+[data-model-menu]:is(:hover, :focus-visible) {
+  width: max-content;
+}
+:is(.model-row, [data-model-menu]):is(:hover, :focus-visible) .model-name {
+  grid-template-columns: 1fr;
+  margin-inline-start: 0.5rem;
+  opacity: 1;
+}
+@media (hover: none) {
+  .model-row {
+    min-height: 44px;
+  }
+  .model-row .model-name {
+    grid-template-columns: 1fr;
+    margin-inline-start: 0.5rem;
+    opacity: 1;
+  }
 }
 .author-tab {
   position: fixed;

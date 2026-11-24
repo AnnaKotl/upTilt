@@ -19,6 +19,9 @@
 }
 :root {
   color-scheme: dark;
+  --ui-ease: cubic-bezier(0.22, 0.68, 0.24, 1);
+  --ui-motion: 200ms var(--ui-ease);
+  --accent-hover: color-mix(in srgb, var(--accent) 74%, var(--ink));
   --surface: #0d0f13;
   --panel: #171a1f;
   --ink: #eaebed;
@@ -76,22 +79,22 @@ body {
   }
 }
 :root[data-season='winter'] {
-  --accent: #98d8ff;
+  --accent: #b6e4ff;
 }
 :root[data-season='spring'] {
-  --accent: #f1a9c2;
+  --accent: #ffbed5;
 }
 :root[data-season='summer'] {
-  --accent: #b9d783;
+  --accent: #cbec93;
 }
 :root[data-theme='light'][data-season='winter'] {
-  --accent: #205c85;
+  --accent: #174f76;
 }
 :root[data-theme='light'][data-season='spring'] {
-  --accent: #8b3359;
+  --accent: #812847;
 }
 :root[data-theme='light'][data-season='summer'] {
-  --accent: #476022;
+  --accent: #354f16;
 }
 [hidden] {
   display: none !important;
@@ -195,5 +198,59 @@ body {
   }
   .pass-art img {
     transform: none;
+  }
+}
+
+:where(a, button, summary, input, select, [role='button']) {
+  transition-property:
+    color, background-color, border-color, box-shadow, outline-color,
+    text-decoration-color;
+  transition-duration: 200ms;
+  transition-timing-function: var(--ui-ease);
+}
+:where(a, button:enabled, summary):is(:hover, :focus-visible) {
+  color: var(--accent-hover);
+}
+:where(.search-results a h2, .sim-compare a strong, .gallery-frame button svg) {
+  transition:
+    color var(--ui-motion),
+    opacity var(--ui-motion);
+}
+:where(a, button, summary, input, select):not(:focus-visible) {
+  outline-color: transparent;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+  .edge-rail {
+    view-transition-name: navigation-rail;
+  }
+  ::view-transition-group(root) {
+    animation-duration: 200ms;
+  }
+  ::view-transition-old(root) {
+    animation: page-out 160ms ease-in both;
+  }
+  ::view-transition-new(root) {
+    animation: page-in var(--ui-motion) both;
+  }
+  ::view-transition-group(navigation-rail) {
+    animation-duration: 160ms;
+  }
+  @keyframes page-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes page-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @supports not (view-transition-name: none) {
+    main {
+      animation: page-in var(--ui-motion);
+    }
   }
 }
