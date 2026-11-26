@@ -1,12 +1,11 @@
 import * as T from 'three';
 
 // A stationary angular scale and one moving index share the model's viewing frame.
-export function attitudeDial() {
+export function attitudeDial(radius: number) {
   const root = new T.Group();
   root.name = 'Attitude reference';
   const scale = new T.Group();
   root.add(scale);
-  const radius = 2.32;
   const ink = new T.LineBasicMaterial({ transparent: true, depthWrite: false });
   const accent = new T.LineBasicMaterial({
     transparent: true,
@@ -49,6 +48,9 @@ export function attitudeDial() {
       opacity > 0.01 && (term === 'Yaw' || term === 'Pitch' || term === 'Roll');
     if (!root.visible) return;
     root.position.copy(quad.position);
+    // The camera is orthographic. Keep the projected axes but let the
+    // airframe occlude the guide even when a circle is seen edge-on.
+    root.position.z -= (2 * radius + 0.3) * quad.scale.z;
     root.scale.copy(quad.scale);
     root.rotation.x = viewTilt;
     // The index starts along the nose (+Z) for yaw/pitch and up (+Y) for roll.

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { usePageLanguage } from '../../lib/page-language';
 import { radioControls as controls } from '../../data/radio-controls';
+import { phases, demoFrames, leadInMs } from '../../data/radio-demo';
 import posterControls from '../../data/radio-poster.json';
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import type { Locale } from '../../lib/i18n';
@@ -46,25 +47,6 @@ const cueRotation: Record<string, number> = {
   down: 180,
   left: -90,
 };
-const phases = [
-  { id: 1, term: 'ARMED', x: 0, y: 0, arrow: '' },
-  { id: 2, term: 'Throttle', x: 0, y: 1, arrow: 'up' },
-  { id: 3, term: 'Pitch', x: 0, y: 1, arrow: 'up' },
-  { id: 3, term: 'Roll', x: 1, y: 0, arrow: 'right' },
-  { id: 3, term: 'Pitch', x: 0, y: -1, arrow: 'down' },
-  { id: 3, term: 'Roll', x: -1, y: 0, arrow: 'left' },
-  { id: 2, term: 'Yaw', x: 1, y: 0, arrow: 'cw' },
-  { id: 2, term: 'Yaw', x: -1, y: 0, arrow: 'ccw' },
-  ...['ANGLE', 'HORIZON', 'ACRO'].map((term, i) => ({
-    id: 4,
-    term,
-    x: 0,
-    y: i - 1,
-    arrow: '',
-  })),
-  { id: 2, term: 'Throttle', x: 0, y: -1, arrow: 'down' },
-  { id: 1, term: 'DISARMED', x: 0, y: 0, arrow: '' },
-];
 function open(i: number, event: MouseEvent) {
   if (!powered.value) return;
   if (i === 0 && canPractice.value) {
@@ -187,6 +169,8 @@ function pose(i: number, term = '', x = 0, y = 0, arrow = '') {
   if (term === 'ARMED') story.dataset.radioArmed = 'true';
   if (!term || !powered.value || term === 'DISARMED')
     story.dataset.radioArmed = 'false';
+  surface.value?.style.setProperty('--stick-x', String(x));
+  surface.value?.style.setProperty('--stick-y', String(y));
   story.dataset.radioTerm = term;
   story.dataset.radioCue = arrow;
   story.dataset.radioIdle = String(
@@ -203,14 +187,14 @@ function run() {
     return;
   playbackTimer = window.setTimeout(
     () => {
-      const phase = phases[next++];
+      const phase = demoFrames[next++];
       pose(phase.id, phase.term, phase.x, phase.y, phase.arrow);
-      if (next === phases.length) {
+      if (next === demoFrames.length) {
         complete.value = true;
         pose(0, 'DISARMED');
       } else run();
     },
-    next === 0 ? 1400 : 1480,
+    next === 0 ? leadInMs : demoFrames[next - 1].duration,
   );
 }
 function reset() {
@@ -359,23 +343,18 @@ onBeforeUnmount(() => {
       </h2>
       <StudyLink :locale="locale" article="equipment/controls" />
     </header>
-    <Transition
-      name="note-fade"
-      @before-leave="(el) => el.setAttribute('inert', '')"
+    <button
+      class="radio-replay"
+      type="button"
+      :aria-label="replayLabel"
+      :inert="!complete || !powered || nextSectionVisible"
+      @click="replay"
     >
-      <button
-        v-if="complete && powered && !nextSectionVisible"
-        class="radio-replay"
-        type="button"
-        :aria-label="replayLabel"
-        @click="replay"
+      <Icon name="replay" />
+      <span class="action-label" aria-hidden="true"
+        ><span>{{ replayLabel }}</span></span
       >
-        <Icon name="replay" />
-        <span class="action-label" aria-hidden="true"
-          ><span>{{ replayLabel }}</span></span
-        >
-      </button>
-    </Transition>
+    </button>
     <div class="radio-pair">
       <span class="study-poster" role="img" aria-label="RadioMaster TX16S MK3">
         <img

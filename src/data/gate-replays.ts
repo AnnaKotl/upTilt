@@ -78,7 +78,7 @@ export function lapPoint(
     index === 4 && u < 0.5 ? 0.56 * Math.sin(2 * Math.PI * u) ** 2 : 0;
   const bend = Math.sin(Math.PI * u);
   return [
-    k * ((0.62 * width) / d) + drift * bend * 0.08,
+    -k * ((0.62 * width) / d) + drift * bend * 0.08,
     k * (5.15 / d) +
       drift * (0.22 + 0.55 * Math.sin(2 * Math.PI * u)) * bend +
       highEntry +

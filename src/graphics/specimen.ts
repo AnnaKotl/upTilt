@@ -626,7 +626,8 @@ export function makeWhoop(openFrame = false) {
     evening.scale.setScalar(1.08 - 0.18 * day);
     evening.position.z = 0.64 - 0.12 * day;
   }
-  return { root, parts, rotors, repeats, theme, blade, led };
+  const rotorReach = Math.hypot(span, span) + (openFrame ? 0.96 : 1.02);
+  return { root, parts, rotors, repeats, theme, blade, led, rotorReach };
 }
 export function makeViewingKit() {
   const root = new T.Group();

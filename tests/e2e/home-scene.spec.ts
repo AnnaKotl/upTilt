@@ -46,9 +46,15 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
       behavior: 'instant',
     }),
   );
+  const header = page.locator('.radio-heading');
+  await expect(header).toBeVisible();
+  const headingTop = (await header.boundingBox())!.y;
   const parked = await page.evaluate(() => scrollY);
   await page.mouse.wheel(0, 420);
   await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(parked);
+  expect(Math.abs((await header.boundingBox())!.y - headingTop)).toBeLessThan(
+    1,
+  );
   const radio = page.locator('.radio-study');
   const replay = radio.getByRole('button', { name: 'Повторити демонстрацію' });
   await expect(replay).toHaveCount(0);
@@ -101,6 +107,7 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
     restingY,
   );
   await expect(replay).toBeVisible();
+  await expect(replay).toHaveCSS('cursor', 'pointer');
   const iconWidth = (await replay.boundingBox())!.width;
   await replay.hover();
   await expect

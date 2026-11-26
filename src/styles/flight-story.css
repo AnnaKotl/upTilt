@@ -722,21 +722,26 @@ html:has(.flight-story [data-stop]:target) {
   .lifting:not([data-live]) .hero-machine {
     animation: poster-lift 1.56s 1.52s both;
   }
-  .radio-pin:has([data-pose='2'])
+  [data-radio-armed='true']
+    .radio-pin:has([data-pose='2'])
     .radio-pair
     :is(.study-poster:last-child, astro-slot) {
-    translate: 0 -13%;
+    translate: 0 calc(-10% - 5% * var(--stick-y, 0));
+    transform: perspective(32rem) rotateY(calc(16deg * var(--stick-x, 0)));
   }
-  .radio-pin:has([data-pose='3'])
+  [data-radio-armed='true']
+    .radio-pin:has([data-pose='3'])
     .radio-pair
     :is(.study-poster:last-child, astro-slot) {
     translate: 0 -11%;
-    rotate: -11deg;
+    rotate: calc(11deg * var(--stick-x, 0));
+    transform: perspective(32rem) rotateX(calc(16deg * var(--stick-y, 0)));
   }
   .radio-pair .study-poster {
     transition:
-      rotate 0.5s,
-      translate 0.5s;
+      rotate 0.4s var(--ui-ease),
+      translate 0.4s var(--ui-ease),
+      transform 0.4s var(--ui-ease);
   }
 }
 
@@ -2146,8 +2151,8 @@ html:has(.flight-story [data-stop]:target) {
 .gate-chapter:has(.gate-study.is-ready)
   .gate-fallback
   .study-poster:last-child {
-  top: 53.5%;
-  left: 20.5%;
+  top: var(--parked-y);
+  left: var(--parked-x);
   width: 23%;
   height: 24%;
   transform: translate(-50%, -50%);
@@ -2163,6 +2168,11 @@ html:has(.flight-story [data-stop]:target) {
   top: clamp(1.4rem, 5.5svh, 4rem);
   left: var(--gutter, 10%);
   max-width: min(70vw, 42rem);
+}
+[data-live] .radio-heading {
+  position: fixed;
+  visibility: var(--radio-heading-visibility, hidden);
+  opacity: var(--radio-heading-opacity, 0);
 }
 .radio-heading h2 {
   font-size: clamp(1rem, 1.65vw, 1.65rem);
@@ -2180,6 +2190,8 @@ html:has(.flight-story [data-stop]:target) {
   color: var(--accent-hover);
 }
 .radio-replay {
+  --ui-motion: 280ms var(--ui-ease);
+  cursor: pointer;
   position: absolute;
   z-index: 2;
   left: 77%;
@@ -2194,7 +2206,13 @@ html:has(.flight-story [data-stop]:target) {
   background: transparent;
   transition:
     color var(--ui-motion),
-    opacity var(--ui-motion);
+    opacity var(--ui-motion),
+    visibility 0s;
+}
+.radio-replay[inert] {
+  visibility: hidden;
+  opacity: 0;
+  transition-delay: 0s, 0s, 280ms;
 }
 .radio-replay svg {
   width: 3rem;

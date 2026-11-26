@@ -5,10 +5,12 @@ import { lapPoint, laps, sampleLap } from '../../src/data/gate-replays';
 import {
   gateApproach,
   gateCameraLift,
+  gateCameraPan,
   routesArrival,
   routesDeparture,
   sampleFlight,
   gateCrossing,
+  gateCentre,
   gateParked,
   gatePoint,
 } from '../../src/data/flight-path';
@@ -16,7 +18,7 @@ import {
 it('moves closer beside the column and stays inside the frame on approach', () => {
   const held = sampleFlight(routesArrival);
   const column = sampleFlight(routesDeparture);
-  expect(column[0]).toBeLessThan(held[0]);
+  expect(column[0]).toBeGreaterThanOrEqual(held[0]);
   expect(column[1]).toBeCloseTo(0.5, 1);
   expect(column[2]).toBeGreaterThan(held[2]);
   let lastY = column[1];
@@ -26,19 +28,21 @@ it('moves closer beside the column and stays inside the frame on approach', () =
     const screenY = 0.5 - (worldY - gateCameraLift(p)) / 10;
     expect(screenY).toBeGreaterThan(0.18);
     expect(Math.abs(screenY - lastY)).toBeLessThan(0.01);
-    expect(Math.abs(worldX / 16)).toBeLessThan(0.37);
+    expect(Math.abs((worldX - gateCameraPan(p, 16)) / 16)).toBeLessThan(0.37);
     lastY = screenY;
   }
   expect(gateCameraLift(gateCrossing)).toBe(0);
 });
 
-it('enters from above the right side, crosses the hoop and parks without reversing the visible trace', () => {
+it('travels right from the reading column through the hoop to the parked pose', () => {
   const width = 16;
   let previous = gatePoint(gateApproach, width);
-  expect(previous[0]).toBeGreaterThan(width * 0.3);
+  expect(previous[0] - gateCameraPan(gateApproach, width)).toBeGreaterThan(
+    width * 0.2,
+  );
   expect(previous[1]).toBeGreaterThan(5);
   const [gateX, gateY, gateZ] = gatePoint(gateCrossing, width);
-  expect(gateX).toBeCloseTo(0.08 * width);
+  expect(gateX).toBeCloseTo((gateCentre.x - 0.5) * width);
   expect(gateY).toBeCloseTo(0.65);
   expect(gateZ).toBe(0);
   for (let index = 1; index <= 120; index++) {
@@ -46,7 +50,7 @@ it('enters from above the right side, crosses the hoop and parks without reversi
       gateApproach + ((gateParked - gateApproach) * index) / 120,
       width,
     );
-    expect(position[0]).toBeLessThan(previous[0]);
+    expect(position[0]).toBeGreaterThan(previous[0]);
     expect(position[1]).toBeLessThan(previous[1]);
     previous = position;
   }

@@ -4,6 +4,7 @@ import TopicLink from '../knowledge/TopicLink.vue';
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import {
   gateApproach,
+  gateCentre,
   gateExitStart,
   gateExitEnd,
   gateParked,
@@ -149,8 +150,8 @@ onBeforeUnmount(() => {
 const width = computed(() => (10 * size.value.x) / size.value.y);
 const scale = computed(() => (ringDiameter(width.value) * size.value.y) / 10);
 const origin = computed(() => ({
-  x: size.value.x * 0.58,
-  y: size.value.y * 0.435,
+  x: size.value.x * gateCentre.x,
+  y: size.value.y * gateCentre.y,
 }));
 function project([x, y]: Point) {
   return {
@@ -367,14 +368,14 @@ function nudge(amount: number) {
         :viewBox="`0 0 ${size.x} ${size.y}`"
         aria-hidden="true"
       >
-        <!-- The orthographic view looks at a yawed hoop. The incoming (right)
+        <!-- The orthographic view looks at a yawed hoop. The incoming (left)
              half lies in front of its rim, the outgoing half behind it. Share
              the ink so dash phase, ticks and the scrub marker survive the split. -->
         <defs>
-          <clipPath id="gate-back">
+          <clipPath id="gate-incoming">
             <rect x="0" y="0" :width="origin.x" :height="size.y" />
           </clipPath>
-          <clipPath id="gate-front">
+          <clipPath id="gate-outgoing">
             <rect
               :x="origin.x"
               y="0"
@@ -495,7 +496,7 @@ function nudge(amount: number) {
           />
           <ellipse :rx="(scale / 2) * Math.cos(gateYaw)" :ry="scale / 2" />
         </g>
-        <use href="#gate-tracks" clip-path="url(#gate-back)" />
+        <use href="#gate-tracks" clip-path="url(#gate-outgoing)" />
         <g
           :transform="`translate(${origin.x + scale * 0.49},${origin.y})`"
           class="dimension graph-paper"
@@ -506,7 +507,7 @@ function nudge(amount: number) {
         <path
           v-if="!live"
           class="ring-outline"
-          :d="`M ${origin.x} ${origin.y - scale / 2} a ${(scale / 2) * Math.cos(gateYaw)} ${scale / 2} 0 0 0 0 ${scale}`"
+          :d="`M ${origin.x} ${origin.y - scale / 2} a ${(scale / 2) * Math.cos(gateYaw)} ${scale / 2} 0 0 1 0 ${scale}`"
         />
       </svg>
       <svg
@@ -515,7 +516,7 @@ function nudge(amount: number) {
         :viewBox="`0 0 ${size.x} ${size.y}`"
         aria-hidden="true"
       >
-        <use href="#gate-tracks" clip-path="url(#gate-front)" />
+        <use href="#gate-tracks" clip-path="url(#gate-incoming)" />
       </svg>
     </Teleport>
     <template v-if="quantities > 0">
@@ -840,6 +841,7 @@ function nudge(amount: number) {
 figcaption,
 .lap-controls {
   position: absolute;
+  z-index: 2;
   left: clamp(4.6rem, 10vw, 11rem);
   animation: gate-ink-in 0.32s ease;
 }

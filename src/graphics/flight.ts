@@ -2,6 +2,8 @@ import type { LapBend } from '../data/gate-replays';
 import {
   sampleFlight,
   gateCameraLift,
+  gateCameraPan,
+  gateCentre,
   gateYaw,
   gateExitStart,
   gateExitEnd,
@@ -143,7 +145,10 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     radio = makeRadio();
   const airframeBounds = new T.Box3().setFromObject(quad.root);
   const approachBounds = new T.Box3();
-  const dial = attitudeDial();
+  const radioBounds = new T.Box3().setFromObject(radio.root);
+  const tiltedBounds = new T.Box3();
+  const radioRotation = new T.Matrix4();
+  const dial = attitudeDial(quad.rotorReach + 0.22);
   scene.add(quad.root, gate.root, radio.root, dial.root);
   // Put the readout in the glass plane so its perspective and depth follow the case.
   const lcd = document.createElement('canvas');
@@ -401,6 +406,11 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     document.getElementById(id)!,
   );
   const startRoutes = document.getElementById('start')!;
+  const lastRoute = startRoutes.querySelector('li:last-child')!;
+  const radioHeading =
+    chapters[3].querySelector<HTMLElement>('.radio-heading')!;
+  let headingFloor = 3;
+  let gateReveal = 0;
   let routesAnchor = 0;
   let routesExit = 0;
   let routesBottom = 0;
@@ -453,6 +463,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const h = host.clientHeight || innerHeight,
       wpx = host.clientWidth;
     w = (10 * wpx) / h;
+    // Convert the measured text block and its gutter to camera coordinates.
+    headingFloor =
+      5 - (10 * (radioHeading.offsetTop + radioHeading.offsetHeight + 16)) / h;
     ghosts.resize(w);
     camera.left = -w / 2;
     camera.right = w / 2;
@@ -578,6 +591,13 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     const delta = Math.min(frameMs / 1000, 0.055);
     previous = now;
     const follow = 1 - Math.exp(-delta * 13);
+    const clearedRoutes =
+      scrollY >= routesBottom ||
+      (goal >= routesDeparture &&
+        lastRoute.getBoundingClientRect().bottom <= 0);
+    const revealTarget = Number(clearedRoutes);
+    gateReveal = mix(gateReveal, revealTarget, follow);
+    if (Math.abs(revealTarget - gateReveal) < 0.002) gateReveal = revealTarget;
     elapsed = story.dataset.awaiting
       ? 0
       : Math.max(0, (now - introStart) / 1000);
@@ -690,8 +710,11 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
         ? Math.sin(elapsed * 1.5) * 0.035 * (1 - ease(5.5, 7, elapsed))
         : 0);
     const cameraLift = gateCameraLift(p);
+    const cameraPan = gateCameraPan(p, w);
     quad.root.position.set(
-      (x - 0.5 + departRadio * 0.62) * w + hoverX * 0.64 * hero * take,
+      (x - 0.5 + departRadio * 0.62) * w +
+        cameraPan +
+        hoverX * 0.64 * hero * take,
       (0.5 - y) * 10 +
         cameraLift -
         2.32 * (1 - take) * hero +
@@ -722,6 +745,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     } else {
       camera.position.x = camera.position.y = 0;
     }
+    camera.position.x += cameraPan;
     camera.position.y += cameraLift;
     const term = story.dataset.radioTerm ?? '';
     dial.update(
@@ -800,12 +824,13 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     for (const lamp of lamps) lamp.material.opacity = ledPower;
     quad.led.emissiveIntensity = ledPower * 2.1;
     underglow.material.opacity = ledPower * 0.9;
-    const gateOpacity =
-      ease(0.65, 0.77, p) *
-      ease(0, innerHeight * 0.18, scrollY - routesBottom) *
-      (1 - ease(gateExitStart, gateExitEnd, p));
+    const gateOpacity = gateReveal * (1 - ease(gateExitStart, gateExitEnd, p));
     gate.root.visible = gateOpacity > 0;
-    gate.root.position.set(0.08 * w, 0.65, 0);
+    gate.root.position.set(
+      (gateCentre.x - 0.5) * w,
+      (0.5 - gateCentre.y) * 10,
+      0,
+    );
     if (gate.root.visible) {
       const translucent = gateOpacity < 1;
       for (const material of gate.materials) {
@@ -868,6 +893,15 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       (1 - spread) *
       (1 - diagram) *
       (floorVisibility * ease(0.72, 1.08, elapsed) + ease(2.72, 2.98, p));
+    const headingOpacity = ease(2.8, 2.93, p) * (1 - ease(3.45, 3.64, p));
+    radioHeading.style.setProperty(
+      '--radio-heading-opacity',
+      String(headingOpacity),
+    );
+    radioHeading.style.setProperty(
+      '--radio-heading-visibility',
+      headingOpacity > 0 ? 'visible' : 'hidden',
+    );
     radio.root.visible = p > 2.59;
     radio.root.position.set(
       (-0.24 - (1 - inRadio) * 0.49 - departRadio * 0.65) * w,
@@ -875,7 +909,22 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       0,
     );
     radio.root.rotation.set(0.22 * inRadio, 0.1 * inRadio, 0.28 * inRadio);
-    radio.root.scale.setScalar(0.95 * Math.min(w * 0.116, 1.85));
+    if (radio.root.visible) {
+      tiltedBounds
+        .copy(radioBounds)
+        .applyMatrix4(radioRotation.makeRotationFromEuler(radio.root.rotation));
+      const floor = -4.84;
+      const scale = Math.min(
+        0.95 * Math.min(w * 0.116, 1.85),
+        (headingFloor - floor) / (tiltedBounds.max.y - tiltedBounds.min.y),
+      );
+      radio.root.scale.setScalar(scale);
+      radio.root.position.y = clamp(
+        -0.84,
+        floor - tiltedBounds.min.y * scale,
+        headingFloor - tiltedBounds.max.y * scale,
+      );
+    }
     radio.sticks[0].rotation.x = mix(
       radio.sticks[0].rotation.x,
       pose === 2 ? -ay * 0.7 : !armed || pose === 1 ? 0.7 : 0,
@@ -947,6 +996,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       story.dispatchEvent(new Event('scene-painted'));
     }
     if (
+      gateReveal !== revealTarget ||
       ghosts.moving ||
       gatePhase === 'replays' ||
       spinning ||
@@ -1082,6 +1132,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   });
   const ro = new ResizeObserver(measure);
   ro.observe(host);
+  ro.observe(radioHeading);
   ro.observe(story);
   const io = new IntersectionObserver(([entry]) => {
     visible = entry.isIntersecting;
@@ -1104,6 +1155,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     startRoutes.style.removeProperty('--column-progress');
     startRoutes.style.removeProperty('--row-progress');
     startRoutes.style.removeProperty('--column-exit');
+    radioHeading.style.removeProperty('--radio-heading-opacity');
+    radioHeading.style.removeProperty('--radio-heading-visibility');
     delete story.dataset.live;
     delete story.dataset.gatePhase;
     delete story.dataset.gateSample;

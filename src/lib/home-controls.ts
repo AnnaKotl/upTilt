@@ -1,3 +1,5 @@
+import { demoDurationMs } from '../data/radio-demo';
+
 // Localise the static Astro shell in place. Hydrated islands listen to page-language.
 const shell = [
   'body > a[href="#main"]',
@@ -105,7 +107,7 @@ export function initPresentation() {
   const stops = ['hero', 'start', 'motion', 'anatomy', 'radio', 'display'].map(
     (id) => document.getElementById(id)!,
   );
-  const dwell = [5300, 6800, 12300, 3200, 23700, 8500];
+  const dwell = [5300, 6800, 12300, 3200, demoDurationMs + 4500, 8500];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const stopPosition = (node: HTMLElement) => {
     const live =
