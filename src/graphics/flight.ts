@@ -114,10 +114,10 @@ function rotorExposure() {
   const sweep = ctx.createRadialGradient(0, 0, 4, 0, 0, 62);
   for (const [stop, alpha] of [
     [0, 0],
-    [0.16, 0.045],
-    [0.57, 0.145],
-    [0.87, 0.205],
-    [0.96, 0.16],
+    [0.16, 0.075],
+    [0.57, 0.24],
+    [0.87, 0.34],
+    [0.96, 0.265],
     [1, 0],
   ]) {
     sweep.addColorStop(stop, `rgba(216,232,237,${alpha})`);
@@ -147,7 +147,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const radioBounds = new T.Box3().setFromObject(radio.root);
   const tiltedBounds = new T.Box3();
   const radioRotation = new T.Matrix4();
-  const dial = attitudeDial(quad.rotorReach * 1.5);
+  // Camera shows ten world units of height; this keeps the ring inside it.
+  const dial = attitudeDial(quad.rotorReach * 1.1);
   scene.add(quad.root, gate.root, radio.root, dial.root);
   // Put the readout in the glass plane so its perspective and depth follow the case.
   const lcd = document.createElement('canvas');
@@ -230,6 +231,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     transparent: true,
     depthWrite: false,
   });
+  // The smear texture is near white, so daylight needs it tinted to exist.
+  const smearNight = new T.Color('#ffffff');
+  const smearDay = new T.Color('#43637a');
   for (const rotor of quad.rotors) {
     const fan = new T.Mesh(new T.PlaneGeometry(1.92, 1.92), exposure);
     fan.rotation.x = -Math.PI / 2;
@@ -719,9 +723,13 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
         (0.92 * lift * exitLanding - 0.42) * inRadio,
       z,
     );
+    // Square to the camera while hovering; the angled pose returns once landed.
+    const squareOn = inRadio * Math.min(1, lift / 0.74);
+    const viewTilt = rx * (1 - 0.72 * squareOn);
+    const viewYaw = ry * (1 - squareOn);
     quad.root.rotation.set(
-      rx + hoverY * 0.255 * hero,
-      ry + hoverX * 0.44 * hero + radioYaw * inRadio,
+      viewTilt + hoverY * 0.255 * hero,
+      viewYaw + hoverX * 0.44 * hero + radioYaw * inRadio,
       rz - hoverX * 0.205 * hero,
       'ZXY',
     );
@@ -751,12 +759,13 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
         : term === 'Pitch'
           ? radioPitch * 0.27
           : bank * 0.33,
-      rx,
-      ry,
+      viewTilt,
+      viewYaw,
       day,
       airborne ? inRadio * (1 - departRadio) : 0,
     );
     quad.theme(day);
+    exposure.color.lerpColors(smearNight, smearDay, day);
     inv.copy(quad.root.quaternion).invert();
     for (const unit of units) {
       positionPart(unit, spread, follow);
@@ -802,9 +811,9 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
           exitLanding);
     const speed = Math.max(departure, arrival);
     const spinning = speed > 0.005;
-    exposure.opacity = speed * (0.88 + 0.12 * scrollMotion);
+    exposure.opacity = speed * (0.88 + 0.12 * scrollMotion) * (0.6 + 0.4 * day);
     quad.blade.opacity =
-      (0.68 * (1 - speed) + 0.007 * speed) * (1 - 0.9 * diagram);
+      ((0.68 + 0.16 * day) * (1 - speed) + 0.007 * speed) * (1 - 0.9 * diagram);
     quad.rotors.forEach((r, i) => {
       if (spinning)
         r.rotation.y +=
@@ -1116,8 +1125,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   }
   lighting();
   const mo = new MutationObserver(() => {
-    // The finish decides which ink the attitude ring uses, so read it before
-    // repainting; otherwise the ring keeps the previous theme's choice.
+    // Must precede lighting(): it picks the ring ink from dayGoal.
     dayGoal = document.documentElement.dataset.theme === 'light' ? 1 : 0;
     lighting();
     invalidate();

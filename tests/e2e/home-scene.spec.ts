@@ -319,7 +319,8 @@ test('the author follows the knowledge bookmark and the tour starts only at the 
   await tour.click();
   await expect(tour).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#hero')).toBeInViewport();
-  await expect(author).toBeHidden();
+  // Once the reader has reached the radio chapter the credit stays put.
+  await expect(author).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(tour).toHaveAttribute('aria-pressed', 'false');
   await expect(tour).toBeHidden();

@@ -569,7 +569,7 @@ html:has(.flight-story [data-stop]:target) {
 .kit-library {
   margin-left: auto;
 }
-@media (max-width: 840px), (max-height: 509px) {
+@media (max-width: 840px), (max-height: 379px) {
   .flight-story {
     --gutter: clamp(3.8rem, 9vw, 6rem);
   }
@@ -666,12 +666,21 @@ html:has(.flight-story [data-stop]:target) {
     position: relative;
     padding: 4rem 6% 2rem var(--gutter);
   }
+  /* Off the 3D path the mat is a bench you push sideways: parts keep a size
+     worth looking at instead of shrinking to fit. The heading sits outside. */
   .parts-board {
     position: relative;
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem 0.5rem;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(2, 1fr);
+    grid-auto-columns: 8.5rem;
+    gap: 1rem 0.75rem;
     margin: 2rem 0;
+    padding-inline: 0.25rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
   }
   .board-part {
     position: relative;
@@ -680,6 +689,7 @@ html:has(.flight-story [data-stop]:target) {
     width: 100%;
     height: 7.6rem;
     padding-top: 0.7rem;
+    scroll-snap-align: center;
   }
   .part-render {
     height: 70%;
@@ -702,6 +712,23 @@ html:has(.flight-story [data-stop]:target) {
     height: clamp(10rem, 27vw, 16rem);
     gap: 9%;
     margin: 2rem 0 1rem;
+  }
+}
+/* Narrow, not merely short: stack the pair. DOM order is radio then quad, so
+   column-reverse puts the quad on top. */
+@media (max-width: 760px) {
+  .radio-pair {
+    flex-direction: column-reverse;
+    height: auto;
+    gap: 1.5rem;
+  }
+  .radio-pair > .study-poster {
+    width: min(62%, 15rem);
+    height: clamp(9rem, 44vw, 14rem);
+  }
+  .radio-pair astro-slot > * {
+    width: min(86%, 22rem);
+    height: clamp(7rem, 32vw, 10rem);
   }
   .osd-hud {
     inset: 24% 7% 25% 15%;
@@ -818,7 +845,7 @@ html:has(.flight-story [data-stop]:target) {
   opacity: 1;
   transition-delay: 0.23s;
 }
-@media (min-width: 841px) and (min-height: 510px) {
+@media (min-width: 841px) and (min-height: 380px) {
   .flight-hero {
     align-items: flex-start;
     min-height: 150svh;
@@ -947,7 +974,8 @@ html:has(.flight-story [data-stop]:target) {
   --land-filter: saturate(1.15) sepia(0.08) brightness(1.08);
 }
 [data-theme='dark'] .goggle-view {
-  --exposure: saturate(0.36) brightness(0.38) contrast(1.22);
+  /* Dusk, not night. */
+  --exposure: saturate(0.78) brightness(0.72) contrast(0.96);
 }
 .view-land {
   inset: -14%;
@@ -957,11 +985,13 @@ html:has(.flight-story [data-stop]:target) {
   transition: transform 0.18s ease-out;
 }
 .view-land img {
+  /* Puts the shoreline mid-frame: trees one side, open water the other. */
+  transform: scale(1.12) translateX(-16.6%);
   filter: var(--land-filter) var(--exposure);
   transition: filter 0.75s;
 }
 .osd-hud {
-  inset: 11% 8%;
+  inset: clamp(4%, 5svh, 9%) 4.5%;
   border: 0;
 }
 .osd-hud button {
@@ -985,7 +1015,7 @@ html:has(.flight-story [data-stop]:target) {
 .hud-current {
   top: 2.8rem;
 }
-@media (max-width: 840px), (max-height: 509px) {
+@media (max-width: 840px), (max-height: 379px) {
   .rest-shadow {
     left: 62%;
     top: 53%;
@@ -993,14 +1023,19 @@ html:has(.flight-story [data-stop]:target) {
     height: 3%;
   }
   .gate-chapter,
-  .anatomy-chapter,
   .radio-chapter {
     height: auto;
     min-height: 100svh;
   }
-  .board-pin,
+  .anatomy-chapter {
+    height: auto;
+  }
   .radio-pin {
     min-height: 100svh;
+  }
+  /* The sideways mat is short; a full screen under it would be empty. */
+  .board-pin {
+    min-height: auto;
   }
   .radio-study {
     inset: 0 3% 0 10%;
@@ -1362,7 +1397,7 @@ html:has(.flight-story [data-stop]:target) {
     transition: none;
   }
 }
-@media (min-width: 841px) and (min-height: 510px) {
+@media (min-width: 841px) and (min-height: 380px) {
   .gate-chapter {
     height: 195svh;
   }
@@ -1383,7 +1418,7 @@ html:has(.flight-story [data-stop]:target) {
     inset: 9.05% 7.14% 9.05% 9.14%;
   }
 }
-@media (max-width: 840px), (max-height: 509px) {
+@media (max-width: 840px), (max-height: 379px) {
   .hero-shot {
     display: block;
   }
@@ -1599,6 +1634,14 @@ html:has(.flight-story [data-stop]:target) {
   stroke-width: 0.78;
   filter: drop-shadow(0 0 2px #b8d8ee66);
 }
+/* A phone shows the pattern as a band, not a full screen of traces. */
+@media (max-width: 760px) {
+  .boot-circuit {
+    inset: 50% 0 auto;
+    height: 34svh;
+    translate: 0 -50%;
+  }
+}
 @media (prefers-reduced-motion: no-preference) {
   .boot-glint {
     animation: boot-sheen 1.5s ease-in-out infinite alternate;
@@ -1693,7 +1736,7 @@ html:has(.flight-story [data-stop]:target) {
 .goggle-view[data-phase='5'] .osd-status {
   top: 61%;
 }
-@media (min-width: 841px) and (min-height: 510px) {
+@media (min-width: 841px) and (min-height: 380px) {
   .flight-hero {
     min-height: 121svh;
   }
@@ -1787,7 +1830,7 @@ html:has(.flight-story [data-stop]:target) {
   }
 }
 
-@media (max-width: 840px), (max-height: 509px) {
+@media (max-width: 840px), (max-height: 379px) {
   .hero-shot .scatter {
     top: 52%;
     height: 5%;
@@ -1801,7 +1844,7 @@ html:has(.flight-story [data-stop]:target) {
   }
 }
 
-@media (min-width: 841px) and (min-height: 510px) {
+@media (min-width: 841px) and (min-height: 380px) {
   .hero-type .book-nav {
     pointer-events: none;
   }
@@ -1903,7 +1946,7 @@ html:has(.flight-story [data-stop]:target) {
   stroke-width: 0.5;
   opacity: 0.3;
 }
-@media (min-width: 841px) and (min-height: 510px) {
+@media (min-width: 841px) and (min-height: 380px) {
   .hero-type abbr {
     height: 1.76em;
   }
@@ -1984,7 +2027,7 @@ html:has(.flight-story [data-stop]:target) {
   }
 }
 
-@media (min-width: 841px) and (min-height: 510px) {
+@media (min-width: 841px) and (min-height: 380px) {
   [data-live] .board-part[data-part] .part-label {
     top: calc(50% + var(--label-offset) + 0.35rem);
   }
@@ -1995,7 +2038,7 @@ html:has(.flight-story [data-stop]:target) {
   width: 6.5rem;
   margin: 0 auto 0.65rem;
 }
-@media (min-width: 841px) and (min-height: 510px) {
+@media (min-width: 841px) and (min-height: 380px) {
   [data-live] .board-part .part-label {
     width: max-content;
     max-width: calc(100% + 1rem);
@@ -2005,7 +2048,7 @@ html:has(.flight-story [data-stop]:target) {
   }
 }
 
-@media (max-width: 840px), (max-height: 509px) {
+@media (max-width: 840px), (max-height: 379px) {
   .hero-type abbr {
     height: 1.56em;
   }
@@ -2224,7 +2267,7 @@ html:has(.flight-story [data-stop]:target) {
     display: none;
   }
 }
-@media (max-width: 840px), (max-height: 509px) {
+@media (max-width: 840px), (max-height: 379px) {
   .radio-heading {
     top: 8%;
     left: max(0.6rem, calc(3.6rem - 10vw));
@@ -2236,8 +2279,7 @@ html:has(.flight-story [data-stop]:target) {
     bottom: auto;
   }
 }
-/* Half the usual beat: with mode="out-in" a reader waits through both halves
-   when moving between readings, and the note must still feel immediate. */
+/* Half the usual beat: out-in makes a reader wait through both halves. */
 .note-fade-enter-active,
 .note-fade-leave-active {
   transition: opacity 130ms var(--ui-ease);
@@ -2260,7 +2302,7 @@ dialog.study-note-dialog {
   max-height: 80svh;
   color: var(--ink);
 }
-/* The animated backdrop below needs motion. Keep a plain one when it is off. */
+/* Plain backdrop for when the animated one below is off. */
 dialog.study-note-dialog::backdrop {
   background-color: rgb(8 10 13 / 0.53);
 }

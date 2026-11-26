@@ -1,4 +1,4 @@
-/* The fixed edge rail: language, theme, aircraft, home, library, search, tour. */
+/* The fixed edge rail. */
 .edge-rail,
 .author-tab {
   --rail-size: 45px;
@@ -77,16 +77,32 @@
   left: auto;
   right: 100%;
 }
+/* At the end of the page the way back names itself. */
+.back-top[data-open] {
+  width: auto;
+  padding-inline: 0.85rem;
+  gap: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.back-top[data-open] .hint {
+  position: static;
+  transform: none;
+  opacity: 1;
+  text-shadow: none;
+  transition-delay: 0s;
+}
 .author-tab {
   position: fixed;
   left: 0;
   bottom: 1.5rem;
   z-index: 20;
 }
-/* Controls that come and go with the scroll fade instead of popping. The two
-   fixed ones only need opacity; a tab inside the rail grid also collapses its
-   own box, so the rail closes behind it rather than leaving a hole.
-   setAway() in lib/reveal.ts pairs this with inert. */
+/* Fade rather than pop. A rail tab also collapses its box so the rail closes. */
 :is(.back-top, .author-tab, .edge-rail .edge-tab) {
   transition:
     opacity var(--ui-motion),
@@ -107,8 +123,7 @@
   border-block-width: 0;
 }
 
-/* Two icons, one shown. Which one follows data-theme, so the switch needs no
-   JavaScript to paint itself and cannot flash the wrong icon on load. */
+/* CSS picks the icon from data-theme, so it cannot flash the wrong one. */
 .theme-toggle .icon-light {
   display: none;
 }
@@ -122,8 +137,7 @@
   color: var(--accent);
 }
 
-/* The knowledge core in the hero: a book chip on a board, with the nine
-   directions fanning out along copper traces. Geometry lives in BookNav.vue. */
+/* Hero knowledge core. Geometry lives in BookNav.vue. */
 .book-nav {
   margin-top: 2rem;
   min-height: 5.8rem;
@@ -151,7 +165,7 @@
   color: var(--accent);
 }
 
-/* Aircraft picker: a collapsed tab that grows into a labelled list. */
+/* Aircraft picker. */
 #aircraft-options {
   display: grid;
   grid-template-rows: 0fr;
@@ -277,7 +291,7 @@
     color: var(--muted);
   }
 }
-@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+@media (max-width: 760px) {
   :root {
     --nav-content-start: 1.25rem;
     --dock-height: calc(3.75rem + env(safe-area-inset-bottom, 0px));
@@ -307,7 +321,7 @@
     border: 0;
     border-radius: 0;
   }
-  /* The dock runs across, so a departing tab closes its column, not its row. */
+  /* The dock runs across: close the column, not the row. */
   .edge-rail .edge-tab[data-away] {
     width: 0;
     height: 100%;
@@ -329,5 +343,42 @@
   }
   .back-top {
     bottom: calc(var(--dock-height) + 0.4rem);
+  }
+  .author-credit {
+    padding: 0;
+  }
+  .author-credit .author-tab {
+    position: fixed;
+    left: auto;
+    right: 1.25rem;
+    bottom: calc(var(--dock-height) + var(--tap) + 1rem);
+    width: var(--tap);
+    height: var(--tap);
+    padding: 0;
+    justify-content: center;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: var(--surface);
+  }
+  .author-credit .author-tab[data-open] {
+    width: auto;
+    padding-inline: 0.85rem;
+    gap: 0.5rem;
+  }
+  /* Collapsed until tapped, unlike the rail tabs above. */
+  .author-credit .author-tab .action-label {
+    grid-template-columns: 0fr;
+    opacity: 0;
+  }
+  .author-credit .author-tab[data-open] .action-label {
+    grid-template-columns: 1fr;
+    opacity: 1;
+    margin-inline-start: 0.5rem;
+  }
+  .author-credit .action-label:has(small) > span {
+    display: block;
+  }
+  .author-credit .action-label > small {
+    display: none;
   }
 }

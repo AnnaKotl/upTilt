@@ -369,8 +369,7 @@ function inspect(i: number) {
 }
 const { selected, choose, ready } = useStudySelection(fields, 'field');
 const hover = ref<number | null>(null);
-// Only a pointer or focus that leaves the whole group hides the note; moving
-// between readings swaps it in one step so it never flickers through empty.
+// Clearing per button would pass through empty and double the note.
 function leaveHud(event: FocusEvent) {
   const group = event.currentTarget as HTMLElement;
   if (!group.contains(event.relatedTarget as Node | null)) hover.value = null;

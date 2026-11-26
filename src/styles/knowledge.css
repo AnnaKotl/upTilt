@@ -1,6 +1,4 @@
-/* Knowledge base. Imported by the pages under /knowledge, not globally.
-   Order: page shell, shared block primitives, reading blocks, lists, gallery,
-   search, diagrams. One selector appears once. */
+/* Knowledge base. Imported by its own pages, not globally. One selector once. */
 
 /* ---------------------------------------------------------------- page shell */
 
@@ -37,7 +35,6 @@
   height: 1.8rem;
 }
 
-/* Icon-only back link and a trailing text link. Shared by crumbs and sections. */
 .inline-link,
 .plain-back {
   display: inline-flex;
@@ -73,7 +70,6 @@
   transform: none;
 }
 
-/* Anything a search result or a table of contents can link into. */
 #practice,
 .gallery-entry,
 .exercise-list li {
@@ -82,9 +78,7 @@
 
 /* ---------------------------------------------------- shared block primitive */
 
-/* Every content block in the knowledge base is this one grid. A block declares
-   only its narrowest acceptable column and its gap; the column count follows
-   from the space available, so no block needs its own breakpoint. */
+/* Every block is this grid. It declares only --kb-col and --kb-gap. */
 .library-list ul,
 .lesson-list,
 .sim-compare,
@@ -117,7 +111,7 @@
   line-height: 1.75;
   color: var(--muted);
 }
-/* The opening paragraph of a direction or a lesson reads as the lead. */
+
 .knowledge-lead,
 .lesson-body p:first-child {
   font-size: clamp(1.05rem, 1.5vw, 1.24rem);
@@ -138,12 +132,11 @@
 
 /* -------------------------------------------------------------------- lists */
 
-/* The nine directions on the knowledge index. */
 .library-list ul {
   --kb-col: 24rem;
   --kb-gap: 1rem clamp(1rem, 4vw, 4rem);
 }
-/* Lessons inside a direction, and the simulator comparison, are both rule rows. */
+
 .lesson-list {
   --kb-col: 15rem;
   --kb-gap: 0.45rem 1.5rem;
@@ -313,7 +306,6 @@
 
 /* ------------------------------------------------------------------- search */
 
-/* The drawer that slides out of the rail's search tab. */
 .library-search {
   width: var(--rail-size);
   position: relative;
@@ -427,7 +419,6 @@
   }
 }
 
-/* The results page. */
 .search-query {
   font: 700 1.5rem/1.5 var(--font-display);
   overflow-wrap: anywhere;
@@ -530,8 +521,6 @@
 
 /* -------------------------------------------------------------- adaptations */
 
-/* Phones get narrower page padding; the rail still owns the left edge.
-   Blocks reflow on their own through the shared grid above. */
 @media (max-width: 600px) {
   .reading-page {
     padding: 3.2rem 1rem 2rem 3.35rem;

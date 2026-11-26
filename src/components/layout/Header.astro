@@ -198,17 +198,30 @@ const models = [
   const library = document.querySelector<HTMLElement>('[data-library]');
   const author = document.querySelector<HTMLElement>('[data-author]');
   const top = document.querySelector<HTMLElement>('[data-top]');
+  const radioChapter = document.querySelector('#radio');
+  let credited = false;
   function update() {
     if (!top) return;
     setAway(
       top,
       window.scrollY < (hero?.clientHeight ?? window.innerHeight) * 0.75,
     );
-    if (hero && library) {
-      const pastHero =
-        hero.getBoundingClientRect().bottom <= innerHeight * 0.25;
-      setAway(library, !pastHero);
-      setAway(author, !pastHero);
+    // The last chapter ends on jammed static, so offer the way back by name.
+    top.toggleAttribute(
+      'data-open',
+      scrollY + innerHeight >= document.documentElement.scrollHeight - 8,
+    );
+    if (hero && library)
+      setAway(
+        library,
+        hero.getBoundingClientRect().bottom > innerHeight * 0.25,
+      );
+    if (author && radioChapter) {
+      // Document coordinates: a rect read before layout settles latches early.
+      const reached =
+        radioChapter.getBoundingClientRect().top + scrollY - innerHeight * 0.75;
+      credited ||= scrollY > 0 && scrollY >= reached;
+      if (credited) setAway(author, false);
     }
   }
   top?.addEventListener('click', (event) => {
@@ -221,6 +234,17 @@ const models = [
   window.addEventListener('scroll', update, { passive: true });
   window.addEventListener('resize', update);
   window.addEventListener('pageshow', update);
+  // Touch: the first tap names the link, the second follows it.
+  const coarse = matchMedia('(hover: none), (pointer: coarse)');
+  author?.addEventListener('click', (event) => {
+    if (!coarse.matches || author.hasAttribute('data-open')) return;
+    event.preventDefault();
+    author.setAttribute('data-open', '');
+  });
+  document.addEventListener('pointerdown', (event) => {
+    if (!(event.target as Element).closest('[data-author]'))
+      author?.removeAttribute('data-open');
+  });
   const language = document.querySelector<HTMLAnchorElement>('[data-language]');
   language?.addEventListener('click', (event) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)

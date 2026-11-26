@@ -613,6 +613,7 @@ export function makeWhoop(openFrame = false) {
     [shell, '#232b34', '#f7faf9'],
     [trim, '#617780', '#53a5cb'],
     [lens, '#536e80', '#2b5269'],
+    [blade, '#b1c0c5', '#5d7f93'],
   ] as const;
   const colors = palette.map(([m, a, b]) => ({
     m,
@@ -622,6 +623,10 @@ export function makeWhoop(openFrame = false) {
   function theme(day: number) {
     for (const { m, night, day: light } of colors)
       m.color.lerpColors(night, light, day);
+    // Daylight needs a glossier blade; against a near-white ground a matte one
+    // reads as absent.
+    blade.roughness = 0.28 - 0.12 * day;
+    blade.metalness = 0.19 + 0.16 * day;
     led.emissiveIntensity = 2.3 * (1 - day) + 0.06;
     evening.scale.setScalar(1.08 - 0.18 * day);
     evening.position.z = 0.64 - 0.12 * day;

@@ -58,7 +58,7 @@ const kit = [
         sessionStorage.setItem('uptilt:boot', '1');
         setTimeout(() => {
           delete root.dataset.boot;
-        }, 3000);
+        }, 2000);
       }
     } catch {}
   </script>
@@ -294,7 +294,7 @@ const kit = [
     if (story) {
       const host = story.querySelector<HTMLElement>('.scene-canvas')!;
       const media = matchMedia(
-        '(min-width: 841px) and (min-height: 510px) and (prefers-reduced-motion: no-preference)',
+        '(min-width: 841px) and (min-height: 380px) and (prefers-reduced-motion: no-preference)',
       );
       const reduced = matchMedia('(prefers-reduced-motion: reduce)');
       const saveData = (
@@ -336,7 +336,7 @@ const kit = [
         if (!waiting) return;
         const root = document.documentElement;
         const remaining =
-          Number(root.dataset.bootStart ?? 0) + 1000 - performance.now();
+          Number(root.dataset.bootStart ?? 0) + 420 - performance.now();
         if (root.dataset.boot === 'pending' && remaining > 0) {
           clearTimeout(releaseTimer);
           releaseTimer = window.setTimeout(ready, remaining);

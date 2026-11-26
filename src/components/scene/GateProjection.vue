@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { topics } from '../../data/topics';
 import TopicLink from '../knowledge/TopicLink.vue';
+import TermNote from '../ui/TermNote.vue';
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import {
   gateApproach,
@@ -27,6 +28,27 @@ const props = defineProps<{ locale: Locale }>();
 const locale = usePageLanguage(props.locale);
 const physics = topics.find((topic) => topic.id === 'fundamentals')!;
 const uk = computed(() => locale.value === 'uk');
+const terms = computed(() =>
+  uk.value
+    ? {
+        D: 'Діаметр кільця. Відстані тут міряються в D, тож числа не залежать від масштабу сцени.',
+        dr: 'Переміщення — пряма відстань від точки старту до поточної. Не те саме, що пройдений шлях.',
+        vy: 'Вертикальна швидкість — як швидко змінюється висота. Відʼємна означає зниження.',
+        dy: 'Зміна висоти відносно точки старту.',
+        direct:
+          'Прямизна: переміщення поділене на пройдений шлях. 1,00 — ідеально пряма; менше — політ із заворотами.',
+        mean: 'Середня шляхова швидкість: увесь пройдений шлях поділений на час.',
+      }
+    : {
+        D: 'Gate diameter. Distances here are counted in D, so the numbers do not depend on the scene scale.',
+        dr: 'Displacement — the straight line from launch to the current point. Not the same as distance travelled.',
+        vy: 'Vertical velocity — how fast height changes. Negative means descending.',
+        dy: 'Height change relative to the launch point.',
+        direct:
+          'Directness: displacement over distance travelled. 1.00 is a straight line; less means a curving path.',
+        mean: 'Mean speed: the whole path travelled divided by the time.',
+      },
+);
 const title = computed(() => (uk.value ? 'Кінематика' : 'Kinematics'));
 const surface = ref<HTMLElement>();
 const stage = ref<HTMLElement>();
@@ -537,12 +559,18 @@ function nudge(amount: number) {
       <figcaption>
         <h2 class="section-title">{{ title }}</h2>
         <TopicLink compact :topic="physics" :locale="locale" />
-        <small>{{ uk ? 'D — діаметр кільця' : 'D = gate diameter' }}</small>
+        <small
+          ><TermNote :note="terms.D">{{
+            uk ? 'D — діаметр кільця' : 'D = gate diameter'
+          }}</TermNote></small
+        >
         <div class="equation">
           <small>{{
             uk ? 'Переміщення від старту' : 'Displacement from launch'
           }}</small>
-          <div>‖Δr‖ = √(Δx² + Δy² + Δz²)</div>
+          <div>
+            <TermNote :note="terms.dr">‖Δr‖</TermNote> = √(Δx² + Δy² + Δz²)
+          </div>
           <div class="substitution">
             √({{
               displacement
@@ -563,16 +591,23 @@ function nudge(amount: number) {
               ? 'Вертикальна швидкість'
               : 'Vertical velocity'
         }}</small>
-        <span v-if="primary">Δy = {{ fmt(displacement[1]) }} D</span>
+        <span v-if="primary"
+          ><TermNote :note="terms.dy">Δy</TermNote> =
+          {{ fmt(displacement[1]) }} D</span
+        >
         <span v-else
-          >vᵧ = dy/dt ≈ {{ fmt(velocity.y) }} D/{{ uk ? 'с' : 's' }}</span
+          ><TermNote :note="terms.vy">vᵧ = dy/dt</TermNote> ≈
+          {{ fmt(velocity.y) }} D/{{ uk ? 'с' : 's' }}</span
         >
       </div>
       <div class="derived directness" :style="{ opacity: formulas }">
         <small>{{
           uk ? 'Переміщення / шлях' : 'Displacement / distance'
         }}</small>
-        <span>‖Δr‖ / s ≈ {{ directness ? fmt(directness) : '—' }}</span>
+        <span
+          ><TermNote :note="terms.direct">‖Δr‖ / s</TermNote> ≈
+          {{ directness ? fmt(directness) : '—' }}</span
+        >
       </div>
       <div
         class="lap-controls"
@@ -853,6 +888,10 @@ figcaption {
 }
 figcaption :deep(.study-link) {
   justify-self: start;
+  pointer-events: auto;
+}
+/* The readout layer is click-through; the annotated terms are not. */
+.gate-study :deep(.term-note) {
   pointer-events: auto;
 }
 figcaption > small {

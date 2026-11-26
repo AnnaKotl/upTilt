@@ -273,7 +273,7 @@ function trace(i: number) {
 [data-open='true'] .pcb-island {
   opacity: 0.13;
 }
-@media (max-width: 840px), (max-height: 509px) {
+@media (max-width: 840px), (max-height: 379px) {
   .pcb-island {
     width: clamp(10rem, 53vw, 16rem);
   }

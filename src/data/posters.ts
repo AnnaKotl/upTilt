@@ -1,17 +1,10 @@
-// The only list of model stills. `npm run posters` renders exactly these, and
-// the components render exactly these themes, so a still cannot be requested
-// without existing or be rendered without being shown.
-//
-// 'dark'   one render, used in both themes (the subject reads the same way).
-// 'themed' two renders; the light one replaces it under the light theme.
-//
-// `tests/unit/posters.test.ts` checks this against public/media/study.
+// The only list of model stills: `npm run posters` and the components read it.
+// 'themed' means a second light render exists. Checked against disk in tests.
 
 export const posterThemes = ['dark', 'themed'] as const;
 export type PosterTheme = (typeof posterThemes)[number];
 
 export const posters = {
-  // The two aircraft, whole, plus their front-on kit portraits.
   whoop: 'themed',
   seven: 'themed',
   'kit-whoop': 'themed',
@@ -20,7 +13,6 @@ export const posters = {
   'kit-radio': 'dark',
   'kit-goggles': 'dark',
 
-  // Whoop parts, as laid out on the parts board.
   frame: 'themed',
   canopy: 'themed',
   camera: 'themed',
@@ -35,7 +27,7 @@ export const posters = {
   connector: 'dark',
   'power-lead': 'dark',
 
-  // Parts whose 7" counterpart is a different shape and gets its own render.
+  // 7" counterparts that differ in shape.
   'seven-frame': 'themed',
   'seven-canopy': 'themed',
   'seven-antenna': 'themed',
@@ -43,7 +35,6 @@ export const posters = {
   'seven-receiver': 'dark',
   'seven-video': 'dark',
 
-  // The race gate.
   gate: 'dark',
 
   // Transmitter poses: off, neutral, then one per annotated control.
@@ -63,7 +54,6 @@ export const posters = {
 
 export type PosterName = keyof typeof posters;
 
-/** True when a light render exists and should replace the dark one. */
 export function isThemed(name: string): boolean {
   return posters[name as PosterName] === 'themed';
 }

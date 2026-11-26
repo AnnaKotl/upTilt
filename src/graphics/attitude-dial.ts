@@ -1,11 +1,12 @@
 import * as T from 'three';
 
-// A stationary angular scale and one moving index share the model's viewing frame.
+// Ring turns with the model, horizon stays level. The angle is the gap between them.
 export function attitudeDial(radius: number) {
   const root = new T.Group();
   root.name = 'Attitude reference';
   const scale = new T.Group();
-  root.add(scale);
+  const level = new T.Group();
+  root.add(scale, level);
   const ink = new T.LineBasicMaterial({ transparent: true, depthWrite: false });
   const accent = new T.LineBasicMaterial({
     transparent: true,
@@ -37,6 +38,30 @@ export function attitudeDial(radius: number) {
     accent,
   );
   scale.add(index);
+
+  // Segment pairs, gapped in the middle so the airframe is never crossed.
+  const reach = radius * 1.24;
+  const gap = radius * 0.46;
+  const dash = (reach - gap) / 9;
+  const rule: T.Vector3[] = [];
+  for (let i = 0; i < 5; i++) {
+    const near = gap + i * 2 * dash;
+    const far = Math.min(reach, near + dash);
+    for (const side of [1, -1])
+      rule.push(
+        new T.Vector3(side * near, 0, 0),
+        new T.Vector3(side * far, 0, 0),
+      );
+  }
+  for (const side of [1, -1])
+    rule.push(
+      new T.Vector3(side * reach, -0.11, 0),
+      new T.Vector3(side * reach, 0.11, 0),
+    );
+  level.add(
+    new T.LineSegments(new T.BufferGeometry().setFromPoints(rule), ink),
+  );
+
   function update(
     quad: T.Group,
     term: string,
@@ -59,6 +84,9 @@ export function attitudeDial(radius: number) {
       scale.rotation.set(0, Math.PI / 2, Math.PI / 2, 'XYZ');
     else scale.rotation.set(0, 0, 0);
     index.rotation.z = term === 'Yaw' ? -angle : angle;
+    // Undo the viewing frame so the rule stays level. Yaw has no horizon to read.
+    level.visible = term !== 'Yaw';
+    level.rotation.set(-viewTilt, 0, 0, 'ZXY');
     ink.opacity = (0.48 + 0.2 * daylight) * opacity;
     accent.opacity = 0.93 * opacity;
   }

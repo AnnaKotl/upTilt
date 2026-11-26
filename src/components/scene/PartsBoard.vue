@@ -250,7 +250,7 @@ async function open(event: Event, index: number) {
 .mat-topic[inert] {
   opacity: 0;
 }
-@media (min-width: 841px) and (min-height: 510px) {
+@media (min-width: 841px) and (min-height: 380px) {
   .mat-topic {
     position: absolute;
     z-index: 2;
@@ -260,7 +260,7 @@ async function open(event: Event, index: number) {
     align-items: center;
   }
 }
-@media (min-width: 1200px) and (min-height: 510px) {
+@media (min-width: 1200px) and (min-height: 380px) {
   .mat-topic {
     --topic-padding: 0.15rem;
     top: 74%;

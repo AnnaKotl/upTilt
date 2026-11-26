@@ -1,17 +1,9 @@
-/**
- * Minimal stylesheet walker, used by the style-hygiene test. It reports one
- * entry per style rule with the at-rule context it sits in, so a selector that
- * appears twice in the same context can be told apart from the same selector
- * legitimately repeated inside a media query.
- */
+// Stylesheet walker for the style-hygiene test. Context separates a repeat
+// inside a media query from an accidental one.
 export interface StyleRule {
-  /** The at-rule preludes this rule nests inside, joined by " | ". */
   context: string;
-  /** The selector list, whitespace normalised. */
   selector: string;
-  /** Declared property names, in source order. */
   properties: string[];
-  /** 1-based line of the opening brace. */
   line: number;
 }
 
@@ -80,7 +72,6 @@ export function styleRules(source: string): StyleRule[] {
   return rules;
 }
 
-/** Selectors declared more than once in the same at-rule context. */
 export function repeatedSelectors(source: string): string[] {
   const seen = new Map<string, number>();
   for (const rule of styleRules(source)) {

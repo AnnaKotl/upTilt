@@ -64,9 +64,7 @@ const label = uk ? 'Пошук' : 'Search';
     // Keep search in the reading area when the primary rail becomes a phone dock.
     const rail = search.parentElement!;
     const reading = document.querySelector('.reading-page');
-    const compact = matchMedia(
-      '(max-width: 760px), (max-height: 500px) and (pointer: coarse)',
-    );
+    const compact = matchMedia('(max-width: 760px)');
     function placeSearch() {
       setOpen(false);
       if (compact.matches && reading) reading.prepend(search!);
