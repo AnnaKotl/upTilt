@@ -8,6 +8,8 @@ const shell = [
   '[data-model-menu]',
   '[data-aircraft-option]',
   '[data-aircraft-option] .model-name span',
+  '[data-theme-toggle]',
+  '[data-theme-toggle] .hint',
   '[data-library]',
   '[data-library] .hint',
   '[data-top]',

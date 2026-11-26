@@ -1,4 +1,6 @@
 import { radioControls } from '../src/data/radio-controls';
+// Re-exported so render-posters.mjs renders exactly the declared stills.
+export { posters, isThemed } from '../src/data/posters';
 import * as T from 'three';
 import {
   makeGate,

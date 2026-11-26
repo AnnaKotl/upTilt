@@ -1,7 +1,7 @@
 ---
 import Icon from '../ui/Icon.vue';
 import KnowledgeSearch from '../knowledge/KnowledgeSearch.astro';
-import ThemeToggle from '../preferences/ThemeToggle.vue';
+import ThemeToggle from '../preferences/ThemeToggle.astro';
 import { pageUrl, t, type Locale } from '../../lib/i18n';
 interface Props {
   locale: Locale;
@@ -41,7 +41,7 @@ const models = [
     <b class="font-mono text-xs">{alt.toUpperCase()}</b>
     <span class="hint">{languageLabel}</span>
   </a>
-  <ThemeToggle client:load locale={locale} />
+  <ThemeToggle locale={locale} />
   {!path && (
     <div class="aircraft-picker">
       <button

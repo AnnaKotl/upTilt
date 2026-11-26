@@ -6,6 +6,7 @@ import LessonLinks from '../../../../components/knowledge/LessonLinks.astro';
 import { lessons, lessonTrails } from '../../../../data/lessons';
 import { topics } from '../../../../data/topics';
 import { locales, type Locale } from '../../../../lib/i18n';
+import '../../../../styles/knowledge.css';
 
 export function getStaticPaths() {
   return locales.flatMap((lang) =>

@@ -24,7 +24,7 @@ Before the first browser test run: `npx playwright install chromium webkit`.
 - `src/components`: layout, UI, preferences, knowledge navigation and lazy 3D scene.
 - `src/lib`: typed localization, URL and preference helpers.
 - `src/data`: structured category records shared across pages.
-- `src/styles`: Tailwind entry point, semantic theme tokens and necessary global CSS.
+- `src/styles`: `global.css` is the Tailwind entry point with the theme tokens, the base rules and the edge rail, loaded everywhere. `knowledge.css` and `flight-story.css` are imported by the pages that use them, so a page carries only its own section.
 - `tests/unit`, `tests/e2e`: behavior checks at the appropriate level.
 
 Astro builds static Ukrainian and English pages. Vue handles the book, the parts board, the transmitter poses and the OSD readings. The homepage loads a single Three.js scene on larger screens with motion enabled. The same model supplies the transparent WebP stills used on smaller screens and when WebGL is unavailable. The inline source geometry in `src/graphics/specimen.ts` is an original visual interpretation of the [BETAFPV Air65](https://betafpv.com/products/air65-brushless-whoop-quadcopter). The transmitter is an original exterior study of the [RadioMaster TX16S MK3](https://radiomasterrc.com/products/tx16s-mk3-radio-controller). Dusk optics, movement and the lake panorama are illustrative. The scene does not model measured flight dynamics.

@@ -10,6 +10,7 @@ import { lessons, topicIntroductions } from '../../../data/lessons';
 import { simulatorSections } from '../../../data/simulator-sections';
 import { topics } from '../../../data/topics';
 import { locales, type Locale } from '../../../lib/i18n';
+import '../../../styles/knowledge.css';
 export function getStaticPaths() {
   return locales.flatMap((lang) =>
     topics.map((topic) => ({

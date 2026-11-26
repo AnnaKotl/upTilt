@@ -66,9 +66,7 @@ html:has(.flight-story [data-stop]:target) {
 }
 .hero-type h1 {
   margin: 0;
-  font:
-    400 clamp(4.4rem, 9.8vw, 11rem)/1.05 'Press Start 2P',
-    monospace;
+  font: 400 clamp(4.4rem, 9.8vw, 11rem)/1.05 var(--font-pixel);
   letter-spacing: -0.095em;
 }
 .hero-type .book-nav {
@@ -191,8 +189,8 @@ html:has(.flight-story [data-stop]:target) {
   }
 }
 .core-port {
-  width: 44px;
-  height: 44px;
+  width: var(--tap);
+  height: var(--tap);
   display: grid;
   place-items: center;
   position: absolute;
@@ -215,8 +213,6 @@ html:has(.flight-story [data-stop]:target) {
     0 0 8px var(--surface);
   opacity: 0;
   pointer-events: none;
-}
-.core-port span {
   transition: opacity var(--ui-motion);
 }
 .core-port:is(:hover, :focus-visible) {
@@ -387,8 +383,8 @@ html:has(.flight-story [data-stop]:target) {
   padding-top: 0.7rem;
 }
 .board-foot button {
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--tap);
+  min-height: var(--tap);
 }
 .board-foot .study-note {
   min-height: 0;
@@ -636,7 +632,7 @@ html:has(.flight-story [data-stop]:target) {
     position: static;
     width: auto;
     height: auto;
-    min-height: 44px;
+    min-height: var(--tap);
     transform: none;
     display: flex;
     align-items: center;
@@ -970,11 +966,9 @@ html:has(.flight-story [data-stop]:target) {
   gap: 0.45em;
   align-items: center;
   color: white;
-  font:
-    400 clamp(0.85rem, 1.35vw, 1.45rem)/1.45 'Press Start 2P',
-    monospace;
+  font: 400 clamp(0.85rem, 1.35vw, 1.45rem)/1.45 var(--font-pixel);
   letter-spacing: -0.07em;
-  min-height: 44px;
+  min-height: var(--tap);
   text-shadow:
     1px 1px 0 #12161a,
     -1px -1px 0 #12161a,
@@ -1304,7 +1298,7 @@ html:has(.flight-story [data-stop]:target) {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  min-height: 44px;
+  min-height: var(--tap);
   font: 650 clamp(0.97rem, 1.65vw, 1.55rem)/1.28 var(--font-sans);
 }
 .preflight-map li a svg {
@@ -1432,9 +1426,7 @@ html:has(.flight-story [data-stop]:target) {
   left: var(--screen-x, var(--poster-screen-x));
   transform: translate(-50%, -50%) skewY(3deg);
   color: #d4e6dd;
-  font:
-    400 clamp(0.4rem, 0.75vw, 0.84rem)/1.4 'Press Start 2P',
-    monospace;
+  font: 400 clamp(0.4rem, 0.75vw, 0.84rem)/1.4 var(--font-pixel);
   text-shadow: 0 0 5px #94dacb99;
   pointer-events: none;
 }
@@ -1689,6 +1681,7 @@ html:has(.flight-story [data-stop]:target) {
 }
 .anchored-dialog[open] > div {
   animation: none;
+  padding-block-end: 0.5rem;
 }
 .anchored-dialog small {
   color: var(--muted);
@@ -1834,13 +1827,11 @@ html:has(.flight-story [data-stop]:target) {
 }
 .branch-fade-leave-active {
   transition: opacity 0.26s ease;
+  pointer-events: none;
 }
 .branch-fade-enter-from,
 .branch-fade-leave-to {
   opacity: 0;
-}
-.branch-fade-leave-active {
-  pointer-events: none;
 }
 
 .radio-screen {
@@ -2043,9 +2034,6 @@ html:has(.flight-story [data-stop]:target) {
 .goggle-view[data-exhausted='true'] :is(.view-land, .osd-hud, .season-weather) {
   visibility: hidden;
 }
-.anchored-dialog[open] > div {
-  padding-block-end: 0.5rem;
-}
 
 .radio-controls .radio-power {
   width: clamp(44px, 6vw, 88px);
@@ -2221,7 +2209,7 @@ html:has(.flight-story [data-stop]:target) {
   left: 77%;
   bottom: 12%;
   translate: -50% 0;
-  min-height: 44px;
+  min-height: var(--tap);
   padding: 0.4rem 0.8rem;
   width: max-content;
   max-width: 43%;
@@ -2265,7 +2253,15 @@ dialog.study-note-dialog,
   box-shadow: 0 5px 25px color-mix(in srgb, var(--surface) 55%, transparent);
 }
 dialog.study-note-dialog {
+  padding: 0;
+  margin: auto;
   width: min(19rem, calc(100vw - 2rem));
+  max-height: 80svh;
+  color: var(--ink);
+}
+/* The animated backdrop below needs motion. Keep a plain one when it is off. */
+dialog.study-note-dialog::backdrop {
+  background-color: rgb(8 10 13 / 0.53);
 }
 dialog.study-note-dialog > div {
   position: relative;
@@ -2273,9 +2269,7 @@ dialog.study-note-dialog > div {
 }
 dialog.study-note-dialog h3 {
   padding-inline-end: 1.8rem;
-  font:
-    700 1.22rem/1.2 'Play',
-    sans-serif;
+  font: 700 1.22rem/1.2 var(--font-display);
 }
 dialog.study-note-dialog p {
   margin: 0.42rem 0 0.55rem;

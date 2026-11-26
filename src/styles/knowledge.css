@@ -1,3 +1,9 @@
+/* Knowledge base. Imported by the pages under /knowledge, not globally.
+   Order: page shell, shared block primitives, reading blocks, lists, gallery,
+   search, diagrams. One selector appears once. */
+
+/* ---------------------------------------------------------------- page shell */
+
 .reading-page {
   max-width: 72rem;
   min-height: calc(100svh - 5.5rem);
@@ -5,11 +11,22 @@
   padding: clamp(3.2rem, 7vw, 6.4rem) clamp(2.6rem, 4.35vw, 4.35rem)
     clamp(3.2rem, 7vw, 6.4rem) clamp(3.5rem, 5.8vw, 5.8rem);
 }
+.reading-page h1 {
+  margin: 1.6rem 0;
+  font:
+    400 clamp(1.05rem, 2.5vw, 2.35rem)/1.55 var(--font-pixel),
+    monospace;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
 .knowledge-heading {
   display: flex;
   align-items: center;
   gap: clamp(0.55rem, 2vw, 1.5rem);
   margin-bottom: clamp(1.8rem, 4vw, 3.2rem);
+}
+.knowledge-heading h1 {
+  margin: 0;
 }
 .knowledge-heading .plain-back {
   flex: none;
@@ -18,6 +35,25 @@
   width: 1.8rem;
   height: 1.8rem;
 }
+
+/* Icon-only back link and a trailing text link. Shared by crumbs and sections. */
+.inline-link,
+.plain-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--tap);
+}
+.inline-link {
+  margin-top: 1.2rem;
+}
+.inline-link svg {
+  width: 1rem;
+}
+:is(.inline-link, .plain-back):is(:hover, :focus-visible) {
+  color: var(--accent);
+}
+
 .crumbs {
   display: flex;
   align-items: center;
@@ -29,12 +65,43 @@
 .crumbs a:is(:hover, :focus-visible) {
   color: var(--accent);
 }
-.reading-page h1 {
-  margin: 1.6rem 0;
+.crumbs .plain-back {
+  position: relative;
 }
-.knowledge-heading h1 {
-  margin: 0;
+.crumbs .plain-back .hint {
+  left: 0;
+  top: auto;
+  bottom: 100%;
+  transform: none;
 }
+
+/* Anything a search result or a table of contents can link into. */
+#practice,
+.gallery-entry,
+.exercise-list li {
+  scroll-margin-top: clamp(1.5rem, 5vh, 3rem);
+}
+
+/* ---------------------------------------------------- shared block primitive */
+
+/* Every content block in the knowledge base is this one grid. A block declares
+   only its narrowest acceptable column and its gap; the column count follows
+   from the space available, so no block needs its own breakpoint. */
+.library-list ul,
+.lesson-list,
+.sim-compare,
+.gallery-grid,
+.exercise-list {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, var(--kb-col)), 1fr)
+  );
+  gap: var(--kb-gap);
+}
+
+/* ------------------------------------------------------------ reading blocks */
+
 .reading-note {
   margin-block: clamp(1.5rem, 4vw, 2.8rem);
 }
@@ -48,95 +115,35 @@
 .reading-note p {
   max-width: clamp(66ch, 56vw, 82ch);
   margin: 0.75rem 0;
-}
-.library-search {
-  position: relative;
-}
-.search-shade {
-  position: fixed;
-  inset: 0;
-  background: rgb(10 13 18 / 0.23);
-  backdrop-filter: blur(2px);
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 0.22s,
-    visibility 0.22s;
-}
-[data-theme='light'] .search-shade {
-  background: rgb(24 33 42 / 0.13);
-}
-.library-search[data-open] .search-shade {
-  opacity: 1;
-  visibility: visible;
-}
-.library-search .edge-tab {
-  z-index: 1;
-}
-.library-search[data-open] .hint {
-  visibility: hidden;
-}
-.library-search form {
-  z-index: 1;
-  opacity: 0;
-  visibility: hidden;
-  clip-path: inset(0 98% 0 0 round 0.6rem);
-  transition:
-    opacity var(--ui-motion),
-    clip-path var(--ui-motion),
-    visibility var(--ui-motion);
-
-  position: absolute;
-  top: 0;
-  left: calc(100% + 0.5rem);
-  display: flex;
-  align-items: center;
-  min-height: 45px;
-  width: min(21rem, calc(100vw - 4.5rem));
-  padding-inline: 0.65rem 0.25rem;
-  border: 1px solid var(--accent);
-  border-radius: 0.6rem;
-  background: var(--surface);
-}
-.library-search[data-open] form {
-  opacity: 1;
-  visibility: visible;
-  clip-path: inset(0 round 0.6rem);
-  transition-delay: 0s;
-}
-.library-search form:focus-within {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
-}
-.library-search input:focus-visible {
-  outline: none;
-}
-.library-search input {
-  min-width: 0;
-  flex: 1;
-  padding: 0.35rem;
-  background: transparent;
-  color: var(--ink);
-}
-.library-search input::-webkit-search-cancel-button {
-  appearance: none;
-}
-.library-search form button {
+  font-size: 1.08rem;
+  line-height: 1.75;
   color: var(--muted);
-  min-width: 2.15rem;
-  min-height: 2.4rem;
-  justify-items: center;
-  align-content: center;
 }
-.library-search form button:not([hidden]) {
-  display: grid;
+/* The opening paragraph of a direction or a lesson reads as the lead. */
+.knowledge-lead,
+.lesson-body p:first-child {
+  font-size: clamp(1.05rem, 1.5vw, 1.24rem);
+  max-width: 62ch;
+  color: var(--ink);
+  line-height: 1.7;
 }
-.library-search form button:is(:hover, :focus-visible) {
+.reference-line {
+  margin-block: 2rem;
+  border-top: var(--row-rule);
+  padding-top: 1rem;
+  font: var(--meta-font);
+  color: var(--muted);
+}
+.reference-line a:is(:hover, :focus-visible) {
   color: var(--accent);
 }
+
+/* -------------------------------------------------------------------- lists */
+
+/* The nine directions on the knowledge index. */
 .library-list ul {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem clamp(1rem, 4vw, 4rem);
+  --kb-col: 24rem;
+  --kb-gap: 1rem clamp(1rem, 4vw, 4rem);
 }
 .topic-row {
   display: grid;
@@ -148,16 +155,14 @@
 .topic-row:is(:hover, :focus-visible) {
   color: var(--accent);
 }
+.topic-row strong {
+  font: 700 clamp(1.17rem, 2vw, 1.48rem)/1.18 var(--font-display);
+}
 .topic-row small {
   display: block;
   margin-top: 0.3rem;
   color: var(--muted);
   font-size: 0.92rem;
-}
-.topic-row strong {
-  font:
-    700 clamp(1.17rem, 2vw, 1.48rem)/1.18 'Play',
-    sans-serif;
 }
 .topic-row > svg {
   width: clamp(2.1rem, 4vw, 3.15rem);
@@ -179,16 +184,22 @@
 .topic-row:is(:hover, :focus-visible) strong svg {
   transform: translateX(0.24em);
 }
+
+/* Lessons inside a direction, and the simulator comparison, are both rule rows. */
 .lesson-list {
-  display: grid;
-  justify-items: start;
-  gap: 0.15rem;
+  --kb-col: 15rem;
+  --kb-gap: 0.45rem 1.5rem;
+}
+.lesson-list li {
+  border-top: var(--row-rule);
 }
 .lesson-list a {
-  display: inline-flex;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 0.6rem;
-  min-height: 44px;
+  min-height: var(--tap);
+  padding-block: 0.6rem;
   font-weight: 700;
 }
 .lesson-list a:is(:hover, :focus-visible) {
@@ -198,10 +209,57 @@
   flex: none;
   width: 1em;
 }
-.gallery-grid {
+
+.sim-compare {
+  --kb-col: 14rem;
+  --kb-gap: 1rem 1.5rem;
+}
+.sim-compare a {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(1.7rem, 5vw, 4rem) clamp(1rem, 2.5vw, 2rem);
+  gap: 0.3rem;
+  border-top: var(--row-rule);
+  padding-block: 0.75rem;
+}
+.sim-compare a:is(:hover, :focus-visible) strong {
+  color: var(--accent);
+}
+.sim-compare span,
+.sim-compare small {
+  color: var(--muted);
+  font: 0.8rem/1.6 var(--font-mono);
+}
+
+.exercise-list {
+  --kb-col: 22rem;
+  --kb-gap: 1.45rem clamp(1.2rem, 4vw, 3rem);
+  margin-top: 1.6rem;
+  padding-left: 1.35rem;
+  list-style: decimal-leading-zero;
+}
+.exercise-list li {
+  padding-left: 0.4rem;
+}
+.exercise-list li::marker {
+  color: var(--accent);
+  font: 0.74rem var(--font-mono);
+}
+.exercise-list h3 {
+  font: 700 clamp(1.04rem, 2vw, 1.45rem)/1.25 var(--font-display);
+}
+.exercise-list p {
+  font-size: 0.94rem;
+  line-height: 1.55;
+  margin-block: 0.4rem;
+}
+.exercise-check strong {
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------------ gallery */
+
+.gallery-grid {
+  --kb-col: 24rem;
+  --kb-gap: clamp(1.7rem, 5vw, 4rem) clamp(1rem, 2.5vw, 2rem);
   margin-block-start: 1.5rem;
 }
 .gallery-entry {
@@ -210,11 +268,23 @@
 .gallery-featured {
   grid-column: 1 / -1;
 }
+.gallery-entry h3 {
+  margin-top: 0.7rem;
+  font: 700 clamp(1.04rem, 2vw, 1.45rem)/1.25 var(--font-display);
+}
+.gallery-entry p {
+  font-size: 0.94rem;
+  line-height: 1.55;
+  margin-block: 0.4rem;
+}
 .gallery-previews {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
   gap: clamp(0.75rem, 2vw, 1.4rem);
+}
+.gallery-entry .gallery-previews {
+  margin-block: 1rem;
 }
 .gallery-frame {
   position: relative;
@@ -269,21 +339,6 @@
   display: inline-block;
   padding-block: 0.3rem;
 }
-.gallery-entry h3,
-.exercise-list h3 {
-  font:
-    700 clamp(1.04rem, 2vw, 1.45rem)/1.25 'Play',
-    sans-serif;
-}
-.gallery-entry h3 {
-  margin-top: 0.7rem;
-}
-.gallery-entry p,
-.exercise-list p {
-  font-size: 0.94rem;
-  line-height: 1.55;
-  margin-block: 0.4rem;
-}
 .gallery-links {
   display: flex;
   flex-wrap: wrap;
@@ -291,7 +346,7 @@
   font: 0.79rem var(--font-mono);
 }
 .gallery-links a {
-  min-height: 44px;
+  min-height: var(--tap);
   display: inline-flex;
   align-items: center;
   text-decoration: underline;
@@ -301,53 +356,154 @@
 .gallery-previews figcaption a:is(:hover, :focus-visible) {
   color: var(--accent);
 }
-#practice {
-  scroll-margin-top: 2rem;
+
+/* ------------------------------------------------------------------- search */
+
+/* The drawer that slides out of the rail's search tab. */
+.library-search {
+  position: relative;
 }
-.exercise-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.45rem clamp(1.2rem, 4vw, 3rem);
-  margin-top: 1.6rem;
-  padding-left: 1.35rem;
-  list-style: decimal-leading-zero;
+.library-search .edge-tab {
+  z-index: 1;
 }
-.exercise-list li {
-  padding-left: 0.4rem;
+.library-search[data-open] .hint {
+  visibility: hidden;
 }
-.exercise-list li::marker {
-  color: var(--accent);
-  font: 0.74rem var(--font-mono);
+.search-shade {
+  position: fixed;
+  inset: 0;
+  background: rgb(10 13 18 / 0.23);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.22s,
+    visibility 0.22s;
 }
-.exercise-check strong {
+[data-theme='light'] .search-shade {
+  background: rgb(24 33 42 / 0.13);
+}
+.library-search[data-open] .search-shade {
+  opacity: 1;
+  visibility: visible;
+}
+.library-search form {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 0.5rem);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  min-height: 45px;
+  width: min(21rem, calc(100vw - 4.5rem));
+  padding-inline: 0.65rem 0.25rem;
+  border: 1px solid var(--accent);
+  border-radius: 0.6rem;
+  background: var(--surface);
+  opacity: 0;
+  visibility: hidden;
+  clip-path: inset(0 98% 0 0 round 0.6rem);
+  transition:
+    opacity var(--ui-motion),
+    clip-path var(--ui-motion),
+    visibility var(--ui-motion);
+}
+.library-search[data-open] form {
+  opacity: 1;
+  visibility: visible;
+  clip-path: inset(0 round 0.6rem);
+  transition-delay: 0s;
+}
+.library-search form:focus-within {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.library-search input {
+  min-width: 0;
+  flex: 1;
+  padding: 0.35rem;
+  background: transparent;
   color: var(--ink);
 }
-@media (max-width: 620px) {
-  .gallery-grid,
-  .exercise-list {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .gallery-previews {
-    grid-auto-flow: row;
-  }
+.library-search input:focus-visible {
+  outline: none;
 }
-@media (max-width: 600px) {
-  .reading-page {
-    padding: 3.2rem 1rem 2rem 3.35rem;
-  }
-  .library-list ul {
-    grid-template-columns: 1fr;
-    gap: 0.45rem;
-  }
-  .knowledge-heading h1 {
-    font-size: clamp(1.85rem, 7vw, 2.8rem);
-  }
+.library-search input::-webkit-search-cancel-button {
+  appearance: none;
 }
-@media (prefers-reduced-motion: reduce) {
-  .topic-row svg {
-    transition: none;
-  }
+.library-search form button {
+  color: var(--muted);
+  min-width: 2.15rem;
+  min-height: 2.4rem;
+  justify-items: center;
+  align-content: center;
 }
+.library-search form button:not([hidden]) {
+  display: grid;
+}
+.library-search form button:is(:hover, :focus-visible) {
+  color: var(--accent);
+}
+
+/* The results page. */
+.search-query {
+  font: 700 1.5rem/1.5 var(--font-display);
+  overflow-wrap: anywhere;
+}
+.search-status,
+.search-results small,
+.search-facets,
+.more-results {
+  font: var(--meta-font);
+  color: var(--muted);
+}
+.search-facets {
+  display: flex;
+  gap: 0.3rem 1.1rem;
+  flex-wrap: wrap;
+  margin-block: 1rem;
+}
+.search-facets a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  border-bottom: var(--row-rule);
+}
+.search-facets [aria-current],
+.search-results a:is(:focus-visible, :hover) h2 {
+  color: var(--accent);
+}
+.search-results {
+  max-width: 50rem;
+}
+.search-results li {
+  border-top: var(--row-rule);
+}
+.search-results a {
+  display: block;
+  padding-block: 1.15rem;
+}
+.search-results h2 {
+  font: 700 clamp(1.15rem, 2vw, 1.55rem)/1.5 var(--font-display);
+}
+.search-results p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+.search-results mark {
+  background: transparent;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 0.24em;
+}
+.more-results {
+  min-height: var(--tap);
+  min-width: var(--tap);
+  border: var(--row-rule);
+}
+
+/* ----------------------------------------------------------------- diagrams */
+
 .radio-diagram {
   max-width: 46rem;
   margin-block: 1.25rem;
@@ -388,6 +544,27 @@
 .radio-diagram figcaption span:first-child::before {
   color: var(--accent);
 }
+
+/* -------------------------------------------------------------- adaptations */
+
+/* Phones get narrower page padding; the rail still owns the left edge.
+   Blocks reflow on their own through the shared grid above. */
+@media (max-width: 600px) {
+  .reading-page {
+    padding: 3.2rem 1rem 2rem 3.35rem;
+  }
+  .knowledge-heading h1 {
+    font-size: clamp(1.85rem, 7vw, 2.8rem);
+  }
+  .gallery-previews {
+    grid-auto-flow: row;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .topic-row svg {
+    transition: none;
+  }
+}
 @media (prefers-reduced-motion: no-preference) {
   .radio-signal,
   .radio-echo {
@@ -398,135 +575,4 @@
       stroke-dashoffset: -26;
     }
   }
-}
-
-[data-knowledge] .reading-page h1 {
-  font:
-    400 clamp(1.05rem, 2.5vw, 2.35rem)/1.55 'Press Start 2P',
-    monospace;
-  text-wrap: balance;
-  overflow-wrap: anywhere;
-}
-.knowledge-lead,
-.lesson-body p:first-child {
-  font-size: clamp(1.05rem, 1.5vw, 1.24rem);
-  max-width: 62ch;
-  color: var(--ink);
-  line-height: 1.7;
-}
-.reference-line {
-  margin-block: 2rem;
-  border-top: 1px solid var(--line);
-  padding-top: 1rem;
-  font: 0.84rem/1.65 var(--font-mono);
-  color: var(--muted);
-}
-.reference-line a:hover,
-.reference-line a:focus-visible {
-  color: var(--accent);
-}
-.gallery-entry .gallery-previews {
-  margin-block: 1rem;
-}
-.lesson-list {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
-  justify-items: stretch;
-  gap: 0.45rem 1.5rem;
-}
-.lesson-list li {
-  border-top: 1px solid var(--line);
-}
-.lesson-list a {
-  display: flex;
-  justify-content: space-between;
-  padding-block: 0.6rem;
-}
-.search-query {
-  font:
-    700 1.5rem/1.5 Play,
-    sans-serif;
-  overflow-wrap: anywhere;
-}
-.search-status,
-.search-results small,
-.search-facets,
-.more-results {
-  font: 0.82rem/1.6 var(--font-mono);
-  color: var(--muted);
-}
-.search-facets {
-  display: flex;
-  gap: 0.3rem 1.1rem;
-  flex-wrap: wrap;
-  margin-block: 1rem;
-}
-.search-facets a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  border-bottom: 1px solid var(--line);
-}
-.search-facets [aria-current],
-.search-results a:is(:focus-visible, :hover) h2 {
-  color: var(--accent);
-}
-.search-results {
-  max-width: 50rem;
-}
-.search-results li {
-  border-top: 1px solid var(--line);
-}
-.search-results a {
-  display: block;
-  padding-block: 1.15rem;
-}
-.search-results h2 {
-  font:
-    700 clamp(1.15rem, 2vw, 1.55rem)/1.5 Play,
-    sans-serif;
-}
-.search-results p {
-  color: var(--muted);
-  line-height: 1.6;
-}
-.search-results mark {
-  background: transparent;
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-color: var(--accent);
-  text-underline-offset: 0.24em;
-}
-.more-results {
-  min-height: 44px;
-  min-width: 44px;
-  border: 1px solid var(--line);
-}
-.sim-compare {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
-  gap: 1rem 1.5rem;
-}
-.sim-compare a {
-  display: grid;
-  gap: 0.3rem;
-  border-top: 1px solid var(--line);
-  padding-block: 0.75rem;
-}
-.sim-compare a:is(:hover, :focus-visible) strong {
-  color: var(--accent);
-}
-.sim-compare span,
-.sim-compare small {
-  color: var(--muted);
-  font: 0.8rem/1.6 var(--font-mono);
-}
-
-.crumbs .plain-back {
-  position: relative;
-}
-.crumbs .plain-back .hint {
-  left: 0;
-  top: auto;
-  bottom: 100%;
-  transform: none;
 }

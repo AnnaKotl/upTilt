@@ -22,67 +22,17 @@ try {
   const page = await browser.newPage();
   await page.setContent('<body></body>');
   await page.addScriptTag({ content: bundle.code });
-  const themed = new Set([
-    'kit-seven',
-    'kit-whoop',
-    'whoop',
-    'frame',
-    'canopy',
-    'camera',
-    'antenna',
-    'seven',
-    'seven-antenna',
-    'seven-frame',
-    'seven-canopy',
-  ]);
-  for (const id of [
-    'seven',
-    'seven-antenna',
-    'seven-frame',
-    'seven-canopy',
-    'whoop',
-    'frame',
-    'canopy',
-    'camera',
-    'antenna',
-    'motor',
-    'board',
-    'battery',
-    'propeller',
-    'light-strip',
-    'mounts',
-    'connector',
-    'power-lead',
-    'battery-holder',
-    'gate',
-    'radio',
-    'radio-off',
-    'radio-1',
-    'radio-2',
-    'radio-3',
-    'radio-4',
-    'radio-5',
-    'radio-6',
-    'radio-7',
-    'seven-esc',
-    'seven-receiver',
-    'seven-video',
-    'radio-8',
-    'radio-9',
-    'radio-10',
-    'kit-seven',
-    'kit-whoop',
-    'kit-battery',
-    'kit-radio',
-    'kit-goggles',
-  ]) {
-    for (const theme of themed.has(id) ? ['dark', 'light'] : ['dark']) {
+  // The manifest in src/data/posters.ts decides what is rendered and in which
+  // themes. There is no second list to keep in step.
+  const posters = await page.evaluate(() => window.StudyPoster.posters);
+  for (const [id, theme] of Object.entries(posters)) {
+    for (const shade of theme === 'themed' ? ['dark', 'light'] : ['dark']) {
       const data = await page.evaluate(
-        ([id, theme]) => window.StudyPoster.capture(id, theme === 'light'),
-        [id, theme],
+        ([id, shade]) => window.StudyPoster.capture(id, shade === 'light'),
+        [id, shade],
       );
       await writeFile(
-        'public/media/study/' + id + '-' + theme + '.webp',
+        'public/media/study/' + id + '-' + shade + '.webp',
         Buffer.from(data, 'base64'),
       );
     }

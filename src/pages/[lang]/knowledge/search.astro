@@ -3,6 +3,7 @@ import SiteLayout from '../../../layouts/SiteLayout.astro';
 import KnowledgeCrumbs from '../../../components/knowledge/KnowledgeCrumbs.astro';
 import SearchResults from '../../../components/knowledge/SearchResults.vue';
 import { locales, type Locale } from '../../../lib/i18n';
+import '../../../styles/knowledge.css';
 export function getStaticPaths() {
   return locales.map((lang) => ({ params: { lang } }));
 }

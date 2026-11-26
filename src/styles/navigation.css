@@ -1,3 +1,4 @@
+/* The fixed edge rail: language, theme, aircraft, home, library, search, tour. */
 .edge-rail {
   position: fixed;
   top: clamp(1rem, 6vh, 4rem);
@@ -29,6 +30,9 @@
   color: var(--accent);
   border-color: var(--accent);
 }
+
+/* Label that names an icon-only control. Revealed by hover or keyboard focus;
+   see the touch fallback at the end of this file. */
 .hint {
   white-space: nowrap;
   position: absolute;
@@ -55,19 +59,37 @@
   z-index: 15;
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: var(--tap);
+  height: var(--tap);
   color: var(--muted);
 }
 .back-top .hint {
   left: auto;
   right: 100%;
 }
-.author-edge {
-  height: 5.5rem;
-  display: flex;
-  align-items: center;
+.author-tab {
+  position: fixed;
+  left: 0;
+  bottom: 1.5rem;
+  z-index: 20;
 }
+/* Two icons, one shown. Which one follows data-theme, so the switch needs no
+   JavaScript to paint itself and cannot flash the wrong icon on load. */
+.theme-toggle .icon-light {
+  display: none;
+}
+[data-theme='light'] .theme-toggle .icon-light {
+  display: contents;
+}
+[data-theme='light'] .theme-toggle .icon-dark {
+  display: none;
+}
+[data-tour][aria-pressed='true'] {
+  color: var(--accent);
+}
+
+/* The knowledge core in the hero: a book chip on a board, with the nine
+   directions fanning out along copper traces. Geometry lives in BookNav.vue. */
 .book-nav {
   margin-top: 2rem;
   min-height: 5.8rem;
@@ -75,89 +97,27 @@
   width: min(100%, 264px);
   max-width: 100%;
 }
-.book-trigger,
-.branch {
+.book-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  min-height: 44px;
-  min-width: 44px;
+  min-height: var(--tap);
+  min-width: var(--tap);
   color: var(--ink);
 }
 .book-trigger svg {
   width: 32px;
   height: 32px;
 }
-:is(.book-trigger, .branch, .plain-back, .back-top, .inline-link):is(
+:is(.book-trigger, .plain-back, .back-top, .inline-link):is(
   :hover,
   :focus-visible
 ) {
   color: var(--accent);
 }
-.branches {
-  display: flex;
-  flex-wrap: wrap;
-  position: relative;
-  margin-top: 0.35rem;
-  padding-top: 32px;
-  width: 264px;
-  max-width: 100%;
-  animation: unfold 0.2s ease-out;
-}
-.branch {
-  width: 16.666%;
-  min-width: 0;
-}
 
-.branch .hint {
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.75rem;
-}
-@keyframes unfold {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-}
-
-.book-traces {
-  position: absolute;
-  inset: 0 0 auto;
-  width: 100%;
-  height: 36px;
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 1;
-  opacity: 0.6;
-  pointer-events: none;
-}
-.book-traces path {
-  stroke-dasharray: 300;
-  stroke-dashoffset: 0;
-  animation: trace-in 0.38s ease-out;
-}
-@keyframes trace-in {
-  from {
-    stroke-dashoffset: 300;
-  }
-}
-@media (max-width: 840px), (hover: none) {
-  .book-traces {
-    display: none;
-  }
-  .branches {
-    padding-top: 0;
-    gap: 0.3rem 0.7rem;
-  }
-  .branch {
-    width: auto;
-    min-width: 44px;
-  }
-}
-
+/* Aircraft picker: a collapsed tab that grows into a labelled list. */
 #aircraft-options {
   display: grid;
   grid-template-rows: 0fr;
@@ -245,22 +205,16 @@
   margin-inline-start: 0.5rem;
   opacity: 1;
 }
+
+/* Without hover there is nothing to reveal a label, so the rail carries its
+   names permanently. A proper bottom bar replaces this on phones later. */
 @media (hover: none) {
   .model-row {
-    min-height: 44px;
+    min-height: var(--tap);
   }
   .model-row .model-name {
     grid-template-columns: 1fr;
     margin-inline-start: 0.5rem;
     opacity: 1;
   }
-}
-.author-tab {
-  position: fixed;
-  left: 0;
-  bottom: 1.5rem;
-  z-index: 20;
-}
-[data-tour][aria-pressed='true'] {
-  color: var(--accent);
 }

@@ -57,9 +57,19 @@ function pointerLeave() {
   if (!menu.value?.contains(document.activeElement))
     hoverTimer = window.setTimeout(close, 460);
 }
-const height = Math.max(208, topics.length * 23);
-function port(i: number) {
-  const sockets = [
+// The board is authored on a 270 x 208 grid and stretches vertically with the
+// number of directions.
+const board = { width: 270, height: 208, radiusX: 107, radiusY: 82 };
+const height = Math.max(board.height, topics.length * 23);
+
+// Socket positions for the nine current directions were placed by hand so the
+// traces read like a real board. Any other count falls back to an even ring on
+// the same ellipse: correct, but worth placing by hand once the count settles.
+const authoredSockets: Record<
+  number,
+  readonly (readonly [x: number, y: number])[]
+> = {
+  9: [
     [58, 34],
     [209, 34],
     [242, 83],
@@ -69,17 +79,31 @@ function port(i: number) {
     [47, 151],
     [28, 83],
     [135, 19],
-  ];
-  const [x, y] = sockets[i];
-  return { x, y: (y * height) / 208 };
+  ],
+};
+const sockets =
+  authoredSockets[topics.length] ??
+  topics.map((_, i) => {
+    const turn = (i / topics.length) * Math.PI * 2 - Math.PI / 2;
+    return [
+      board.width / 2 + Math.cos(turn) * board.radiusX,
+      board.height / 2 + Math.sin(turn) * board.radiusY,
+    ] as const;
+  });
+
+function port(i: number) {
+  const [x, y] = sockets[i]!;
+  return { x, y: (y * height) / board.height };
 }
 function trace(i: number) {
   const { x, y } = port(i);
-  const cx = 135,
+  const cx = board.width / 2,
     cy = height / 2,
     dx = x - cx,
     dy = y - cy;
-  if ([0, 1, 8].includes(i)) {
+  // Sockets high above the chip leave from its top edge over a shoulder bend
+  // instead of running straight out sideways.
+  if (dy < -cy * 0.45) {
     const pin = cx + Math.sign(dx) * 13;
     const shoulder = cy - 37;
     return `M${pin} ${cy} V${shoulder} L${pin + Math.sign(dx) * 12} ${shoulder - 12} V${y} H${x}`;
@@ -165,7 +189,7 @@ function trace(i: number) {
         >
           <svg
             class="core-copper"
-            :viewBox="'0 0 270 ' + height"
+            :viewBox="`0 0 ${board.width} ${height}`"
             preserveAspectRatio="none"
             aria-hidden="true"
           >
@@ -193,7 +217,7 @@ function trace(i: number) {
             :href="pageUrl(locale, 'knowledge/' + topic.id)"
             :aria-label="topic.title[locale]"
             :style="{
-              '--x': (port(i).x / 270) * 100 + '%',
+              '--x': (port(i).x / board.width) * 100 + '%',
               '--y': (port(i).y / height) * 100 + '%',
               '--delay': i * 23 + 'ms',
             }"

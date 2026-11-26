@@ -11,6 +11,8 @@ import SeasonIntro from '../../components/scene/SeasonIntro.astro';
 import StudyPoster from '../../components/scene/StudyPoster.astro';
 import Icon from '../../components/ui/Icon.vue';
 import { locales, t, pageUrl, type Locale } from '../../lib/i18n';
+import type { PosterName } from '../../data/posters';
+import type { Topic } from '../../data/topics';
 import '../../styles/flight-story.css';
 export function getStaticPaths() {
   return locales.map((lang) => ({ params: { lang } }));
@@ -19,16 +21,29 @@ const locale = Astro.params.lang as Locale,
   uk = locale === 'uk';
 // Keep the prep sections ready for a possible return.
 const showFlightPrep = false;
+// Named stills, so a typo is a type error rather than a missing image.
 const kit = [
-  { name: uk ? 'Коптер' : 'Quadcopter', asset: 'whoop', topic: 'anatomy' },
-  { name: uk ? 'Пульт' : 'Transmitter', asset: 'radio', topic: 'equipment' },
+  { name: uk ? 'Коптер' : 'Quadcopter', poster: 'kit-whoop', topic: 'anatomy' },
+  {
+    name: uk ? 'Пульт' : 'Transmitter',
+    poster: 'kit-radio',
+    topic: 'equipment',
+  },
   {
     name: uk ? 'Окуляри або монітор' : 'Goggles or monitor',
-    asset: 'goggles',
+    poster: 'kit-goggles',
     topic: 'video',
   },
-  { name: uk ? 'Акумулятор' : 'Battery', asset: 'battery', topic: 'power' },
-];
+  {
+    name: uk ? 'Акумулятор' : 'Battery',
+    poster: 'kit-battery',
+    topic: 'power',
+  },
+] as const satisfies readonly {
+  name: string;
+  poster: PosterName;
+  topic: Topic['id'];
+}[];
 ---
 
 <SiteLayout locale={locale} title="FPV">
@@ -140,6 +155,11 @@ const kit = [
         </div>
       </div>
     </section>
+    {/* These four hydrate on load, not on visibility. They are not independent
+        islands: the scroll orchestrator below drives them through one shared
+        choreography from the top of the page, and the OSD readings and gate
+        replays are already live before their section is in view. Deferring
+        them silently drops those early events. */}
     <StartRoutes locale={locale} />
     <section data-stop id="motion" class="gate-chapter">
       <div class="gate-fallback">
@@ -175,7 +195,7 @@ const kit = [
               href={pageUrl(locale, 'knowledge/' + item.topic)}
             >
               <span class="kit-art">
-                <StudyPoster name={'kit-' + item.asset} />
+                <StudyPoster name={item.poster} />
               </span>
               <span>{item.name}</span>
             </a>

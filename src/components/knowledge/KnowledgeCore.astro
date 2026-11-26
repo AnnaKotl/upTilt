@@ -6,25 +6,11 @@ interface Props {
   locale: Locale;
 }
 const { locale } = Astro.props;
-const order = [
-  'radio',
-  'simulators',
-  'anatomy',
-  'fundamentals',
-  'equipment',
-  'firmware',
-  'video',
-  'power',
-  'workbench',
-];
-const orderedTopics = [...topics].sort(
-  (a, b) => order.indexOf(a.id) - order.indexOf(b.id),
-);
 ---
 
 <div class="library-list">
   <ul>
-    {orderedTopics.map((topic) => (
+    {topics.map((topic) => (
       <li data-topic-row>
         <a class="topic-row" href={pageUrl(locale, 'knowledge/' + topic.id)}>
           <Icon name={topic.icon} />

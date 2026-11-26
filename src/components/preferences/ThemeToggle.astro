@@ -1,0 +1,44 @@
+---
+import Icon from '../ui/Icon.vue';
+import { t, type Locale } from '../../lib/i18n';
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const label = t(locale).theme;
+---
+
+{/* The icon follows data-theme through CSS, so only the switch state needs JS.
+    The label is localised in place with the rest of the rail. */}
+<button
+  class="edge-tab theme-toggle"
+  type="button"
+  role="switch"
+  aria-checked="false"
+  aria-label={label}
+  data-theme-toggle
+>
+  <span class="icon-dark">
+    <Icon name="moon" />
+  </span>
+  <span class="icon-light">
+    <Icon name="sun" />
+  </span>
+  <span class="hint">{label}</span>
+</button>
+
+<script>
+  import { currentTheme, toggleTheme } from '../../lib/preferences';
+  const toggle = document.querySelector<HTMLButtonElement>(
+    '[data-theme-toggle]',
+  );
+  const sync = () =>
+    toggle?.setAttribute('aria-checked', String(currentTheme() === 'light'));
+  toggle?.addEventListener('click', () => {
+    toggleTheme();
+    sync();
+  });
+  // The head script applies the stored theme before paint; catch up to it.
+  sync();
+  window.addEventListener('pageshow', sync);
+</script>

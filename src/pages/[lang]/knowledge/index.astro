@@ -3,6 +3,7 @@ import SiteLayout from '../../../layouts/SiteLayout.astro';
 import KnowledgeCore from '../../../components/knowledge/KnowledgeCore.astro';
 import Icon from '../../../components/ui/Icon.vue';
 import { locales, t, pageUrl, type Locale } from '../../../lib/i18n';
+import '../../../styles/knowledge.css';
 export function getStaticPaths() {
   return locales.map((lang) => ({ params: { lang } }));
 }

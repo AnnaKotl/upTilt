@@ -1,52 +1,6 @@
+// Declaration order is the reading order. It drives the knowledge index,
+// the hero board and the search facets, so change it here and nowhere else.
 export const topics = [
-  {
-    id: 'anatomy',
-    icon: 'layers',
-    title: {
-      uk: 'Будова дрона',
-      en: 'Drone anatomy',
-    },
-    summary: {
-      uk: 'Рама, камера й пропелери.',
-      en: 'Frame, camera and propellers.',
-    },
-    question: {
-      uk: 'Що тримає рама?',
-      en: 'What does the frame hold?',
-    },
-    note: {
-      uk: 'У мікрокоптера типу whoop рама об’єднує чотири захисні кільця. Усередині кожного розташовані двигун і пропелер.',
-      en: 'A whoop frame joins four propeller guards into one structure. Each guard surrounds a motor and its propeller.',
-    },
-    source: {
-      label: 'BETAFPV · Air65',
-      url: 'https://betafpv.com/products/air65-brushless-whoop-quadcopter',
-    },
-  },
-  {
-    id: 'fundamentals',
-    icon: 'flight',
-    title: {
-      uk: 'Фізика польоту',
-      en: 'Flight physics',
-    },
-    summary: {
-      uk: 'Сили та рух у повітрі.',
-      en: 'Forces and motion in the air.',
-    },
-    question: {
-      uk: 'Як читати стрілку сили?',
-      en: 'What does a force arrow show?',
-    },
-    note: {
-      uk: 'Сила має величину й напрямок. На схемі напрямок показує вістря стрілки, а довжина дає змогу порівняти величини сил, якщо масштаб однаковий.',
-      en: 'A force has both magnitude and direction. The arrowhead shows its direction. On a diagram drawn to scale, a longer arrow represents a larger force.',
-    },
-    source: {
-      label: 'NASA Glenn',
-      url: 'https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/four-forces-on-an-airplane/',
-    },
-  },
   {
     id: 'radio',
     icon: 'radio',
@@ -96,27 +50,51 @@ export const topics = [
     },
   },
   {
-    id: 'workbench',
-    icon: 'circuit',
+    id: 'anatomy',
+    icon: 'layers',
     title: {
-      uk: 'Паяння та збірка',
-      en: 'Soldering and assembly',
+      uk: 'Будова дрона',
+      en: 'Drone anatomy',
     },
     summary: {
-      uk: 'Плати, компоненти та з’єднання.',
-      en: 'Boards, components and connections.',
+      uk: 'Рама, камера й пропелери.',
+      en: 'Frame, camera and propellers.',
     },
     question: {
-      uk: 'Що таке друкована плата?',
-      en: 'What is a printed circuit board?',
+      uk: 'Що тримає рама?',
+      en: 'What does the frame hold?',
     },
     note: {
-      uk: 'На друкованій платі закріплені електронні компоненти. Провідні доріжки з’єднують їх у коло. В англомовній документації таку плату часто називають PCB.',
-      en: 'A printed circuit board (PCB) supports electronic components. Conductive tracks on the board connect the components to form a circuit.',
+      uk: 'У мікрокоптера типу whoop рама об’єднує чотири захисні кільця. Усередині кожного розташовані двигун і пропелер.',
+      en: 'A whoop frame joins four propeller guards into one structure. Each guard surrounds a motor and its propeller.',
     },
     source: {
-      label: 'KiCad',
-      url: 'https://docs.kicad.org/',
+      label: 'BETAFPV · Air65',
+      url: 'https://betafpv.com/products/air65-brushless-whoop-quadcopter',
+    },
+  },
+  {
+    id: 'fundamentals',
+    icon: 'flight',
+    title: {
+      uk: 'Фізика польоту',
+      en: 'Flight physics',
+    },
+    summary: {
+      uk: 'Сили та рух у повітрі.',
+      en: 'Forces and motion in the air.',
+    },
+    question: {
+      uk: 'Як читати стрілку сили?',
+      en: 'What does a force arrow show?',
+    },
+    note: {
+      uk: 'Сила має величину й напрямок. На схемі напрямок показує вістря стрілки, а довжина дає змогу порівняти величини сил, якщо масштаб однаковий.',
+      en: 'A force has both magnitude and direction. The arrowhead shows its direction. On a diagram drawn to scale, a longer arrow represents a larger force.',
+    },
+    source: {
+      label: 'NASA Glenn',
+      url: 'https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/four-forces-on-an-airplane/',
     },
   },
   {
@@ -141,6 +119,27 @@ export const topics = [
     source: {
       label: 'EdgeTX',
       url: 'https://manual.edgetx.org/',
+    },
+  },
+  {
+    id: 'firmware',
+    icon: 'firmware',
+    title: { uk: 'Прошивка', en: 'Firmware' },
+    summary: {
+      uk: 'Betaflight для коптера, EdgeTX і налаштування пульта.',
+      en: 'Betaflight for the quad, EdgeTX and transmitter setup.',
+    },
+    question: {
+      uk: 'Прошивка й налаштування — у чому різниця?',
+      en: 'How do firmware and settings differ?',
+    },
+    note: {
+      uk: 'Прошивка — програма, що працює на пристрої. Налаштування — збережені параметри цієї програми. Зміна імені моделі на пульті або перегляд каналів у Betaflight App не потребують перепрошивки.',
+      en: 'Firmware is the software running on the device. Settings are the parameters it stores. Renaming a transmitter model or inspecting channels in Betaflight App does not require flashing firmware.',
+    },
+    source: {
+      label: 'Betaflight App',
+      url: 'https://betaflight.com/docs/wiki/app',
     },
   },
   {
@@ -180,24 +179,27 @@ export const topics = [
     },
   },
   {
-    id: 'firmware',
-    icon: 'firmware',
-    title: { uk: 'Прошивка', en: 'Firmware' },
+    id: 'workbench',
+    icon: 'circuit',
+    title: {
+      uk: 'Паяння та збірка',
+      en: 'Soldering and assembly',
+    },
     summary: {
-      uk: 'Betaflight для коптера, EdgeTX і налаштування пульта.',
-      en: 'Betaflight for the quad, EdgeTX and transmitter setup.',
+      uk: 'Плати, компоненти та з’єднання.',
+      en: 'Boards, components and connections.',
     },
     question: {
-      uk: 'Прошивка й налаштування — у чому різниця?',
-      en: 'How do firmware and settings differ?',
+      uk: 'Що таке друкована плата?',
+      en: 'What is a printed circuit board?',
     },
     note: {
-      uk: 'Прошивка — програма, що працює на пристрої. Налаштування — збережені параметри цієї програми. Зміна імені моделі на пульті або перегляд каналів у Betaflight App не потребують перепрошивки.',
-      en: 'Firmware is the software running on the device. Settings are the parameters it stores. Renaming a transmitter model or inspecting channels in Betaflight App does not require flashing firmware.',
+      uk: 'На друкованій платі закріплені електронні компоненти. Провідні доріжки з’єднують їх у коло. В англомовній документації таку плату часто називають PCB.',
+      en: 'A printed circuit board (PCB) supports electronic components. Conductive tracks on the board connect the components to form a circuit.',
     },
     source: {
-      label: 'Betaflight App',
-      url: 'https://betaflight.com/docs/wiki/app',
+      label: 'KiCad',
+      url: 'https://docs.kicad.org/',
     },
   },
 ] as const;

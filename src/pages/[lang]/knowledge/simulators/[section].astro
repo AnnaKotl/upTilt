@@ -7,6 +7,7 @@ import { simulatorSections } from '../../../../data/simulator-sections';
 import SimulatorComparison from '../../../../components/knowledge/SimulatorComparison.astro';
 import { simulators } from '../../../../data/simulators';
 import { locales, type Locale } from '../../../../lib/i18n';
+import '../../../../styles/knowledge.css';
 export function getStaticPaths() {
   return locales.flatMap((lang) =>
     simulatorSections.map((section) => ({

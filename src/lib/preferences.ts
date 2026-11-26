@@ -12,3 +12,21 @@ export function savePreference(key: string, value: string): void {
     /* The current page still works when storage is unavailable. */
   }
 }
+
+export type Theme = 'dark' | 'light';
+
+/** Read the finish the document is currently wearing. */
+export function currentTheme(root = document.documentElement): Theme {
+  return root.dataset.theme === 'light' ? 'light' : 'dark';
+}
+
+/**
+ * Switch the finish, remember it and report the new one. Applying it to the
+ * document is what paints the page, so it happens whether storage works or not.
+ */
+export function toggleTheme(root = document.documentElement): Theme {
+  const theme = currentTheme(root) === 'light' ? 'dark' : 'light';
+  root.dataset.theme = theme;
+  savePreference('theme', theme);
+  return theme;
+}

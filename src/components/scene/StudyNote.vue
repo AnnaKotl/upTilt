@@ -21,7 +21,7 @@ defineExpose({
 </script>
 <template>
   <dialog
-    class="part-dialog study-note-dialog"
+    class="study-note-dialog"
     ref="dialog"
     :aria-label="title"
     :aria-labelledby="titleId"

@@ -2,6 +2,7 @@
 import { usePageLanguage } from '../../lib/page-language';
 import { currentAircraft, type Aircraft } from '../../lib/aircraft';
 import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue';
+import { isThemed } from '../../data/posters';
 import { parts, matPosition, separateBoards } from '../../data/airframe';
 import { useStudySelection } from '../../lib/useStudySelection';
 import { type Locale } from '../../lib/i18n';
@@ -44,15 +45,16 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', positionDialog);
   window.removeEventListener('aircraft-change', syncModel);
 });
+// The 7" counterparts of these parts are a different shape and have their own
+// still; everything else reuses the whoop render.
+const sevenOwn = new Set(['frame', 'canopy', 'antenna']);
+function poster(id: string) {
+  return model.value === 'seven' && (sevenOwn.has(id) || separateBoards.has(id))
+    ? 'seven-' + id
+    : id;
+}
 function art(id: string) {
-  return (
-    base +
-    (model.value === 'seven' &&
-    (['frame', 'canopy', 'antenna'].includes(id) || separateBoards.has(id))
-      ? 'seven-'
-      : '') +
-    id
-  );
+  return base + poster(id);
 }
 function name(part: (typeof parts)[number]) {
   if (model.value === 'seven' && part.id === 'antenna')
@@ -86,7 +88,6 @@ function description(part: (typeof parts)[number]) {
       : 'The compact study groups the flight controller, electronic speed controllers, radio receiver and video transmitter on one board.';
   return part.description[locale.value];
 }
-const themed = ['frame', 'canopy', 'camera', 'antenna'];
 function highlight(index: number | null) {
   if (index !== null && !settled.value) return;
   hover.value = index;
@@ -175,11 +176,11 @@ async function open(event: Event, index: number) {
             class="part-render"
             aria-hidden="true"
             ><img
-              :class="{ 'night-image': themed.includes(part.id) }"
+              :class="{ 'night-image': isThemed(poster(part.id)) }"
               :src="art(part.id) + '-dark.webp'"
               loading="lazy"
               alt="" /><img
-              v-if="themed.includes(part.id)"
+              v-if="isThemed(poster(part.id))"
               class="day-image"
               :src="art(part.id) + '-light.webp'"
               alt=""
@@ -202,10 +203,10 @@ async function open(event: Event, index: number) {
       <template #image>
         <span class="dialog-render" aria-hidden="true"
           ><img
-            :class="{ 'night-image': themed.includes(parts[selected].id) }"
+            :class="{ 'night-image': isThemed(poster(parts[selected].id)) }"
             :src="art(parts[selected].id) + '-dark.webp'"
             alt="" /><img
-            v-if="themed.includes(parts[selected].id)"
+            v-if="isThemed(poster(parts[selected].id))"
             class="day-image"
             :src="art(parts[selected].id) + '-light.webp'"
             alt=""

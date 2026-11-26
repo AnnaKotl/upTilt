@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { topics } from '../../src/data/topics';
 test('theme survives reload and a language switch preserves the page', async ({
   page,
 }) => {
@@ -142,7 +143,8 @@ test('book, section bookmarks and search serve different routes', async ({
     animations: 'disabled',
     path: test.info().outputPath('hero.png'),
   });
-  await expect(page.locator('#book-branches a')).toHaveCount(9);
+  // Both the hero board and the library list every direction, whatever the count.
+  await expect(page.locator('#book-branches a')).toHaveCount(topics.length);
   await expect(
     page.locator('#book-branches').getByRole('link', { name: 'Firmware' }),
   ).toHaveAttribute('href', /\/en\/knowledge\/firmware\/$/);
@@ -158,7 +160,7 @@ test('book, section bookmarks and search serve different routes', async ({
   await search.click();
   const query = page.getByRole('searchbox');
   await query.fill('flight physics');
-  await expect(page.locator('.topic-row:visible')).toHaveCount(9);
+  await expect(page.locator('.topic-row:visible')).toHaveCount(topics.length);
   await page.locator('.search-shade').click({ position: { x: 400, y: 180 } });
   await expect(query).toBeHidden();
   await search.click();
