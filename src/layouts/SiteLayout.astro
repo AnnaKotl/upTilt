@@ -1,6 +1,8 @@
 ---
 import '../styles/global.css';
 import { seasonPreview } from '../lib/preferences';
+import ActionLabel from '../components/ui/ActionLabel.vue';
+import Icon from '../components/ui/Icon.vue';
 import Header from '../components/layout/Header.astro';
 import playCyrillic from '../assets/fonts/play-cyrl.woff2?url';
 import playLatin from '../assets/fonts/play-latin.woff2?url';
@@ -25,7 +27,10 @@ const knowledge = path === 'knowledge' || path.startsWith('knowledge/');
 >
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
     <meta name="description" content={text.intro} />
     <title>{title} · upTilt</title>
     {knowledge && (
@@ -95,6 +100,24 @@ const knowledge = path === 'knowledge' || path.startsWith('knowledge/');
     <main id="main" tabindex="-1">
       <slot />
     </main>
+    {!path && (
+      <footer class="author-credit">
+        <a
+          class="edge-tab author-tab"
+          data-author
+          href="https://github.com/AnnaKotl/upTilt"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Icon name="github" />
+          <ActionLabel
+            text={locale === 'uk' ? 'Автор' : 'Author'}
+            compact={text.author}
+          />
+        </a>
+      </footer>
+    )}
+
     <script>
       // Let native navigation own history, scroll restoration and modified clicks.
       // Only coalesce repeated activations of the same pending destination.

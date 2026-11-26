@@ -4,19 +4,16 @@ import { demoDurationMs } from '../data/radio-demo';
 const shell = [
   'body > a[href="#main"]',
   '.edge-rail',
+  '.edge-tab > .action-label > span',
+  '.edge-tab > .action-label > small',
   '[data-language]',
   '[data-language] b',
-  '[data-language] .hint',
   '[data-model-menu]',
   '[data-aircraft-option]',
-  '[data-aircraft-option] .action-label span',
   '[data-theme-toggle]',
-  '[data-theme-toggle] .hint',
   '[data-library]',
-  '[data-library] .hint',
   '[data-top]',
   '[data-top] .hint',
-  '[data-author] .hint',
   '.gate-fallback [aria-label]',
   '#start h2',
   '#start a',
@@ -139,7 +136,14 @@ export function initPresentation() {
         ? 'Повторити демонстрацію'
         : 'Replay the tour';
     button.setAttribute('aria-label', title);
-    button.querySelector('.hint')!.textContent = title;
+    button.querySelector('.action-label > span')!.textContent = title;
+    button.querySelector('.action-label > small')!.textContent = playing
+      ? uk
+        ? 'Зупинити'
+        : 'Stop'
+      : uk
+        ? 'Повторити'
+        : 'Replay';
   }
   const end = new IntersectionObserver(
     ([entry]) => {

@@ -9,7 +9,8 @@
   min-height: calc(100svh - 5.5rem);
   margin: auto;
   padding: clamp(3.2rem, 7vw, 6.4rem) clamp(2.6rem, 4.35vw, 4.35rem)
-    clamp(3.2rem, 7vw, 6.4rem) clamp(3.5rem, 5.8vw, 5.8rem);
+    clamp(3.2rem, 7vw, 6.4rem)
+    clamp(var(--nav-content-start, 3.5rem), 5.8vw, 5.8rem);
 }
 .reading-page h1 {
   margin: 1.6rem 0;
@@ -314,13 +315,18 @@
 
 /* The drawer that slides out of the rail's search tab. */
 .library-search {
+  width: var(--rail-size);
   position: relative;
 }
 .library-search .edge-tab {
   z-index: 1;
 }
-.library-search[data-open] .hint {
-  visibility: hidden;
+@media (min-width: 1025px) and (hover: hover) and (pointer: fine) {
+  .library-search[data-open] .edge-tab > .action-label {
+    grid-template-columns: 0fr;
+    margin-inline-start: 0;
+    opacity: 0;
+  }
 }
 .search-shade {
   position: fixed;
@@ -395,6 +401,30 @@
 }
 .library-search form button:is(:hover, :focus-visible) {
   color: var(--accent);
+}
+
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+  .reading-page {
+    padding-inline: clamp(1rem, 5vw, 2.5rem);
+  }
+  .reading-page .library-search {
+    --rail-size: var(--tap);
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  .reading-page [data-search-toggle] {
+    flex-direction: row;
+    gap: 0.5rem;
+    width: auto;
+    min-height: var(--tap);
+    border: 0;
+    color: var(--accent);
+  }
+  .library-search form {
+    top: 100%;
+    left: 0;
+    width: min(100%, 21rem);
+  }
 }
 
 /* The results page. */

@@ -6,6 +6,7 @@ import posterControls from '../../data/radio-poster.json';
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import type { Locale } from '../../lib/i18n';
 import { usePointerNote } from '../../lib/usePointerNote';
+import ActionLabel from '../ui/ActionLabel.vue';
 import Icon from '../ui/Icon.vue';
 import StudyLink from './StudyLink.vue';
 import StudyNote from './StudyNote.vue';
@@ -351,9 +352,7 @@ onBeforeUnmount(() => {
       @click="replay"
     >
       <Icon name="replay" />
-      <span class="action-label" aria-hidden="true"
-        ><span>{{ replayLabel }}</span></span
-      >
+      <ActionLabel :text="replayLabel" aria-hidden="true" />
     </button>
     <div class="radio-pair">
       <span class="study-poster" role="img" aria-label="RadioMaster TX16S MK3">

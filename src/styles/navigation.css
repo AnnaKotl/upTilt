@@ -1,5 +1,10 @@
 /* The fixed edge rail: language, theme, aircraft, home, library, search, tour. */
+.edge-rail,
+.author-tab {
+  --rail-size: 45px;
+}
 .edge-rail {
+  width: var(--rail-size);
   position: fixed;
   top: clamp(1rem, 6vh, 4rem);
   left: 0;
@@ -15,24 +20,29 @@
   background: var(--surface);
   position: relative;
   display: flex;
-  width: 45px;
-  height: 45px;
+  width: max-content;
+  min-width: var(--rail-size);
+  max-width: calc(100vw - 0.5rem);
+  padding-inline: calc((var(--rail-size) - 25px) / 2);
+  cursor: pointer;
+  height: var(--rail-size);
   align-items: center;
   justify-content: center;
   transition:
-    width 0.22s,
-    color 0.18s,
-    border-color 0.18s,
-    background-color 0.22s;
+    color var(--ui-motion),
+    border-color var(--ui-motion),
+    background-color var(--ui-motion);
+}
+.edge-tab > b {
+  width: 24px;
+  text-align: center;
 }
 .edge-tab:is(:hover, :focus-visible) {
-  width: 54px;
   color: var(--accent);
   border-color: var(--accent);
 }
 
-/* Label that names an icon-only control. Revealed by hover or keyboard focus;
-   see the touch fallback at the end of this file. */
+/* Standalone hints outside the sidebar. */
 .hint {
   white-space: nowrap;
   position: absolute;
@@ -72,6 +82,9 @@
   left: 0;
   bottom: 1.5rem;
   z-index: 20;
+}
+.author-tab:not([data-past-hero]) {
+  display: none;
 }
 /* Two icons, one shown. Which one follows data-theme, so the switch needs no
    JavaScript to paint itself and cannot flash the wrong icon on load. */
@@ -145,7 +158,6 @@
   display: inline-flex;
   justify-content: start;
   gap: 0;
-  width: max-content;
   max-width: min(82vw, 24rem);
   height: 38px;
   min-width: 40px;
@@ -161,7 +173,6 @@
   flex: none;
 }
 .model-row:is(:hover, :focus-visible) {
-  width: max-content;
   color: var(--accent);
   background-color: color-mix(in srgb, var(--accent) 9%, var(--surface));
 }
@@ -175,24 +186,122 @@
   outline-color: var(--surface);
   cursor: default;
 }
-[data-model-menu] {
-  justify-content: flex-start;
-  padding-inline: 10px;
-  width: max-content;
-  min-width: 45px;
-}
-[data-model-menu]:is(:hover, :focus-visible) {
-  width: max-content;
-}
-/* Without hover there is nothing to reveal a label, so the rail carries its
-   names permanently. A proper bottom bar replaces this on phones later. */
-@media (hover: none) {
+
+/* Compact controls share a permanent caption on narrow or touch-first screens. */
+@media (max-width: 1024px), (hover: none), (pointer: coarse) {
+  :root {
+    --nav-content-start: 5rem;
+  }
+  .edge-rail {
+    --rail-size: 4rem;
+  }
+  .edge-tab:not(.model-row, .author-tab) {
+    width: var(--rail-size);
+    height: auto;
+    min-height: 3.6rem;
+    padding: 0.35rem 0.15rem;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .edge-tab > .action-label {
+    grid-template-columns: 1fr;
+    opacity: 1;
+  }
+  .edge-tab:not(.model-row) > .action-label {
+    max-width: 100%;
+    margin: 0;
+    font: 600 0.72rem/1.2 var(--font-sans);
+    text-align: center;
+  }
+  .edge-tab .action-label > span {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .edge-tab .action-label:has(small) > span {
+    display: none;
+  }
+  .edge-tab .action-label > small {
+    display: block;
+  }
+  .edge-tab > b {
+    line-height: 24px;
+  }
+  .aircraft-picker {
+    position: relative;
+  }
+  #aircraft-options {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: 100%;
+    width: max-content;
+  }
   .model-row {
     min-height: var(--tap);
   }
-  .model-row .action-label {
-    grid-template-columns: 1fr;
+  .model-row > .action-label {
     margin-inline-start: 0.5rem;
-    opacity: 1;
+  }
+  .author-credit {
+    padding: 1rem max(1rem, 8vw);
+  }
+  .author-credit .author-tab {
+    position: static;
+    display: inline-flex;
+    height: var(--tap);
+    min-width: 0;
+    gap: 0.5rem;
+    padding: 0;
+    border: 0;
+    color: var(--muted);
+  }
+}
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+  :root {
+    --nav-content-start: 1.25rem;
+    --dock-height: calc(3.75rem + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: var(--dock-height);
+  }
+  body {
+    padding-bottom: var(--dock-height);
+  }
+  .edge-rail {
+    inset: auto 0 0;
+    width: auto;
+    min-height: var(--dock-height);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    align-items: stretch;
+    justify-items: stretch;
+    gap: 0;
+    padding: 0 max(0.25rem, env(safe-area-inset-right))
+      env(safe-area-inset-bottom) max(0.25rem, env(safe-area-inset-left));
+    border-top: var(--row-rule);
+    background: var(--surface);
+  }
+  .edge-rail .edge-tab:not(.model-row) {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+  .edge-rail [data-tour] {
+    display: none;
+  }
+  #aircraft-options {
+    inset: auto 0 calc(100% + 0.35rem) auto;
+  }
+  .model-rows {
+    align-items: stretch;
+    border-radius: 0.55rem;
+  }
+  .model-rows .model-row {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 0.55rem;
+  }
+  .back-top {
+    bottom: calc(var(--dock-height) + 0.4rem);
   }
 }

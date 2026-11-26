@@ -1,4 +1,5 @@
 ---
+import ActionLabel from '../ui/ActionLabel.vue';
 import Icon from '../ui/Icon.vue';
 import KnowledgeSearch from '../knowledge/KnowledgeSearch.astro';
 import ThemeToggle from '../preferences/ThemeToggle.astro';
@@ -39,7 +40,10 @@ const models = [
     aria-label={languageLabel}
   >
     <b class="font-mono text-xs">{alt.toUpperCase()}</b>
-    <span class="hint">{languageLabel}</span>
+    <ActionLabel
+      text={languageLabel}
+      compact={locale === 'uk' ? 'Мова' : 'Language'}
+    />
   </a>
   <ThemeToggle locale={locale} />
   {!path && (
@@ -56,9 +60,10 @@ const models = [
             <Icon name={item.icon} />
           </span>
         ))}
-        <span class="action-label">
-          <span>Whoop</span>
-        </span>
+        <ActionLabel
+          text={models[0].name}
+          compact={locale === 'uk' ? 'Коптер' : 'Aircraft'}
+        />
       </button>
       <div id="aircraft-options" inert>
         <div class="model-rows">
@@ -72,9 +77,7 @@ const models = [
               aria-disabled={item.id === 'whoop'}
             >
               <Icon name={item.icon} />
-              <span class="action-label">
-                <span>{item.name}</span>
-              </span>
+              <ActionLabel text={item.name} />
             </button>
           ))}
         </div>
@@ -89,9 +92,10 @@ const models = [
       aria-label={locale === 'uk' ? 'На головну сторінку' : 'Home page'}
     >
       <Icon name="quad" />
-      <span class="hint">
-        {locale === 'uk' ? 'На головну сторінку' : 'Home page'}
-      </span>
+      <ActionLabel
+        text={locale === 'uk' ? 'На головну сторінку' : 'Home page'}
+        compact={locale === 'uk' ? 'Головна' : 'Home'}
+      />
     </a>
   )}
   <a
@@ -102,7 +106,7 @@ const models = [
     href={pageUrl(locale, 'knowledge')}
   >
     <Icon name="book" />
-    <span class="hint">{text.knowledge}</span>
+    <ActionLabel text={text.knowledge} />
   </a>
   {path.split('/')[0] === 'knowledge' && <KnowledgeSearch locale={locale} />}
   {!path && (
@@ -114,25 +118,13 @@ const models = [
       aria-pressed="false"
     >
       <Icon name="replay" />
-      <span class="hint">
-        {locale === 'uk' ? 'Повторити демонстрацію' : 'Replay the tour'}
-      </span>
+      <ActionLabel
+        text={locale === 'uk' ? 'Повторити демонстрацію' : 'Replay the tour'}
+        compact={locale === 'uk' ? 'Повторити' : 'Replay'}
+      />
     </button>
   )}
 </nav>
-{!path && (
-  <a
-    class="edge-tab author-tab"
-    data-author
-    hidden
-    href="https://github.com/AnnaKotl/upTilt"
-    target="_blank"
-    rel="noopener noreferrer"
-  >
-    <Icon name="github" />
-    <span class="hint">{locale === 'uk' ? 'Автор' : 'Author'}</span>
-  </a>
-)}
 <a class="back-top" href="#main" hidden data-top aria-label={text.home}>
   <Icon name="up" />
   <span class="hint">{text.home}</span>
@@ -182,7 +174,11 @@ const models = [
     option.addEventListener('click', () => {
       const id = option.dataset.aircraftOption;
       if (option.getAttribute('aria-disabled') === 'true') return;
-      if (id === 'whoop' || id === 'seven') selectAircraft(id);
+      if (id === 'whoop' || id === 'seven') {
+        selectAircraft(id);
+        reveal(false);
+        menu?.focus({ preventScroll: true });
+      }
     });
   window.addEventListener('page-language', updatePicker);
   window.addEventListener('pageshow', updatePicker);
@@ -200,7 +196,7 @@ const models = [
       const pastHero =
         hero.getBoundingClientRect().bottom <= innerHeight * 0.25;
       library.hidden = !pastHero;
-      if (author) author.hidden = !pastHero;
+      author?.toggleAttribute('data-past-hero', pastHero);
     }
   }
   top?.addEventListener('click', (event) => {

@@ -94,13 +94,18 @@ body {
     opacity var(--ui-motion),
     margin var(--ui-motion);
 }
+.action-label > small {
+  display: none;
+  font: inherit;
+}
 .action-label > span {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-button:is(:hover, :focus-visible):not([inert]) > .action-label {
+:where(button, a):where(:hover, :focus-visible):not(:where([inert]))
+  > .action-label {
   grid-template-columns: 1fr;
   margin-inline-start: 0.5rem;
   opacity: 1;
@@ -146,9 +151,6 @@ button:is(:hover, :focus-visible):not([inert]) > .action-label {
   .book-nav {
     margin-top: 0.6rem;
     min-height: 3rem;
-  }
-  .edge-tab {
-    width: 40px;
   }
 }
 
