@@ -42,24 +42,24 @@ export function attitudeDial(radius: number) {
     term: string,
     angle: number,
     viewTilt: number,
+    viewYaw: number,
+    daylight: number,
     opacity: number,
   ) {
     root.visible =
       opacity > 0.01 && (term === 'Yaw' || term === 'Pitch' || term === 'Roll');
     if (!root.visible) return;
     root.position.copy(quad.position);
-    // The camera is orthographic. Keep the projected axes but let the
-    // airframe occlude the guide even when a circle is seen edge-on.
-    root.position.z -= (2 * radius + 0.3) * quad.scale.z;
+    // A real ring shares the pivot. The depth buffer hides just its far side.
     root.scale.copy(quad.scale);
-    root.rotation.x = viewTilt;
+    root.rotation.set(viewTilt, viewYaw, 0, 'ZXY');
     // The index starts along the nose (+Z) for yaw/pitch and up (+Y) for roll.
     if (term === 'Yaw') scale.rotation.set(Math.PI / 2, 0, 0, 'XYZ');
     else if (term === 'Pitch')
       scale.rotation.set(0, Math.PI / 2, Math.PI / 2, 'XYZ');
     else scale.rotation.set(0, 0, 0);
     index.rotation.z = term === 'Yaw' ? -angle : angle;
-    ink.opacity = 0.34 * opacity;
+    ink.opacity = (0.48 + 0.2 * daylight) * opacity;
     accent.opacity = 0.93 * opacity;
   }
   return { root, ink, accent, update };

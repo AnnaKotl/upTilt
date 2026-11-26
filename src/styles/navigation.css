@@ -83,9 +83,30 @@
   bottom: 1.5rem;
   z-index: 20;
 }
-.author-tab:not([data-past-hero]) {
-  display: none;
+/* Controls that come and go with the scroll fade instead of popping. The two
+   fixed ones only need opacity; a tab inside the rail grid also collapses its
+   own box, so the rail closes behind it rather than leaving a hole.
+   setAway() in lib/reveal.ts pairs this with inert. */
+:is(.back-top, .author-tab, .edge-rail .edge-tab) {
+  transition:
+    opacity var(--ui-motion),
+    visibility var(--ui-motion),
+    width 0.22s,
+    height var(--ui-motion),
+    border-width var(--ui-motion),
+    color 0.18s,
+    border-color 0.18s,
+    background-color 0.22s;
 }
+:is(.back-top, .author-tab, .edge-rail .edge-tab)[data-away] {
+  opacity: 0;
+  visibility: hidden;
+}
+.edge-rail .edge-tab[data-away] {
+  height: 0;
+  border-block-width: 0;
+}
+
 /* Two icons, one shown. Which one follows data-theme, so the switch needs no
    JavaScript to paint itself and cannot flash the wrong icon on load. */
 .theme-toggle .icon-light {
@@ -285,6 +306,11 @@
     height: 100%;
     border: 0;
     border-radius: 0;
+  }
+  /* The dock runs across, so a departing tab closes its column, not its row. */
+  .edge-rail .edge-tab[data-away] {
+    width: 0;
+    height: 100%;
   }
   .edge-rail [data-tour] {
     display: none;

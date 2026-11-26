@@ -449,7 +449,7 @@ onBeforeUnmount(() => {
         @click="open(i, $event)"
       />
     </div>
-    <Transition name="note-fade"
+    <Transition name="note-fade" mode="out-in"
       ><span
         v-if="noteControl !== null"
         id="control-note"

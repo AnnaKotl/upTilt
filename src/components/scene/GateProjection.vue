@@ -368,14 +368,14 @@ function nudge(amount: number) {
         :viewBox="`0 0 ${size.x} ${size.y}`"
         aria-hidden="true"
       >
-        <!-- The orthographic view looks at a yawed hoop. The incoming (left)
+        <!-- The orthographic view looks at a yawed hoop. The incoming (right)
              half lies in front of its rim, the outgoing half behind it. Share
              the ink so dash phase, ticks and the scrub marker survive the split. -->
         <defs>
-          <clipPath id="gate-incoming">
+          <clipPath id="gate-outgoing">
             <rect x="0" y="0" :width="origin.x" :height="size.y" />
           </clipPath>
-          <clipPath id="gate-outgoing">
+          <clipPath id="gate-incoming">
             <rect
               :x="origin.x"
               y="0"
@@ -436,7 +436,7 @@ function nudge(amount: number) {
               :d="`M0 ${scale / 8}V0H${scale / 8}`"
               fill="none"
               stroke="currentColor"
-              opacity=".16"
+              opacity=".11"
             />
           </pattern>
           <pattern
@@ -451,7 +451,7 @@ function nudge(amount: number) {
               :d="`M0 ${scale / 2}V0H${scale / 2}`"
               fill="none"
               stroke="currentColor"
-              opacity=".26"
+              opacity=".17"
             />
           </pattern>
           <marker
@@ -507,7 +507,7 @@ function nudge(amount: number) {
         <path
           v-if="!live"
           class="ring-outline"
-          :d="`M ${origin.x} ${origin.y - scale / 2} a ${(scale / 2) * Math.cos(gateYaw)} ${scale / 2} 0 0 1 0 ${scale}`"
+          :d="`M ${origin.x} ${origin.y - scale / 2} a ${(scale / 2) * Math.cos(gateYaw)} ${scale / 2} 0 0 0 0 ${scale}`"
         />
       </svg>
       <svg
@@ -722,7 +722,8 @@ function nudge(amount: number) {
   stroke: currentColor;
   fill: none;
   stroke-width: 1;
-  opacity: 0.52;
+  /* The paper should sit under the readings, not compete with them. */
+  opacity: 0.35;
 }
 .graph-paper {
   opacity: var(--grid, 1);

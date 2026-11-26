@@ -101,7 +101,8 @@ const models = [
   <a
     class="edge-tab"
     data-library
-    hidden={!path || path === 'knowledge'}
+    data-away={!path || path === 'knowledge' || undefined}
+    inert={!path || path === 'knowledge' || undefined}
     aria-label={text.knowledge}
     href={pageUrl(locale, 'knowledge')}
   >
@@ -114,7 +115,8 @@ const models = [
       type="button"
       class="edge-tab"
       data-tour
-      hidden
+      data-away
+      inert
       aria-pressed="false"
     >
       <Icon name="replay" />
@@ -125,12 +127,20 @@ const models = [
     </button>
   )}
 </nav>
-<a class="back-top" href="#main" hidden data-top aria-label={text.home}>
+<a
+  class="back-top"
+  href="#main"
+  data-away
+  inert
+  data-top
+  aria-label={text.home}
+>
   <Icon name="up" />
   <span class="hint">{text.home}</span>
 </a>
 <script>
   import { currentAircraft, selectAircraft } from '../../lib/aircraft';
+  import { setAway } from '../../lib/reveal';
   const options = document.querySelectorAll<HTMLButtonElement>(
     '[data-aircraft-option]',
   );
@@ -190,13 +200,15 @@ const models = [
   const top = document.querySelector<HTMLElement>('[data-top]');
   function update() {
     if (!top) return;
-    top.hidden =
-      window.scrollY < (hero?.clientHeight ?? window.innerHeight) * 0.75;
+    setAway(
+      top,
+      window.scrollY < (hero?.clientHeight ?? window.innerHeight) * 0.75,
+    );
     if (hero && library) {
       const pastHero =
         hero.getBoundingClientRect().bottom <= innerHeight * 0.25;
-      library.hidden = !pastHero;
-      author?.toggleAttribute('data-past-hero', pastHero);
+      setAway(library, !pastHero);
+      setAway(author, !pastHero);
     }
   }
   top?.addEventListener('click', (event) => {

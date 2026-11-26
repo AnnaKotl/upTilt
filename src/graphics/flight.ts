@@ -2,7 +2,6 @@ import type { LapBend } from '../data/gate-replays';
 import {
   sampleFlight,
   gateCameraLift,
-  gateCameraPan,
   gateCentre,
   gateYaw,
   gateExitStart,
@@ -148,7 +147,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   const radioBounds = new T.Box3().setFromObject(radio.root);
   const tiltedBounds = new T.Box3();
   const radioRotation = new T.Matrix4();
-  const dial = attitudeDial(quad.rotorReach + 0.22);
+  const dial = attitudeDial(quad.rotorReach * 1.5);
   scene.add(quad.root, gate.root, radio.root, dial.root);
   // Put the readout in the glass plane so its perspective and depth follow the case.
   const lcd = document.createElement('canvas');
@@ -710,11 +709,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
         ? Math.sin(elapsed * 1.5) * 0.035 * (1 - ease(5.5, 7, elapsed))
         : 0);
     const cameraLift = gateCameraLift(p);
-    const cameraPan = gateCameraPan(p, w);
     quad.root.position.set(
-      (x - 0.5 + departRadio * 0.62) * w +
-        cameraPan +
-        hoverX * 0.64 * hero * take,
+      (x - 0.5 + departRadio * 0.62) * w + hoverX * 0.64 * hero * take,
       (0.5 - y) * 10 +
         cameraLift -
         2.32 * (1 - take) * hero +
@@ -745,7 +741,6 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     } else {
       camera.position.x = camera.position.y = 0;
     }
-    camera.position.x += cameraPan;
     camera.position.y += cameraLift;
     const term = story.dataset.radioTerm ?? '';
     dial.update(
@@ -757,6 +752,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
           ? radioPitch * 0.27
           : bank * 0.33,
       rx,
+      ry,
+      day,
       airborne ? inRadio * (1 - departRadio) : 0,
     );
     quad.theme(day);
@@ -1097,9 +1094,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     { signal },
   );
   function lighting() {
-    const accent = getComputedStyle(document.documentElement)
-      .getPropertyValue('--accent')
-      .trim();
+    const palette = getComputedStyle(document.documentElement);
+    const accent = palette.getPropertyValue('--accent').trim();
     const hue = new T.Color(accent).getHSL(
       { h: 0, s: 0, l: 0 },
       T.SRGBColorSpace,
@@ -1112,9 +1108,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     accentLight.copy(neon);
     quad.led.emissive.copy(neon);
     dial.ink.color.set(
-      getComputedStyle(document.documentElement)
-        .getPropertyValue('--muted')
-        .trim(),
+      palette.getPropertyValue(dayGoal ? '--ink' : '--muted').trim(),
     );
     dial.accent.color.set(accent);
     gate.accent.color.set(accent);
@@ -1122,8 +1116,10 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
   }
   lighting();
   const mo = new MutationObserver(() => {
-    lighting();
+    // The finish decides which ink the attitude ring uses, so read it before
+    // repainting; otherwise the ring keeps the previous theme's choice.
     dayGoal = document.documentElement.dataset.theme === 'light' ? 1 : 0;
+    lighting();
     invalidate();
   });
   mo.observe(document.documentElement, {

@@ -369,7 +369,17 @@ function inspect(i: number) {
 }
 const { selected, choose, ready } = useStudySelection(fields, 'field');
 const hover = ref<number | null>(null);
-const shown = computed(() => fields[hover.value ?? selected.value]);
+// Only a pointer or focus that leaves the whole group hides the note; moving
+// between readings swaps it in one step so it never flickers through empty.
+function leaveHud(event: FocusEvent) {
+  const group = event.currentTarget as HTMLElement;
+  if (!group.contains(event.relatedTarget as Node | null)) hover.value = null;
+}
+const shown = computed(() =>
+  hover.value === null || jammed.value || exhausted.value
+    ? null
+    : fields[hover.value],
+);
 </script>
 <template>
   <section ref="chapter" id="display" data-stop class="goggle-chapter">
@@ -404,7 +414,12 @@ const shown = computed(() => fields[hover.value ?? selected.value]);
         :style="{ backgroundImage: `url(${base}video-grain.png)` }"
         aria-hidden="true"
       ></div>
-      <div class="osd-hud" :inert="jammed || exhausted">
+      <div
+        class="osd-hud"
+        :inert="jammed || exhausted"
+        @pointerleave="hover = null"
+        @focusout="leaveHud"
+      >
         <div class="osd-status">
           {{ voltage <= 3.48 ? 'LOW BATTERY' : phase === 1 ? 'ARMED' : '' }}
         </div>
@@ -420,14 +435,14 @@ const shown = computed(() => fields[hover.value ?? selected.value]);
             place($event);
           "
           @pointermove="place"
-          @pointerleave="hover = null"
           @focus="
             hover = i;
             place($event);
           "
-          @blur="hover = null"
           @click="inspect(i)"
-          :aria-describedby="hover === i ? 'osd-note' : undefined"
+          :aria-describedby="
+            shown?.id === field.id ? 'osd-note-' + field.id : undefined
+          "
         >
           <template v-if="field.id === 'compass'"
             ><span class="compass-tape" aria-hidden="true"
@@ -457,10 +472,11 @@ const shown = computed(() => fields[hover.value ?? selected.value]);
         </button>
         <div class="horizon-tick" aria-hidden="true"><i></i>○<i></i></div>
       </div>
-      <Transition name="note-fade"
+      <Transition name="note-fade" mode="out-in"
         ><div
-          v-if="hover !== null"
-          id="osd-note"
+          v-if="shown"
+          :key="shown.id"
+          :id="'osd-note-' + shown.id"
           class="osd-note cursor-note"
           :style="noteAt"
           role="tooltip"

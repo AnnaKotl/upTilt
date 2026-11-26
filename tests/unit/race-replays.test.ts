@@ -5,7 +5,6 @@ import { lapPoint, laps, sampleLap } from '../../src/data/gate-replays';
 import {
   gateApproach,
   gateCameraLift,
-  gateCameraPan,
   routesArrival,
   routesDeparture,
   sampleFlight,
@@ -21,6 +20,13 @@ it('moves closer beside the column and stays inside the frame on approach', () =
   expect(column[0]).toBeGreaterThanOrEqual(held[0]);
   expect(column[1]).toBeCloseTo(0.5, 1);
   expect(column[2]).toBeGreaterThan(held[2]);
+  let lastX = held[0];
+  for (let i = 1; i <= 160; i++) {
+    const p = routesArrival + ((gateApproach - routesArrival) * i) / 160;
+    const [x] = sampleFlight(p);
+    expect(x).toBeGreaterThanOrEqual(lastX - 1e-12);
+    lastX = x;
+  }
   let lastY = column[1];
   for (let i = 1; i <= 160; i++) {
     const p = routesDeparture + ((gateCrossing - routesDeparture) * i) / 160;
@@ -28,18 +34,16 @@ it('moves closer beside the column and stays inside the frame on approach', () =
     const screenY = 0.5 - (worldY - gateCameraLift(p)) / 10;
     expect(screenY).toBeGreaterThan(0.18);
     expect(Math.abs(screenY - lastY)).toBeLessThan(0.01);
-    expect(Math.abs((worldX - gateCameraPan(p, 16)) / 16)).toBeLessThan(0.37);
+    expect(Math.abs(worldX / 16)).toBeLessThan(0.37);
     lastY = screenY;
   }
   expect(gateCameraLift(gateCrossing)).toBe(0);
 });
 
-it('travels right from the reading column through the hoop to the parked pose', () => {
+it('crosses from the right and parks left of the hoop', () => {
   const width = 16;
   let previous = gatePoint(gateApproach, width);
-  expect(previous[0] - gateCameraPan(gateApproach, width)).toBeGreaterThan(
-    width * 0.2,
-  );
+  expect(previous[0]).toBeGreaterThan(width * 0.3);
   expect(previous[1]).toBeGreaterThan(5);
   const [gateX, gateY, gateZ] = gatePoint(gateCrossing, width);
   expect(gateX).toBeCloseTo((gateCentre.x - 0.5) * width);
@@ -50,7 +54,7 @@ it('travels right from the reading column through the hoop to the parked pose', 
       gateApproach + ((gateParked - gateApproach) * index) / 120,
       width,
     );
-    expect(position[0]).toBeGreaterThan(previous[0]);
+    expect(position[0]).toBeLessThan(previous[0]);
     expect(position[1]).toBeLessThan(previous[1]);
     previous = position;
   }
@@ -89,6 +93,8 @@ it('all six paths pass within the ring and accumulate three-dimensional distance
       expect(Math.hypot(...lapPoint(index, 0.5, width))).toBeLessThan(0.2);
       const samples = sampleLap(index, width);
       expect(samples[0].length).toBe(0);
+      expect(samples[0].point[0]).toBeGreaterThan(0);
+      expect(samples.at(-1)!.point[0]).toBeLessThan(0);
       const end = samples.at(-1)!;
       expect(end.length).toBeGreaterThanOrEqual(
         Math.hypot(...end.point.map((v, i) => v - samples[0].point[i])),

@@ -1,4 +1,5 @@
 import { demoDurationMs } from '../data/radio-demo';
+import { setAway } from './reveal';
 
 // Localise the static Astro shell in place. Hydrated islands listen to page-language.
 const shell = [
@@ -126,7 +127,7 @@ export function initPresentation() {
     frame = 0;
   function paint() {
     const uk = document.documentElement.lang === 'uk';
-    button.hidden = !atEnd && !playing;
+    setAway(button, !atEnd && !playing);
     button.setAttribute('aria-pressed', String(playing));
     const title = playing
       ? uk

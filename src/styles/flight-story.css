@@ -1146,8 +1146,8 @@ html:has(.flight-story [data-stop]:target) {
   inset: 9.05% 7.14% 9.05% 9.14%;
   --mat-surface: #214945;
   --mat-rim: #2c5955;
-  --mat-tick: #e1f5e67a;
-  --mat-guide: #e1f5e632;
+  --mat-tick: #e1f5e651;
+  --mat-guide: #e1f5e621;
   border: 1px solid var(--mat-rim);
   border-radius: 1rem;
   padding: 12px;
@@ -1187,8 +1187,8 @@ html:has(.flight-story [data-stop]:target) {
   :is(.bench-mat, .flight-story:not([data-live]) .parts-board:before) {
   --mat-surface: #292a2d;
   --mat-rim: #414245;
-  --mat-tick: #e8e8e9a6;
-  --mat-guide: #e8e8e947;
+  --mat-tick: #e8e8e96f;
+  --mat-guide: #e8e8e92f;
 }
 .board-part {
   z-index: 1;
@@ -2236,9 +2236,11 @@ html:has(.flight-story [data-stop]:target) {
     bottom: auto;
   }
 }
+/* Half the usual beat: with mode="out-in" a reader waits through both halves
+   when moving between readings, and the note must still feel immediate. */
 .note-fade-enter-active,
 .note-fade-leave-active {
-  transition: opacity var(--ui-motion);
+  transition: opacity 130ms var(--ui-ease);
 }
 .note-fade-enter-from,
 .note-fade-leave-to {
