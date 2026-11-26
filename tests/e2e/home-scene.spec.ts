@@ -57,6 +57,10 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
     .evaluate((el) => el.scrollIntoView({ behavior: 'instant' }));
   await expect(radio).toHaveAttribute('data-powered', 'false');
   await expect(radio).toHaveAttribute('data-complete', 'false');
+  // Leaving the section cuts the demonstration short and rewinds it, so the
+  // first pass contributed however many terms it reached before the scroll.
+  // Those are not part of the run being measured; start the record clean.
+  await sequence.evaluate((terms) => terms.splice(0));
   await page.locator('#radio').evaluate((el) =>
     scrollBy({
       top: el.getBoundingClientRect().top + innerHeight * 0.75,
@@ -72,6 +76,10 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
     },
   );
   const terms = await sequence.jsonValue();
+  // One uninterrupted demonstration arms once. More than one arming means it
+  // restarted mid-run and the readings below belong to different passes.
+  expect(terms.filter((term) => term === 'ARMED')).toHaveLength(1);
+  // Powering back on re-announces the resting state before the run begins.
   expect(
     terms.slice(terms.indexOf('ARMED'), terms.indexOf('ARMED') + 4),
   ).toEqual(['ARMED', 'Throttle', 'Pitch', 'Roll']);
