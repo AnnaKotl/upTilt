@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LinkArrow from '../ui/LinkArrow.vue';
 import { studyTitles, type StudyPath } from '../../data/study-titles';
 import { pageUrl, type Locale } from '../../lib/i18n';
 defineProps<{ locale: Locale; article: StudyPath }>();
@@ -6,6 +7,6 @@ defineProps<{ locale: Locale; article: StudyPath }>();
 <template>
   <a class="study-link" :href="pageUrl(locale, 'knowledge/' + article)">
     {{ studyTitles[article][locale === 'uk' ? 0 : 1] }}
-    <span aria-hidden="true">↗</span>
+    <LinkArrow />
   </a>
 </template>

@@ -48,8 +48,21 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
   );
   const parked = await page.evaluate(() => scrollY);
   await page.mouse.wheel(0, 420);
-  await page.waitForTimeout(150);
-  expect(await page.evaluate(() => scrollY)).toBe(parked);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(parked);
+  const radio = page.locator('.radio-study');
+  const replay = radio.getByRole('button', { name: 'Повторити демонстрацію' });
+  await expect(replay).toHaveCount(0);
+  await page
+    .locator('#display')
+    .evaluate((el) => el.scrollIntoView({ behavior: 'instant' }));
+  await expect(radio).toHaveAttribute('data-powered', 'false');
+  await expect(radio).toHaveAttribute('data-complete', 'false');
+  await page.locator('#radio').evaluate((el) =>
+    scrollBy({
+      top: el.getBoundingClientRect().top + innerHeight * 0.75,
+      behavior: 'instant',
+    }),
+  );
   await expect.poll(() => sequence.jsonValue()).toContain('ARMED');
   await expect(page.locator('.radio-study')).toHaveAttribute(
     'data-complete',
@@ -59,23 +72,37 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
     },
   );
   const terms = await sequence.jsonValue();
-  expect(terms.slice(0, 4)).toEqual(['ARMED', 'Throttle', 'Pitch', 'Roll']);
+  expect(
+    terms.slice(terms.indexOf('ARMED'), terms.indexOf('ARMED') + 4),
+  ).toEqual(['ARMED', 'Throttle', 'Pitch', 'Roll']);
   expect(terms).not.toContain('SW');
   expect(terms.at(-1)).toBe('DISARMED');
   await sequence.dispose();
   await page.screenshot({ path: test.info().outputPath('radio.png') });
-  const radio = page.locator('.radio-study');
-  await page.locator('#radio').evaluate((el) =>
+  const restingY = await page.evaluate(() => scrollY);
+  await page.locator('#display').evaluate((el) =>
     scrollBy({
-      top: el.getBoundingClientRect().top + innerHeight * 0.75,
+      top: el.getBoundingClientRect().top - innerHeight + 24,
       behavior: 'instant',
     }),
   );
-  await expect(radio).toHaveAttribute('data-powered', 'false');
+  await expect(replay).toHaveCount(0);
+  await expect(radio).toHaveAttribute('data-complete', 'true');
+  await page.evaluate(
+    (top) => scrollTo({ top, behavior: 'instant' }),
+    restingY,
+  );
+  await expect(replay).toBeVisible();
+  const iconWidth = (await replay.boundingBox())!.width;
+  await replay.hover();
+  await expect
+    .poll(async () => (await replay.boundingBox())!.width)
+    .toBeGreaterThan(iconWidth + 40);
+  await page.mouse.move(5, 5);
+  await expect
+    .poll(async () => (await replay.boundingBox())!.width)
+    .toBeLessThan(iconWidth + 1);
   const stick = page.getByRole('button', { name: 'Правий стік' });
-  await expect(stick).toBeDisabled();
-  await page.getByRole('button', { name: 'Живлення пульта' }).hover();
-  await expect(stick).toBeEnabled();
   await stick.hover();
   await expect(page.getByRole('tooltip')).toContainText('Правий стік');
   await expect(page.locator('.radio-study')).toHaveAttribute('data-pose', '3');
@@ -86,7 +113,12 @@ test('one desktop scene follows the gate, parts board and radio in both themes',
     'Призначення задає профіль моделі',
   );
   await expect(scene).not.toHaveAttribute('data-radio-term', 'SW');
-  await radio.getByRole('button', { name: 'Повторити рухи стіків' }).click();
+  await radio.getByRole('link').focus();
+  await page.keyboard.press('Tab');
+  await expect(replay).toBeFocused();
+  await expect(replay.locator('.action-label')).toHaveCSS('opacity', '1');
+  await replay.press('Enter');
+  await expect(replay).toHaveCount(0);
   await expect(radio).toHaveAttribute('data-complete', 'false');
   await expect(scene).toHaveAttribute('data-radio-term', 'ARMED');
   await page.getByRole('button', { name: 'Вибрати коптер' }).click();
@@ -112,6 +144,52 @@ test('season previews and the no-motion scene work from a direct link', async ({
   await page.getByRole('button', { name: 'Battery', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('rechargeable');
 });
+test.describe('touch radio controls', () => {
+  test.use({ hasTouch: true, viewport: { width: 768, height: 1024 } });
+
+  test('a finished demonstration can be replayed by icon in either language', async ({
+    page,
+  }) => {
+    await page.goto('en/#radio');
+    const radio = page.locator('.radio-study');
+    const repeat = radio.getByRole('button', { name: 'Replay demonstration' });
+    await expect(repeat).toHaveCount(0);
+    await expect(repeat).toBeVisible({ timeout: 30000 });
+    await expect(repeat.locator('.action-label')).toBeHidden();
+    await page.locator('[data-language]').tap();
+    const translated = radio.getByRole('button', {
+      name: 'Повторити демонстрацію',
+    });
+    await translated.tap();
+    await expect(translated).toHaveCount(0);
+    await expect(page.locator('[data-story]')).toHaveAttribute(
+      'data-radio-term',
+      'ARMED',
+    );
+  });
+});
+
+test('section links lead to the matching knowledge topics on a phone', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (const [lang, section, slug, title] of [
+    ['uk', 'motion', 'fundamentals', 'Фізика польоту'],
+    ['en', 'anatomy', 'anatomy', 'Drone anatomy'],
+  ]) {
+    await page.goto(lang + '/#' + section);
+    const link = page
+      .locator('#' + section)
+      .getByRole('link', { name: new RegExp(title) });
+    await link.click();
+    await expect(page).toHaveURL(
+      new RegExp(lang + '/knowledge/' + slug + '/$'),
+    );
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
+  }
+});
+
 test('the home bookmark follows the current language', async ({ page }) => {
   await page.goto('uk/knowledge/video/');
   await page.getByRole('link', { name: 'На головну сторінку' }).click();
@@ -176,7 +254,7 @@ test('the title, aircraft menu and language switch preserve the live scene', asy
   await expect(selected).toBeDisabled();
   await page.keyboard.press('Tab');
   await expect(selected).toBeFocused();
-  await expect(selected.locator('.model-name')).toHaveCSS('opacity', '1');
+  await expect(selected.locator('.action-label')).toHaveCSS('opacity', '1');
   await page.keyboard.press('Enter');
   await expect(story).toHaveAttribute('data-takeoff', start!);
   await expect(page.locator('[data-model-menu]')).toHaveAttribute(
@@ -354,6 +432,13 @@ test('both settled layouts keep the names and the opened corner card inside the 
     );
     await expect(buttons).toHaveCount(model === 'seven' ? 16 : 13);
     const mat = await page.locator('.bench-mat').boundingBox();
+    const topic = page.locator('#anatomy .mat-topic');
+    await expect(topic).toHaveAccessibleName('Будова дрона');
+    const topicBox = (await topic.boundingBox())!;
+    const rail = (await page.locator('[data-model-menu]').boundingBox())!;
+    expect(topicBox.x).toBeGreaterThanOrEqual(rail.x + rail.width);
+    expect(topicBox.x + topicBox.width).toBeLessThanOrEqual(mat!.x);
+    await topic.click({ trial: true });
     for (const label of await buttons.locator('.part-label').all()) {
       const box = await label.boundingBox();
       expect(box!.x).toBeGreaterThanOrEqual(mat!.x);

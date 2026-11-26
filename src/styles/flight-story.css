@@ -498,9 +498,7 @@ html:has(.flight-story [data-stop]:target) {
   scroll-margin-top: clamp(1.5rem, 4vh, 3rem);
 }
 .flight-prep h2 {
-  font: 700 clamp(1.75rem, 3.45vw, 3.35rem)/1.15 var(--font-mono);
-  letter-spacing: -0.025em;
-  text-wrap: balance;
+  font-size: clamp(1.3rem, 2.5vw, 2.5rem);
   margin: 0 0 clamp(2rem, 5vw, 4.4rem);
 }
 .kit-list {
@@ -1301,13 +1299,7 @@ html:has(.flight-story [data-stop]:target) {
   min-height: var(--tap);
   font: 650 clamp(0.97rem, 1.65vw, 1.55rem)/1.28 var(--font-sans);
 }
-.preflight-map li a svg {
-  flex: none;
-  width: 0.85em;
-  color: var(--muted);
-}
-.preflight-map li a:is(:hover, :focus-visible),
-.preflight-map li a:is(:hover, :focus-visible) svg {
+.preflight-map li a:is(:hover, :focus-visible) {
   color: var(--accent);
 }
 .preflight-map li:is(:hover, :focus-within) .preflight-trace {
@@ -1363,14 +1355,6 @@ html:has(.flight-story [data-stop]:target) {
   .preflight-map li:focus-within :is(a, .preflight-trace),
   .preflight-map li:focus-within::after {
     transition: none;
-  }
-  .preflight-map li a svg {
-    transition:
-      transform 0.26s var(--ui-ease),
-      color var(--ui-motion);
-  }
-  .preflight-map li a:is(:hover, :focus-visible) svg {
-    transform: translateX(0.24em);
   }
 }
 @media (min-width: 841px) and (min-height: 510px) {
@@ -2181,23 +2165,15 @@ html:has(.flight-story [data-stop]:target) {
   max-width: min(70vw, 42rem);
 }
 .radio-heading h2 {
-  font: 700 clamp(1.4rem, 2.5vw, 2.6rem)/1.15 var(--font-mono);
-  text-wrap: balance;
+  font-size: clamp(1rem, 1.65vw, 1.65rem);
   margin-bottom: 0.45rem;
 }
-.study-link,
-.radio-replay {
+.study-link {
   display: inline-flex;
   align-items: center;
   gap: 0.45em;
   font: 500 0.84rem/1.45 var(--font-mono);
   color: var(--accent);
-}
-.study-link span {
-  transition: transform var(--ui-motion);
-}
-.study-link:is(:hover, :focus-visible) span {
-  transform: translate(0.1em, -0.1em);
 }
 .study-link:is(:hover, :focus-visible),
 .radio-replay:is(:hover, :focus-visible) {
@@ -2207,33 +2183,38 @@ html:has(.flight-story [data-stop]:target) {
   position: absolute;
   z-index: 2;
   left: 77%;
-  bottom: 12%;
+  bottom: 20%;
   translate: -50% 0;
-  min-height: var(--tap);
-  padding: 0.4rem 0.8rem;
-  width: max-content;
-  max-width: 43%;
-  border: 1px solid var(--line);
-  border-radius: 3px 9px;
-  background: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: max(var(--tap), 4rem);
+  padding-inline: 0.85rem;
+  color: var(--accent);
+  background: transparent;
+  transition:
+    color var(--ui-motion),
+    opacity var(--ui-motion);
 }
 .radio-replay svg {
-  width: 1.15em;
+  width: 3rem;
+  height: 3rem;
   flex: none;
 }
-.radio-replay:is(:hover, :focus-visible) {
-  border-color: var(--accent);
-  background-color: var(--panel);
+@media (hover: none), (pointer: coarse) {
+  .radio-replay .action-label {
+    display: none;
+  }
 }
 @media (max-width: 840px), (max-height: 509px) {
   .radio-heading {
-    left: max(1.4rem, 5%);
     top: 8%;
-    max-width: 84%;
+    left: max(0.6rem, calc(3.6rem - 10vw));
+    max-width: 90%;
   }
   .radio-replay {
     left: 73%;
-    top: 68%;
+    top: 64%;
     bottom: auto;
   }
 }

@@ -8,7 +8,9 @@ const platforms = [...new Set(simulators.flatMap((item) => item.platforms))];
 ---
 
 <section class="reading-note" data-comparison>
-  <h2>{uk ? 'Порівняння версій для ПК' : 'Desktop editions'}</h2>
+  <h2 class="section-title">
+    {uk ? 'Порівняння версій для ПК' : 'Desktop editions'}
+  </h2>
   <details class="comparison-filter" hidden>
     <summary
       title={uk ? 'Фільтри' : 'Filters'}

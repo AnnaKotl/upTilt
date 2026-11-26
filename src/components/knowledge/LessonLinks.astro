@@ -1,6 +1,6 @@
 ---
 import { pageUrl, type Locale } from '../../lib/i18n';
-import Icon from '../ui/Icon.vue';
+import LinkArrow from '../ui/LinkArrow.vue';
 interface Props {
   locale: Locale;
   path: string;
@@ -14,7 +14,7 @@ const { locale, path, items } = Astro.props;
     <li>
       <a href={pageUrl(locale, path + '/' + id)}>
         {title[locale === 'uk' ? 0 : 1]}
-        <Icon name="forward" />
+        <LinkArrow />
       </a>
     </li>
   ))}

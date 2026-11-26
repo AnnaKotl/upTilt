@@ -1,4 +1,5 @@
 ---
+import LinkArrow from '../ui/LinkArrow.vue';
 import { pageUrl, type Locale } from '../../lib/i18n';
 import Icon from '../ui/Icon.vue';
 import StudyPoster from './StudyPoster.astro';
@@ -51,7 +52,9 @@ const routes = [
   </div>
   <div class="start-frame">
     <div class="start-heading">
-      <h2 id="start-heading">{i === 0 ? 'З чого почати' : 'Where to start'}</h2>
+      <h2 class="section-title" id="start-heading">
+        {i === 0 ? 'З чого почати' : 'Where to start'}
+      </h2>
       <div class="start-search">
         <button
           class="search-toggle"
@@ -94,7 +97,7 @@ const routes = [
             <p>{route.detail[i]}</p>
             <small>
               <span>{route.target[i]}</span>
-              <Icon name="forward" />
+              <LinkArrow />
               <span class="route-corner" aria-hidden="true">
                 <svg viewBox="0 0 100 36" preserveAspectRatio="none">
                   <path d="M0 35H94L99 30V1" />
@@ -183,8 +186,7 @@ const routes = [
     max-width: 72%;
   }
   .start-routes h2 {
-    font: 700 clamp(1.85rem, 3.5vw, 3.65rem)/1.15 var(--font-mono);
-    text-wrap: balance;
+    font-size: clamp(1.6rem, 2.9vw, 2.9rem);
   }
   ul {
     position: relative;
@@ -238,17 +240,6 @@ const routes = [
     display: flex;
     gap: 0.45rem;
     align-items: center;
-  }
-  small > :global(svg) {
-    flex: none;
-    width: 1.15rem;
-    height: 1.15rem;
-    stroke-width: 2;
-    rotate: -45deg;
-    transition: translate 0.2s;
-  }
-  li a:is(:hover, :focus-visible) small > :global(svg) {
-    translate: 0.12rem -0.12rem;
   }
   .route-corner {
     position: relative;
@@ -412,7 +403,7 @@ const routes = [
       max-width: 100%;
     }
     .start-routes h2 {
-      font-size: clamp(1.75rem, 6vw, 2.35rem);
+      font-size: clamp(1.25rem, 4.8vw, 2rem);
     }
     ul {
       grid-template-columns: 1fr;

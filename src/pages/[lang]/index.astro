@@ -1,4 +1,5 @@
 ---
+import LinkArrow from '../../components/ui/LinkArrow.vue';
 import { paths } from '../../components/ui/paths';
 import SiteLayout from '../../layouts/SiteLayout.astro';
 import BookNav from '../../components/knowledge/BookNav.vue';
@@ -184,7 +185,7 @@ const kit = [
   {showFlightPrep && (
     <div class="flight-prep">
       <section class="equipment-section" data-stop id="kit">
-        <h2 data-prep-reveal>
+        <h2 class="section-title" data-prep-reveal>
           {uk ? 'Що потрібно для польоту' : 'What you need to fly'}
         </h2>
         <div class="kit-list">
@@ -203,7 +204,9 @@ const kit = [
         </div>
       </section>
       <section data-stop id="before-flight" class="before-flight">
-        <h2 data-prep-reveal>{uk ? 'Перед польотом' : 'Before you fly'}</h2>
+        <h2 class="section-title" data-prep-reveal>
+          {uk ? 'Перед польотом' : 'Before you fly'}
+        </h2>
         <nav class="preflight-map" aria-label={t(locale).knowledge}>
           <a
             class="preflight-book book-trigger"
@@ -267,7 +270,7 @@ const kit = [
                 </svg>
                 <a href={pageUrl(locale, 'knowledge/' + slug)}>
                   <span>{uk ? ua : en}</span>
-                  <Icon name="forward" />
+                  <LinkArrow />
                 </a>
               </li>
             ))}

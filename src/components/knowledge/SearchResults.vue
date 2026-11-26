@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LinkArrow from '../ui/LinkArrow.vue';
 import { computed, onMounted, ref } from 'vue';
 import { searchTerm, searchWords } from '../../lib/search-term';
 import { topics } from '../../data/topics';
@@ -147,7 +148,7 @@ const status = computed(() => {
         <small>{{
           hit.meta.trail || (uk ? 'База знань' : 'Knowledge base')
         }}</small>
-        <h2>{{ hit.meta.title }} ↗</h2>
+        <h2>{{ hit.meta.title }} <LinkArrow /></h2>
         <p>
           <template v-for="(part, i) in excerptParts(hit.excerpt)" :key="i"
             ><mark v-if="part.mark">{{ part.text }}</mark

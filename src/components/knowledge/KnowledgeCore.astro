@@ -1,7 +1,7 @@
 ---
 import { topics } from '../../data/topics';
-import { pageUrl, type Locale } from '../../lib/i18n';
-import Icon from '../ui/Icon.vue';
+import { type Locale } from '../../lib/i18n';
+import TopicLink from './TopicLink.vue';
 interface Props {
   locale: Locale;
 }
@@ -12,15 +12,7 @@ const { locale } = Astro.props;
   <ul>
     {topics.map((topic) => (
       <li data-topic-row>
-        <a class="topic-row" href={pageUrl(locale, 'knowledge/' + topic.id)}>
-          <Icon name={topic.icon} />
-          <span>
-            <strong>
-              {topic.title[locale]} <Icon name="forward" />
-            </strong>
-            <small>{topic.summary[locale]}</small>
-          </span>
-        </a>
+        <TopicLink topic={topic} locale={locale} />
       </li>
     ))}
   </ul>

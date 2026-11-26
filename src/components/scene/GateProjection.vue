@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { topics } from '../../data/topics';
+import TopicLink from '../knowledge/TopicLink.vue';
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import {
   gateApproach,
@@ -22,7 +24,9 @@ import type { Locale } from '../../lib/i18n';
 
 const props = defineProps<{ locale: Locale }>();
 const locale = usePageLanguage(props.locale);
+const physics = topics.find((topic) => topic.id === 'fundamentals')!;
 const uk = computed(() => locale.value === 'uk');
+const title = computed(() => (uk.value ? 'Кінематика' : 'Kinematics'));
 const surface = ref<HTMLElement>();
 const stage = ref<HTMLElement>();
 const live = ref(false);
@@ -353,7 +357,7 @@ function nudge(amount: number) {
     :class="{ 'is-live': live, 'is-ready': studying }"
     :inert="quantities === 0"
     :style="{ '--readouts': quantities }"
-    :aria-label="uk ? 'Кінематика прольоту' : 'Flight kinematics'"
+    :aria-label="title"
   >
     <Teleport :to="stage || 'body'" :disabled="!stage || !live">
       <svg
@@ -530,7 +534,8 @@ function nudge(amount: number) {
         <polyline v-for="(points, i) in paths" :key="i" :points="points" />
       </svg>
       <figcaption>
-        <h2>{{ uk ? 'Кінематика прольоту' : 'Flight kinematics' }}</h2>
+        <h2 class="section-title">{{ title }}</h2>
+        <TopicLink compact :topic="physics" :locale="locale" />
         <small>{{ uk ? 'D — діаметр кільця' : 'D = gate diameter' }}</small>
         <div class="equation">
           <small>{{
@@ -839,12 +844,19 @@ figcaption,
   animation: gate-ink-in 0.32s ease;
 }
 figcaption {
-  top: 16%;
+  top: clamp(1.5rem, 7svh, 4.5rem);
   display: grid;
   gap: 0.35rem;
 }
+figcaption :deep(.study-link) {
+  justify-self: start;
+  pointer-events: auto;
+}
+figcaption > small {
+  margin-block-start: clamp(0.75rem, 2svh, 1.25rem);
+}
 figcaption h2 {
-  font: 600 clamp(1.21rem, 2.2vw, 2.09rem)/1.1 var(--font-mono);
+  font-size: clamp(1.05rem, 1.7vw, 1.65rem);
   color: var(--ink);
 }
 small {

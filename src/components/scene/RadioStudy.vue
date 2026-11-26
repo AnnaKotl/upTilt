@@ -17,8 +17,7 @@ const modal = ref<InstanceType<typeof StudyNote>>(),
 const powered = ref(true),
   level = ref(6);
 let powerTimer = 0;
-let previousTop: number | undefined;
-let arrived = false;
+let visibilityObserver: IntersectionObserver | undefined;
 const notes = [
   [
     'У цьому профілі перемикач дозволяє роботу двигунів (ARMED) або блокує їх (DISARMED).',
@@ -68,10 +67,10 @@ const phases = [
 ];
 function open(i: number, event: MouseEvent) {
   if (!powered.value) return;
-  if (i === 0 && complete.value) {
+  if (i === 0 && canPractice.value) {
     manualArmed = !manualArmed;
     manualLift = false;
-    clearTimeout(timer);
+    clearTimeout(previewTimer);
     pose(1, manualArmed ? 'ARMED' : 'DISARMED');
   } else preview(i, event);
   chosen.value = i;
@@ -83,7 +82,7 @@ const hover = ref<number | null>(null);
 const noteControl = computed(
   () =>
     hover.value ??
-    (powered.value && !complete.value && [2, 3].includes(active.value)
+    (powered.value && !canPractice.value && [2, 3].includes(active.value)
       ? active.value - 1
       : null),
 );
@@ -138,34 +137,18 @@ function alignPosterControls() {
   });
 }
 
-let timer = 0;
+let playbackTimer = 0;
+let previewTimer = 0;
 let visible = false;
 let hoverTimer = 0;
-let skipped = false;
-let touchY = 0;
-const inputEvents = new AbortController();
-function holdForward(distance: number) {
-  if (
-    distance <= 0 ||
-    !powered.value ||
-    complete.value ||
-    skipped ||
-    next >= Math.ceil(phases.length / 3) ||
-    !surface.value?.closest('[data-live]') ||
-    document.querySelector('dialog[open]') ||
-    matchMedia('(prefers-reduced-motion: reduce)').matches
-  )
-    return false;
-  const top = surface.value
-    .closest('.radio-chapter')!
-    .getBoundingClientRect().top;
-  const remaining = top + innerHeight * 0.12;
-  if (remaining > distance || top < -innerHeight * 0.9) return false;
-  if (remaining > 0)
-    window.scrollBy({ top: Math.ceil(remaining), behavior: 'instant' });
-  settle();
-  return true;
-}
+const events = new AbortController();
+const complete = ref(false);
+const nextSectionVisible = ref(false);
+const reducedMotion = ref(false);
+const canPractice = computed(() => complete.value || reducedMotion.value);
+const replayLabel = computed(() =>
+  locale.value === 'uk' ? 'Повторити демонстрацію' : 'Replay demonstration',
+);
 function delayedPreview(i: number, event: PointerEvent) {
   cancelPreview();
   place(event);
@@ -181,7 +164,6 @@ let next = 0,
   manualLift = false,
   lastControl = -1,
   gesture = 0;
-const complete = ref(false);
 function pose(i: number, term = '', x = 0, y = 0, arrow = '') {
   active.value = i;
   screen.value = term;
@@ -208,7 +190,7 @@ function pose(i: number, term = '', x = 0, y = 0, arrow = '') {
   story.dataset.radioTerm = term;
   story.dataset.radioCue = arrow;
   story.dataset.radioIdle = String(
-    complete.value && manualArmed && !manualLift,
+    canPractice.value && manualArmed && !manualLift,
   );
   story.dataset.radioX = String(x);
   story.dataset.radioY = String(y);
@@ -216,9 +198,10 @@ function pose(i: number, term = '', x = 0, y = 0, arrow = '') {
   story.dispatchEvent(new CustomEvent('radio-pose', { detail: i }));
 }
 function run() {
-  clearTimeout(timer);
-  if (!visible || document.hidden || complete.value || !powered.value) return;
-  timer = window.setTimeout(
+  clearTimeout(playbackTimer);
+  if (!visible || document.hidden || canPractice.value || !powered.value)
+    return;
+  playbackTimer = window.setTimeout(
     () => {
       const phase = phases[next++];
       pose(phase.id, phase.term, phase.x, phase.y, phase.arrow);
@@ -232,30 +215,25 @@ function run() {
 }
 function reset() {
   cancelPreview();
+  clearTimeout(previewTimer);
   clearTimeout(powerTimer);
   powered.value = true;
   level.value = 6;
   publishPower();
-  previousTop = undefined;
-  arrived = false;
   next = 0;
-  skipped = false;
   manualArmed = false;
   manualLift = false;
   lastControl = -1;
   gesture = 0;
-  complete.value = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  complete.value = false;
   pose(0);
   run();
 }
-function replay() {
+function replay(event: MouseEvent) {
+  if (!complete.value || nextSectionVisible.value) return;
+  if (event.detail === 0)
+    surface.value?.querySelector('h2')?.focus({ preventScroll: true });
   reset();
-  complete.value = false;
-  // An explicit replay starts from the visible poster or live scene, including
-  // the leading edge of the sticky chapter before automatic playback starts.
-  const rect = surface.value!.getBoundingClientRect();
-  visible = rect.bottom > 0 && rect.top < innerHeight;
-  run();
 }
 function publishPower() {
   const story = surface.value?.closest<HTMLElement>('[data-story]');
@@ -267,12 +245,13 @@ function publishPower() {
 function setPower(on: boolean) {
   if (powered.value === on) return;
   clearTimeout(powerTimer);
-  clearTimeout(timer);
+  clearTimeout(playbackTimer);
+  clearTimeout(previewTimer);
   cancelPreview();
   powered.value = on;
   manualArmed = manualLift = false;
   lastControl = -1;
-  if (!on) complete.value = true;
+  if (!on && !complete.value) next = 0;
   pose(0, on ? 'DISARMED' : '');
   const target = on ? 6 : 0;
   function step() {
@@ -285,47 +264,21 @@ function setPower(on: boolean) {
   }
   step();
 }
-function settle() {
-  const box = surface.value?.getBoundingClientRect();
-  const chapter = surface.value?.closest('.radio-chapter');
-  if (chapter) {
-    const rect = chapter.getBoundingClientRect();
-    const threshold = -Math.max(
-      innerHeight * 0.39,
-      (rect.height - innerHeight) * 0.42,
-    );
-    if (
-      previousTop !== undefined &&
-      previousTop > threshold &&
-      rect.top <= threshold &&
-      arrived
-    )
-      setPower(false);
-    if (rect.top <= threshold || rect.top > innerHeight * 0.5) arrived = false;
-    previousTop = rect.top;
-  }
-  const arrival =
-    !document.querySelector('[data-story][data-live]') ||
-    (chapter && chapter.getBoundingClientRect().top <= -innerHeight * 0.12);
-  const inside = Boolean(
-    arrival &&
-    box &&
-    box.top <= innerHeight * 0.012 &&
-    box.bottom >= innerHeight * 0.65,
-  );
-  if (inside) arrived = true;
-  if (visible !== inside) {
-    visible = inside;
-    run();
-  }
+// Observe the pinned study itself. Its chapter can span several viewports,
+// and the same resting frame is reachable from either scroll direction.
+function setVisible(inside: boolean) {
+  if (visible === inside) return;
+  visible = inside;
+  setPower(inside);
+  run();
 }
 function preview(i: number, event?: MouseEvent | FocusEvent) {
   if (!powered.value) return;
   clearTimeout(hoverTimer);
   hover.value = i;
   if (event) place(event);
-  if (!complete.value || i >= notes.length) return;
-  clearTimeout(timer);
+  if (!canPractice.value || i >= notes.length) return;
+  clearTimeout(previewTimer);
   if (lastControl !== i) {
     gesture++;
     lastControl = i;
@@ -338,86 +291,53 @@ function preview(i: number, event?: MouseEvent | FocusEvent) {
   const sample = strokes[gesture % strokes.length];
   if (i === 1 && manualArmed) manualLift = true;
   pose(i + 1, sample.term, sample.x, sample.y, sample.arrow);
-  timer = window.setTimeout(() => {
+  previewTimer = window.setTimeout(() => {
     lastControl = -1;
     pose(0, manualArmed ? 'ARMED' : 'DISARMED');
   }, 1500);
 }
 onMounted(() => {
-  const signal = inputEvents.signal;
-  window.addEventListener(
-    'wheel',
-    (event) => {
-      const unit =
-        event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
-      if (!event.ctrlKey && holdForward(event.deltaY * unit))
-        event.preventDefault();
-    },
-    { passive: false, signal },
-  );
-  window.addEventListener(
-    'touchstart',
-    (e) => {
-      touchY = e.touches[0].clientY;
-    },
-    { passive: true, signal },
-  );
-  window.addEventListener(
-    'touchmove',
-    (e) => {
-      const y = e.touches[0].clientY;
-      if (e.touches.length === 1 && holdForward(touchY - y)) e.preventDefault();
-      touchY = y;
-    },
-    { passive: false, signal },
-  );
-  window.addEventListener(
-    'keydown',
-    (e) => {
-      if (e.key === 'Escape' && visible) skipped = true;
-      if (
-        e.defaultPrevented ||
-        e.shiftKey ||
-        e.altKey ||
-        e.metaKey ||
-        e.ctrlKey ||
-        (e.target instanceof HTMLElement &&
-          e.target.closest(
-            'input,textarea,select,button,a,[contenteditable="true"]',
-          ))
-      )
-        return;
-      const distance =
-        e.key === 'ArrowDown'
-          ? 48
-          : ['PageDown', ' '].includes(e.key)
-            ? innerHeight
-            : 0;
-      if (holdForward(distance)) e.preventDefault();
+  const { signal } = events;
+  const motion = matchMedia('(prefers-reduced-motion: reduce)');
+  reducedMotion.value = motion.matches;
+  motion.addEventListener(
+    'change',
+    () => {
+      reducedMotion.value = motion.matches;
+      reset();
     },
     { signal },
   );
+  visibilityObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.target === surface.value)
+          setVisible(entry.intersectionRatio >= 0.5);
+        else nextSectionVisible.value = entry.isIntersecting;
+      }
+    },
+    { threshold: [0, 0.5], rootMargin: '0px 0px -1px 0px' },
+  );
+  visibilityObserver.observe(surface.value!);
+  const nextSection = document.getElementById('display');
+  if (nextSection) visibilityObserver.observe(nextSection);
   sizeObserver = new ResizeObserver(alignPosterControls);
   sizeObserver.observe(surface.value!);
   sizeObserver.observe(poster.value!);
   alignPosterControls();
-  complete.value = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  window.addEventListener('scroll', settle, { passive: true });
-  window.addEventListener('tour-restart', reset);
-  window.addEventListener('scene-reset', reset);
-  settle();
-  document.addEventListener('visibilitychange', run);
+  window.addEventListener('tour-restart', reset, { signal });
+  window.addEventListener('scene-reset', reset, { signal });
+  window.addEventListener('pageshow', run, { signal });
+  document.addEventListener('visibilitychange', run, { signal });
 });
 onBeforeUnmount(() => {
   clearTimeout(powerTimer);
-  clearTimeout(timer);
+  clearTimeout(playbackTimer);
+  clearTimeout(previewTimer);
   cancelPreview();
-  inputEvents.abort();
-  window.removeEventListener('scroll', settle);
-  window.removeEventListener('tour-restart', reset);
-  window.removeEventListener('scene-reset', reset);
+  events.abort();
+  visibilityObserver?.disconnect();
   sizeObserver?.disconnect();
-  document.removeEventListener('visibilitychange', run);
 });
 </script>
 <template>
@@ -430,7 +350,7 @@ onBeforeUnmount(() => {
     @keydown.esc="hover = null"
   >
     <header class="radio-heading">
-      <h2>
+      <h2 class="section-title" tabindex="-1">
         {{
           locale === 'uk'
             ? 'Демонстрація керування коптером'
@@ -439,12 +359,23 @@ onBeforeUnmount(() => {
       </h2>
       <StudyLink :locale="locale" article="equipment/controls" />
     </header>
-    <button class="radio-replay" type="button" @click="replay">
-      <Icon name="replay" />
-      <span>{{
-        locale === 'uk' ? 'Повторити рухи стіків' : 'Replay stick movements'
-      }}</span>
-    </button>
+    <Transition
+      name="note-fade"
+      @before-leave="(el) => el.setAttribute('inert', '')"
+    >
+      <button
+        v-if="complete && powered && !nextSectionVisible"
+        class="radio-replay"
+        type="button"
+        :aria-label="replayLabel"
+        @click="replay"
+      >
+        <Icon name="replay" />
+        <span class="action-label" aria-hidden="true"
+          ><span>{{ replayLabel }}</span></span
+        >
+      </button>
+    </Transition>
     <div class="radio-pair">
       <span class="study-poster" role="img" aria-label="RadioMaster TX16S MK3">
         <img

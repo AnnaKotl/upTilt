@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { topics } from '../../data/topics';
+import TopicLink from '../knowledge/TopicLink.vue';
 import { usePageLanguage } from '../../lib/page-language';
 import { currentAircraft, type Aircraft } from '../../lib/aircraft';
 import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue';
@@ -10,6 +12,7 @@ import StudyNote from './StudyNote.vue';
 import { partArticle } from '../../data/study-titles';
 const input = defineProps<{ locale: Locale }>();
 const locale = usePageLanguage(input.locale);
+const anatomy = topics.find((topic) => topic.id === 'anatomy')!;
 const { selected, choose, ready } = useStudySelection(parts, 'part');
 const hover = ref<number | null>(null),
   dialog = ref<InstanceType<typeof StudyNote>>(),
@@ -144,10 +147,17 @@ async function open(event: Event, index: number) {
   <section
     id="anatomy"
     data-stop
-    :aria-label="locale === 'uk' ? 'Будова дрона' : 'Drone anatomy'"
+    :aria-label="anatomy.title[locale]"
     class="anatomy-chapter"
   >
     <div class="board-pin">
+      <TopicLink
+        heading
+        class="mat-topic"
+        :inert="!settled"
+        :topic="anatomy"
+        :locale="locale"
+      />
       <div class="parts-board">
         <button
           v-for="(part, i) in parts"
@@ -224,3 +234,40 @@ async function open(event: Event, index: number) {
     </StudyNote>
   </section>
 </template>
+<style scoped>
+.mat-topic {
+  --topic-icon-size: 2rem;
+  width: fit-content;
+  color: var(--ink);
+  opacity: 1;
+  transition:
+    opacity var(--ui-motion),
+    color var(--ui-motion);
+}
+.mat-topic :deep(h2) {
+  font-size: clamp(0.85rem, 1.2vw, 1.2rem);
+}
+.mat-topic[inert] {
+  opacity: 0;
+}
+@media (min-width: 841px) and (min-height: 510px) {
+  .mat-topic {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: 10%;
+    height: 9svh;
+    align-items: center;
+  }
+}
+@media (min-width: 1200px) and (min-height: 510px) {
+  .mat-topic {
+    --topic-padding: 0.15rem;
+    top: 74%;
+    left: calc(4.57% + var(--tap) / 2);
+    height: auto;
+    transform-origin: left center;
+    transform: rotate(-90deg);
+  }
+}
+</style>

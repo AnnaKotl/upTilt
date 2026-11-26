@@ -1,4 +1,5 @@
 ---
+import LinkArrow from '../../../components/ui/LinkArrow.vue';
 import SiteLayout from '../../../layouts/SiteLayout.astro';
 import KnowledgeCrumbs from '../../../components/knowledge/KnowledgeCrumbs.astro';
 import LessonLinks from '../../../components/knowledge/LessonLinks.astro';
@@ -36,16 +37,18 @@ const uk = locale === 'uk';
       <p class="knowledge-lead">{topicIntroductions[topic.id][uk ? 0 : 1]}</p>
     </div>
     <section class="reading-note">
-      <h2>{topic.question[locale]}</h2>
+      <h2 class="section-title">{topic.question[locale]}</h2>
       <p>{topic.note[locale]}</p>
     </section>
     <section class="reading-note">
-      <h2>{uk ? 'Теми' : 'Topics'}</h2>
+      <h2 class="section-title">{uk ? 'Теми' : 'Topics'}</h2>
       <LessonLinks locale={locale} path={path} items={lessons[topic.id]} />
     </section>
     {topic.id === 'simulators' && (
       <section class="reading-note" id="practice">
-        <h2>{uk ? 'Вибір і практика' : 'Selection and practice'}</h2>
+        <h2 class="section-title">
+          {uk ? 'Вибір і практика' : 'Selection and practice'}
+        </h2>
         <LessonLinks locale={locale} path={path} items={simulatorSections} />
       </section>
     )}
@@ -57,7 +60,7 @@ const uk = locale === 'uk';
           items={firmwareMedia}
         />
         <section class="reading-note" id={inavNote.id}>
-          <h2>{inavNote.title[locale]}</h2>
+          <h2 class="section-title">{inavNote.title[locale]}</h2>
           <p>{inavNote.text[locale]}</p>
           <a
             class="inline-link"
@@ -65,7 +68,7 @@ const uk = locale === 'uk';
             target="_blank"
             rel="noopener noreferrer"
           >
-            INAV Configurator ↗
+            INAV Configurator <LinkArrow />
           </a>
         </section>
       </>
@@ -73,7 +76,8 @@ const uk = locale === 'uk';
     {topic.id === 'radio' && <RadioDiagram locale={locale} />}
     <aside class="reference-line">
       <a href={topic.source.url}>
-        {uk ? 'Джерело розділу' : 'Section reference'} · {topic.source.label} ↗
+        {uk ? 'Джерело розділу' : 'Section reference'} · {topic.source.label}{' '}
+        <LinkArrow />
       </a>
     </aside>
   </article>

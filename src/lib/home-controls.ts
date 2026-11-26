@@ -7,7 +7,7 @@ const shell = [
   '[data-language] .hint',
   '[data-model-menu]',
   '[data-aircraft-option]',
-  '[data-aircraft-option] .model-name span',
+  '[data-aircraft-option] .action-label span',
   '[data-theme-toggle]',
   '[data-theme-toggle] .hint',
   '[data-library]',

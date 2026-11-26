@@ -175,22 +175,6 @@
   outline-color: var(--surface);
   cursor: default;
 }
-.model-name {
-  display: grid;
-  grid-template-columns: 0fr;
-  font: 500 0.78rem/1.35 var(--font-mono);
-  opacity: 0;
-  transition:
-    grid-template-columns var(--ui-motion),
-    opacity var(--ui-motion),
-    margin var(--ui-motion);
-}
-.model-name > span {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
 [data-model-menu] {
   justify-content: flex-start;
   padding-inline: 10px;
@@ -200,19 +184,13 @@
 [data-model-menu]:is(:hover, :focus-visible) {
   width: max-content;
 }
-:is(.model-row, [data-model-menu]):is(:hover, :focus-visible) .model-name {
-  grid-template-columns: 1fr;
-  margin-inline-start: 0.5rem;
-  opacity: 1;
-}
-
 /* Without hover there is nothing to reveal a label, so the rail carries its
    names permanently. A proper bottom bar replaces this on phones later. */
 @media (hover: none) {
   .model-row {
     min-height: var(--tap);
   }
-  .model-row .model-name {
+  .model-row .action-label {
     grid-template-columns: 1fr;
     margin-inline-start: 0.5rem;
     opacity: 1;

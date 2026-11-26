@@ -56,7 +56,7 @@ const models = [
             <Icon name={item.icon} />
           </span>
         ))}
-        <span class="model-name">
+        <span class="action-label">
           <span>Whoop</span>
         </span>
       </button>
@@ -72,7 +72,7 @@ const models = [
               aria-disabled={item.id === 'whoop'}
             >
               <Icon name={item.icon} />
-              <span class="model-name">
+              <span class="action-label">
                 <span>{item.name}</span>
               </span>
             </button>
@@ -170,7 +170,7 @@ const models = [
       option.setAttribute('aria-disabled', selected);
       option.setAttribute('aria-pressed', selected);
       if (selected === 'true' && menu) {
-        menu.querySelector('.model-name > span')!.textContent =
+        menu.querySelector('.action-label > span')!.textContent =
           option.getAttribute('aria-label');
       }
     }
