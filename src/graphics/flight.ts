@@ -11,6 +11,7 @@ import {
 } from '../data/flight-path';
 import { radioControls } from '../data/radio-controls';
 import { currentAircraft } from '../lib/aircraft';
+import { demonstrationHold, radioViewAngles } from '../lib/radio-view';
 import * as T from 'three';
 import { attitudeDial } from './attitude-dial';
 import { raceReplays, replayExit } from './race-replays';
@@ -448,6 +449,7 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     pose = Number(story.dataset.radioPose ?? 0),
     lift = 0,
     bank = 0,
+    facing = 0,
     radioSettling = false,
     scrollMotion = 0;
   let day = document.documentElement.dataset.theme === 'light' ? 1 : 0,
@@ -699,12 +701,17 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
     radioYaw = mix(yawFrom, yawDestination, ease(0, 1050, now - turnStart));
     lift = mix(lift, targetLift, follow * 0.65);
     bank = mix(bank, targetBank, follow * 0.65);
+    // The half turn is its own, slower move: tied to lift it snapped around.
+    const facingGoal = demonstrationHold(inRadio, lift);
+    facing = mix(facing, facingGoal, follow * 0.21);
+    if (Math.abs(facingGoal - facing) < 0.0008) facing = facingGoal;
     const exitLanding = 1 - ease(3.16, 3.72, p);
     radioSettling =
       Math.abs(targetLift - lift) +
         Math.abs(targetBank - bank) +
         Math.abs(radioYaw - targetYaw) +
-        Math.abs(radioPitch - targetPitch) >
+        Math.abs(radioPitch - targetPitch) +
+        Math.abs(facingGoal - facing) >
       0.002;
     const bob =
       hero *
@@ -724,9 +731,8 @@ export function mountFlight(host: HTMLElement, story: HTMLElement) {
       z,
     );
     // Square to the camera while hovering; the angled pose returns once landed.
-    const squareOn = inRadio * Math.min(1, lift / 0.74);
-    const viewTilt = rx * (1 - 0.72 * squareOn);
-    const viewYaw = ry * (1 - squareOn);
+    const squareOn = facing;
+    const { tilt: viewTilt, yaw: viewYaw } = radioViewAngles(rx, ry, squareOn);
     quad.root.rotation.set(
       viewTilt + hoverY * 0.255 * hero,
       viewYaw + hoverX * 0.44 * hero + radioYaw * inRadio,
